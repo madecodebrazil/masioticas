@@ -1,0 +1,78 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+* {
+  font-family: 'Poppins';
+}
+
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+
+/* Estilo customizado para o select com a seta */
+.custom-select {
+  position: relative;
+  width: 100%;
+}
+
+.custom-select select {
+  appearance: none; /* Remove a seta padrão */
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  border: 1px solid #932A83;
+  border-radius: 8px;
+  padding: 10px;
+  background-color: white;
+  color: #932A83;
+}
+
+.custom-select::after {
+  content: '\25BC'; /* Código da seta para baixo */
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: #932A83; /* Cor roxa da seta */
+  font-size: 1em;
+}
+
+input.custom-input,
+select.custom-input {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #932A83; /* Borda roxa */
+  border-radius: 8px; /* Bordas arredondadas *//* Cor de fundo */
+  color: black; /* Cor do texto */
+  font-size: 16px;
+  text-align: left; /* Texto alinhado à esquerda */
+}
+
+input.custom-input:focus,
+select.custom-input:focus {
+  outline: none; /* Remove o outline azul padrão *//* Adiciona um leve brilho ao redor */
+}
