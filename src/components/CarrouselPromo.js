@@ -1,4 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faChevronLeft, faChevronRight } from '@fortawesome/free-solid-svg-icons';
+
 
 const SimpleCarousel = () => {
   const images = [
@@ -44,15 +47,15 @@ const SimpleCarousel = () => {
 
       <button
         onClick={prevSlide}
-        className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 text-white p-3 rounded-full hover:bg-black/75 transition-colors"
+        className="absolute left-4 top-1/2 -translate-y-1/2 bg-purple-400/70 text-white p-3 rounded-full hover:bg-purple-600/70 transition-colors"
       >
-        ←
+        <FontAwesomeIcon icon={faChevronLeft} />
       </button>
       <button
         onClick={nextSlide}
-        className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 text-white p-3 rounded-full hover:bg-black/75 transition-colors"
+        className="absolute right-4 top-1/2 -translate-y-1/2 bg-purple-400/70 text-white p-3 rounded-full hover:hover:bg-purple-600/70  transition-colors"
       >
-        →
+        <FontAwesomeIcon icon={faChevronRight} />
       </button>
     </div>
   );

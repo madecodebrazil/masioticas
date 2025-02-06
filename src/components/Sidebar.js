@@ -1,5 +1,7 @@
 import Link from 'next/link'; // Importa o Link do Next.js
 import Image from 'next/image';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faX } from '@fortawesome/free-solid-svg-icons';
 
 // Componente MenuItem modificado para usar Link diretamente
 const MenuItem = ({ image, label, route }) => {
@@ -17,9 +19,8 @@ const MenuItem = ({ image, label, route }) => {
 const Sidebar = ({ showSidebar, hideSidebar }) => {
     return (
         <aside
-            className={`fixed top-0 left-0 h-full w-[80vw] max-w-[300px] bg-[#932A83] transform ${
-                showSidebar ? 'translate-x-0' : '-translate-x-full'
-            } transition-transform duration-300 ease-in-out lg:translate-x-0 z-50`} // Adicionada a classe z-50 para z-index alto
+            className={`fixed top-0 left-0 h-full w-[80vw] max-w-[300px] bg-[#81059e] transform ${showSidebar ? 'translate-x-0' : '-translate-x-full'
+                } transition-transform duration-300 ease-in-out lg:translate-x-0 z-50`} // Adicionada a classe z-50 para z-index alto
         >
             <div className="flex flex-col justify-between h-full">
                 <div>
@@ -36,15 +37,12 @@ const Sidebar = ({ showSidebar, hideSidebar }) => {
                         </Link>
 
                         {/* Botão para fechar a sidebar no mobile */}
-                        <Image
-                            src="/images/icons8-close-26.png"
-                            width={24}
-                            height={24}
-                            alt="Close"
+                        <FontAwesomeIcon icon={faX} className="text-xl  p-2 hover:rounded-lg cursor-pointer lg:hidden" alt="Close"
                             onClick={hideSidebar}
-                            className="cursor-pointer lg:hidden" // Escondido em telas grandes
                         />
                     </div>
+
+
 
                     <ul className="space-y-4 mt-6">
                         {/* Itens do Menu com as rotas */}

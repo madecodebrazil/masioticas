@@ -91,7 +91,7 @@ export default function Login() {
         >
             {/* Div da esquerda com o gradiente roxo e rounded apenas na direita */}
             {!isMobile && (
-                <div dir="rtl" className="w-1/2 h-full relative flex justify-end bg-[#9000ff]">
+                <div dir="rtl" className="w-1/2 h-full relative flex justify-end bg-[#81059e]">
                     <div className='flex items-start'>
                         <img src="/images/logomasi_branca.png " alt="Logo" className="h-20 p-4" /></div>
                     <img src="/images/hero_mulher.png" alt="Estático" className="w-3/4 h-auto absolute transform -translate-x-1/2 -translate-y-1/2 top-1/2 left-1/2" />
@@ -99,17 +99,17 @@ export default function Login() {
             )}
 
             {/* Div da direita com o formulário de login */}
-            <div className={`box ${isMobile ? 'w-full' : 'w-1/2'} flex flex-col justify-center items-center relative z-10 bg-[#9000ff]`}>
+            <div className={`box ${isMobile ? 'w-full' : 'w-1/2'} flex flex-col justify-center items-center relative z-10 bg-[#81059e]`}>
 
                 <div className='flex bg-white w-[610px] items-center justify-center h-[400px] md:h-[500px] rounded-2xl'>
 
                     <div className="box-it w-full max-w-xs">
-                        <h2 className="text-center text-[#9000ff] text-5xl font-semibold mb-6">Entrar</h2>
+                        <h2 className="text-center text-[#81059e] text-5xl font-semibold mb-6">Entrar</h2>
 
                         {error && <p className="text-red-500 text-sm text-center mb-4">{error}</p>}
 
                         <form onSubmit={handleLogin} className="flex flex-col">
-                            <label htmlFor="email" className="text-[#9000ff] pb-2 font-semibold"></label>
+                            <label htmlFor="email" className="text-[#81059e] pb-2 font-semibold"></label>
                             <input
                                 type="email"
                                 id="email"
@@ -121,7 +121,7 @@ export default function Login() {
                                 required
                             />
 
-                            <label htmlFor="password" className="text-[#9000ff] pb-2 font-semibold"></label>
+                            <label htmlFor="password" className="text-[#81059e] pb-2 font-semibold"></label>
                             <div className='relative'>
                                 <input
                                     type={passwordVisible ? 'text' : 'password'} // Alterna entre 'text' e 'password'
@@ -142,7 +142,7 @@ export default function Login() {
                             <div className="btn flex justify-center mt-6">
                                 <button
                                     type="submit"
-                                    className={`w-full text-base text-white font-semibold bg-[#9000ff] border border-[#9000ff] rounded-xl px-4 py-3 hover:bg-opacity-90 transition-all duration-300 ${isButtonDisabled || isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    className={`w-full text-base text-white font-semibold bg-[#81059e] border border-[#81059e] rounded-xl px-4 py-3 hover:bg-opacity-90 transition-all duration-300 ${isButtonDisabled || isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
                                     disabled={isButtonDisabled || isLoading} // Desabilitar o botão se estiver vazio ou carregando
                                 >
                                     {isLoading ? 'Carregando' : 'Fazer Login'}

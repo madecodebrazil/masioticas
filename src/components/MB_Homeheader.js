@@ -5,6 +5,8 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { getAuth, signOut } from 'firebase/auth';
 import Sidebar from './Sidebar';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faBell, faBars } from '@fortawesome/free-solid-svg-icons';
 
 const MenuItem = ({ icon, label, href }) => (
     <motion.li
@@ -56,60 +58,39 @@ export default function MobileNavSidebar({ userPhotoURL, userData }) {
 
     return (
         <>
-            <div className="bg-[#932A83] w-full p-4 flex justify-between items-center lg:hidden z-30">
-                <button className="text-white focus:outline-none" onClick={toggleMenu}>
-                    <svg
-                        className="w-8 h-8"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                        xmlns="http://www.w3.org/2000/svg"
-                    >
-                        <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth="2"
-                            d={isMenuOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"}
-                        ></path>
-                    </svg>
+            <div className="flex items-center justify-between w-full p-4 bg-[#81059e] lg:hidden z-30">
+                <button className="text-white w-8" onClick={toggleMenu}>
+                <FontAwesomeIcon icon={faBars} className="text-3xl hover:bg-purple-500 p-2 hover:rounded-lg" />
                 </button>
 
-                <Link href="/homepage" className="mx-auto">
-                    <Image
-                        src="/images/logomasi_branca.png"
-                        alt="Logo masi"
-                        width={100}
-                        height={50}
-                        className="object-contain transition-all duration-300 hover:drop-shadow-[0_0_10px_rgba(255,255,0,0.8)]"
-                    />
-                </Link>
+                <div className="absolute left-1/2 transform -translate-x-1/2">
+                    <Link href="/homepage">
+                        <Image
+                            src="/images/logomasi_branca.png"
+                            alt="Logo masi"
+                            width={100}
+                            height={50}
+                            className="object-contain transition-all duration-300 hover:drop-shadow-[0_0_10px_rgba(255,255,0,0.8)]"
+                            style={{ width: 'auto', height: 'auto' }}
+                        />
+                    </Link>
+                </div>
 
-                <div className="flex items-center space-x-4">
-                    <button className="text-white focus:outline-none">
-                        <svg
-                            className="w-10 h-10"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                            xmlns="http://www.w3.org/2000/svg"
-                        >
-                            <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth="2"
-                                d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-                            ></path>
-                        </svg>
+                <div className="flex gap-4">
+                    <button className="text-white">
+                        <FontAwesomeIcon icon={faBell} className="text-2xl hover:bg-purple-500 p-2 hover:rounded-lg" />
                     </button>
 
-                    <Image
-                        src={userPhotoURL}
-                        alt="User Avatar"
-                        width={50}
-                        height={50}
-                        className="rounded-full border-2 border-white cursor-pointer"
-                        onClick={toggleDropdown}
-                    />
+                    <div className="hover:bg-purple-400 p-1 rounded-2xl">
+                        <Image
+                            src={userPhotoURL}
+                            alt="User Avatar"
+                            width={50}
+                            height={50}
+                            className="rounded-full border-2 border-white cursor-pointer p-2"
+                            onClick={toggleDropdown}
+                        />
+                    </div>
                 </div>
             </div>
 
@@ -119,7 +100,7 @@ export default function MobileNavSidebar({ userPhotoURL, userData }) {
                     animate="visible"
                     exit="exit"
                     variants={menuVariants}
-                    className="fixed top-0 left-0 h-full w-[250px] bg-[#932A83] z-50"
+                    className="fixed top-0 left-0 h-full w-[250px] bg-[#81059e] z-50"
                 >
                     <Sidebar showSidebar={isMenuOpen} hideSidebar={toggleMenu} />
                 </motion.div>
@@ -131,7 +112,7 @@ export default function MobileNavSidebar({ userPhotoURL, userData }) {
                     animate="visible"
                     exit="exit"
                     variants={dropdownVariants}
-                    className="fixed top-0 right-0 w-[250px] h-full bg-[#932A83] text-white p-4 shadow-2xl drop-shadow-lg z-50"
+                    className="fixed top-0 right-0 w-[250px] h-full bg-[#81059e] text-white p-4 shadow-2xl drop-shadow-lg z-50"
                 >
                     <button className="absolute top-4 right-4 text-white" onClick={toggleDropdown}>
                         X

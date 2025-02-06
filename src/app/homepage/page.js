@@ -22,7 +22,7 @@ export default function Home() {
 
     const [osPendentes, setOsPendentes] = useState(0);
     const [osConcluidas, setOsConcluidas] = useState(0);
-    const [osAtrasadas, setOsAtragisadas] = useState(0);
+    const [osAtrasadas, setOsAtrasadas] = useState(0);
 
     // Contagem das vendas por dia, semana e mês
     const [salesToday, setSalesToday] = useState(0);
@@ -235,7 +235,7 @@ export default function Home() {
     const items = [
         { label: <>Finanças</>, img: '/images/homepage/Coins.png', href: '/finance' },
         { label: <>Estoque</>, img: '/images/homepage/Boxes.png', href: '/stock' },
-        { label: <>Produtos e <br /> Serviços</>, img: '/images/homepage/Product.png', href: '/products_and_services' },
+        { label: <>Produtos Serviços</>, img: '/images/homepage/Product.png', href: '/products_and_services' },
         { label: <>Consulta</>, img: '/images/homepage/Stethoscope.png', href: '/consultation' },
         { label: <>Clientes</>, img: '/images/homepage/User.png', href: 'register/consumers' },
         { label: <>Comercial</>, img: '/images/homepage/Shopping.png', href: '/commercial' },
@@ -246,32 +246,19 @@ export default function Home() {
     const userPhotoURL = userData?.imageUrl || '/images/default-avatar.png';
 
     return (
-        <div className="flex flex-col md:flex-row min-h-screen bg-gradient-to-b from-[#9000ff] to-[#B7328C]">
-            
+        <div className="flex flex-col md:flex-row min-h-screen bg-gradient-to-b from-[#81059e] to-[#B7328C]">
             {/* MobileHeader apenas no mobile */}
             <div className="block md:hidden">
                 <MobileHeader userPhotoURL={userPhotoURL} userData={userData} />
             </div>
 
-            {/* Sidebar como um dropdown lateral */}
-            <aside className={`fixed top-0 right-0 w-[250px] h-full bg-[#9000ff] text-white p-4 shadow-xl transform ${isSidebarOpen ? 'translate-x-0' : 'translate-x-full'} transition-transform duration-300 z-50`}>
-                <button
-                    className="absolute top-4 right-4 text-white"
-                    onClick={toggleSidebar}
-                >
-                    <Image src="/images/close-icon.png" alt="Close" width={24} height={24} />
-                </button>
-
-                <SidebarHomepage userPhotoURL={userPhotoURL} userData={userData} />
-            </aside>
-
-            {/* Sidebar normal para desktop (768px+) */}
-            <aside className="hidden md:block md:w-[300px] lg:w-[350px] bg-[#9000ff] text-white p-4 shadow-xl rounded-tr-xl rounded-br-lg">
+            {/* Sidebar fixa para desktop */}
+            <aside className="hidden md:block md:w-[300px] lg:w-[350px] bg-[#81059e] text-white p-4 pl-10 shadow-xl rounded-tr-xl rounded-br-lg fixed h-screen overflow-y-auto">
                 <SidebarHomepage userPhotoURL={userPhotoURL} userData={userData} currentPage="dashboard" />
             </aside>
 
             {/* Conteúdo principal */}
-            <div className="flex-1 flex flex-col bg-white p-4 sm:p-8 overflow-auto shadow-xl rounded-tl-xl rounded-bl-xl">
+            <div className="flex-1 flex flex-col bg-white p-0 md:p-4 overflow-auto shadow-xl rounded-tl-xl rounded-bl-xl md:ml-[300px] lg:ml-[350px]">
                 {/* Feedback de carregamento */}
                 {(loadingOS || loadingVendas) && (
                     <div className="flex justify-center items-center mb-8">
@@ -279,53 +266,51 @@ export default function Home() {
                     </div>
                 )}
 
-                {/* Informações principais */}
-               <Dashboard />
+                <Dashboard />
 
-             {/* Banners promocionais */}
-             <div className="flex flex-col p-4">
-          <CarrouselPromo />
-        </div>
+                <div className="flex flex-col p-2">
+                    <CarrouselPromo />
+                </div>
 
-                {/* Grid de opções */}
-                <div className="grid grid-cols-2 gap-x-4 gap-y-4 md:grid-cols-4 mb-20 justify-center mx-auto lg:gap-x-10 lg:gap-y-6">
+                <div className="grid grid-cols-2 gap-x-16 gap-y-4 md:grid-cols-4 mb-20 justify-center mx-auto lg:gap-x-14 lg:gap-y-6 mt-6">
                     {items.map((item, index) => (
                         <div key={index} className="flex justify-center">
                             <Link href={item.href} className="w-full max-w-[180px]">
-                            <motion.div
-    className="relative flex justify-center items-center bg-gradient-to-r from-[#9000ff] to-[#B7328C] text-white w-full h-[100px] md:h-[80px] lg:h-[100px] rounded-xl transition-transform transform hover:scale-105 hover:shadow-2xl cursor-pointer p-6"
-    style={{ 
-        boxShadow: '0px 10px 25px rgba(0, 0, 0, 0.5)', 
-        boxSizing: 'border-box'
-    }}
-    initial={{ opacity: 0, scale: 0.9 }}
-    animate={{ opacity: 1, scale: 1 }}
-    whileHover={{ scale: 1.1, boxShadow: "0px 15px 30px rgba(0, 0, 0, 0.6)" }} // Aumenta a escala e adiciona uma sombra mais intensa ao passar o mouse
-    transition={{ duration: 0.3 }}
->
-    <div 
-        className="absolute inset-0 opacity-10 pointer-events-none" 
-        style={{ 
-            backgroundImage: `url('/images/fundo.png')`, 
-            backgroundSize: 'cover', 
-            backgroundRepeat: 'no-repeat',
-            backgroundPosition: 'center'
-        }}
-    ></div>
+                                <motion.div
+                                    className="relative flex justify-center items-center bg-gradient-to-r from-[#81059e] to-[#B7328C] text-white w-full h-[100px] md:h-[80px] lg:h-[100px] rounded-xl transition-transform transform hover:scale-105 hover:shadow-2xl cursor-pointer p-6"
+                                    style={{
+                                        boxShadow: '0px 10px 25px rgba(0, 0, 0, 0.5)',
+                                        boxSizing: 'border-box'
+                                    }}
+                                    initial={{ opacity: 0, scale: 0.9 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    whileHover={{ scale: 1.1, boxShadow: "0px 15px 30px rgba(0, 0, 0, 0.6)" }} // Aumenta a escala e adiciona uma sombra mais intensa ao passar o mouse
+                                    transition={{ duration: 0.3 }}
+                                >
+                                    <div
+                                        className="absolute inset-0 opacity-10 pointer-events-none"
+                                        style={{
+                                            backgroundImage: `url('/images/fundo.png')`,
+                                            backgroundSize: 'cover',
+                                            backgroundRepeat: 'no-repeat',
+                                            backgroundPosition: 'center'
+                                        }}
+                                    ></div>
 
-    <div className="relative z-10 flex flex-row justify-between items-center w-full h-full p-0 m-0">
-        <span className="text-white font-medium text-lg flex-grow text-center pointer-events-none p-0 m-0">
-            {item.label}
-        </span>
-        <Image
-            src={item.img}
-            alt={item.label}
-            width={70}
-            height={70}
-            className=" object-contain pointer-events-none p-0 m-0"
-        />
-    </div>
-</motion.div>
+                                    <div className="relative z-10 flex flex-row justify-between items-center w-full h-full p-0 m-0">
+                                        <span className="text-white font-medium text-sm w-1/2 text-left pointer-events-none p-0 m-0">
+                                            {item.label}
+                                        </span>
+                                        <Image
+                                            src={item.img}
+                                            alt={item.label}
+                                            width={65}
+                                            height={65}
+                                            className="w-1/2 h-[60px] object-contain pointer-events-none"
+                                            style={{ width: 'auto', height: 'auto' }}
+                                        />
+                                    </div>
+                                </motion.div>
 
                             </Link>
                         </div>
@@ -334,7 +319,7 @@ export default function Home() {
             </div>
 
             {/* Barra de navegação inferior no mobile */}
-            <div className="mt-auto">
+            <div className="mt-auto md:hidden">
                 <BottomMobileNav />
             </div>
         </div>

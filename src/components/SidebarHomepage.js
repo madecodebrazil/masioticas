@@ -94,12 +94,15 @@ export default function SidebarHomepage({ userPhotoURL, userData, currentPage })
                     alt="User Avatar"
                     width={80}
                     height={80}
-                    className="rounded-full mb-4 border-2 border-white"
+                    className="rounded-full mb-4 border-2 border-white p-2"
                 />
                 <div className="text-center mb-6">
                     <h2 className="text-white text-xl font-bold mb-1">
-                        {userData?.name}
+                        {userData?.name || 'Dev Account'}
                     </h2>
+                    <p className="text-white text-base mb-2">
+                        {userData?.username || '@username'}
+                    </p>
                     {/* Verifica o nível de permissão */}
                     {userData?.level_perm === 'user' && (
                         <h3 className="text-white-600 text-lg font-semibold">
@@ -126,7 +129,7 @@ export default function SidebarHomepage({ userPhotoURL, userData, currentPage })
 
                     <Link href="/homepage/agenda">
                         <div className={`${getLinkStyle('agenda')} text-white rounded-lg py-2 px-4 w-full text-center shadow-lg flex items-center justify-start gap-4 hover:bg-[#D4A017] transition-colors duration-300`}>
-                        <FontAwesomeIcon icon={faCalendarDay} />
+                            <FontAwesomeIcon icon={faCalendarDay} />
                             <span className="text-white text-lg font-medium">Agenda</span>
                         </div>
                     </Link>
@@ -134,21 +137,21 @@ export default function SidebarHomepage({ userPhotoURL, userData, currentPage })
 
                     <Link href="/commercial/sales">
                         <div className={`${getLinkStyle('agenda')} text-white rounded-lg py-2 px-4 w-full text-center shadow-lg flex items-center justify-start gap-4 hover:bg-[#D4A017] transition-colors duration-300`}>
-                        <FontAwesomeIcon icon={faMoneyBillTransfer} />
+                            <FontAwesomeIcon icon={faMoneyBillTransfer} />
                             <span className="text-white text-lg font-medium">Vendas</span>
                         </div>
                     </Link>
 
                     <Link href="/finance">
                         <div className={`${getLinkStyle('agenda')} text-white rounded-lg py-2 px-4 w-full text-center shadow-lg flex items-center justify-start gap-4 hover:bg-[#D4A017] transition-colors duration-300`}>
-                        <FontAwesomeIcon icon={faCoins} />
+                            <FontAwesomeIcon icon={faCoins} />
                             <span className="text-white text-lg font-medium">Financeiro</span>
                         </div>
                     </Link>
 
                     <Link href="/homepage/agenda">
                         <div className={`${getLinkStyle('agenda')} text-white rounded-lg py-2 px-4 w-full text-center shadow-lg flex items-center justify-start gap-4 hover:bg-[#D4A017] transition-colors duration-300`}>
-                        <FontAwesomeIcon icon={faGear} />
+                            <FontAwesomeIcon icon={faGear} />
                             <span className="text-white text-lg font-medium">Configurações</span>
                         </div>
                     </Link>
