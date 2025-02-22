@@ -5,7 +5,7 @@ import { firestore } from "@/lib/firebaseConfig";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getDocs, collection, addDoc } from "firebase/firestore";
 
-export  function AddMalote() {
+export function AddMalote() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -165,18 +165,18 @@ export  function AddMalote() {
       <div className="p-6">
         <div className="flex justify-between items-center mb-4">
           <button
-            className="bg-[#932A83] text-white font-bold px-4 py-2 rounded-lg"
+            className="bg-[#81059e] text-white font-bold px-4 py-2 rounded-lg"
             onClick={() => router.push('/products_and_services/pouch/list-pouches')}
           >
             Ver Malotes
           </button>
         </div>
         <div className="flex justify-between items-center mb-4">
-          <h1 className="text-2xl font-bold" style={{ color: "#932A83" }}>
+          <h1 className="text-2xl font-bold" style={{ color: "#81059e" }}>
             REGISTRO DE MALOTES
           </h1>
           <button
-            className="bg-[#932A83] text-white font-bold px-4 py-2 rounded-lg"
+            className="bg-[#81059e] text-white font-bold px-4 py-2 rounded-lg"
             onClick={() => setFormData({})} // Limpa os campos
           >
             LIMPAR
@@ -186,7 +186,7 @@ export  function AddMalote() {
         <form onSubmit={handleSubmit} className="space-y-6 mt-6">
           {/* Nome do Cliente */}
           <div className="relative">
-            <label className="block text-sm font-bold" style={{ color: '#932A8387' }}>Nome do Cliente</label>
+            <label className="block text-sm font-bold" style={{ color: '#81059e87' }}>Nome do Cliente</label>
             <input
               type="text"
               name="nomeCliente"
@@ -214,7 +214,7 @@ export  function AddMalote() {
           {/* Código do Produto e NCM */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-bold" style={{ color: '#932A8387' }}>Código do Produto</label>
+              <label className="block text-sm font-bold" style={{ color: '#81059e87' }}>Código do Produto</label>
               <input
                 type="text"
                 name="codigoProduto"
@@ -226,7 +226,7 @@ export  function AddMalote() {
               />
             </div>
             <div>
-              <label className="block text-sm font-bold" style={{ color: '#932A8387' }}>NCM</label>
+              <label className="block text-sm font-bold" style={{ color: '#81059e87' }}>NCM</label>
               <input
                 type="text"
                 name="NCM"
@@ -241,7 +241,7 @@ export  function AddMalote() {
           {/* SKU e Produto */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-bold" style={{ color: '#932A8387' }}>SKU</label>
+              <label className="block text-sm font-bold" style={{ color: '#81059e87' }}>SKU</label>
               <input
                 type="text"
                 name="SKU"
@@ -252,7 +252,7 @@ export  function AddMalote() {
               />
             </div>
             <div>
-              <label className="block text-sm font-bold" style={{ color: '#932A8387' }}>Produto</label>
+              <label className="block text-sm font-bold" style={{ color: '#81059e87' }}>Produto</label>
               <input
                 type="text"
                 name="produto"
@@ -266,7 +266,7 @@ export  function AddMalote() {
 
           {/* Descrição */}
           <div>
-            <label className="block text-sm font-bold" style={{ color: '#932A8387' }}>Descrição</label>
+            <label className="block text-sm font-bold" style={{ color: '#81059e87' }}>Descrição</label>
             <textarea
               name="descricao"
               value={formData.descricao}
@@ -280,7 +280,7 @@ export  function AddMalote() {
           {/* Data, Hora e Loja */}
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-bold" style={{ color: '#932A8387' }}>Data</label>
+              <label className="block text-sm font-bold" style={{ color: '#81059e87' }}>Data</label>
               <input
                 type="date"
                 name="data"
@@ -291,7 +291,7 @@ export  function AddMalote() {
             </div>
 
             <div>
-              <label className="block text-sm font-bold" style={{ color: '#932A8387' }}>Hora</label>
+              <label className="block text-sm font-bold" style={{ color: '#81059e87' }}>Hora</label>
               <input
                 type="time"
                 name="hora"
@@ -302,7 +302,7 @@ export  function AddMalote() {
             </div>
 
             <div>
-              <label className="block text-sm font-bold" style={{ color: '#932A8387' }}>Loja</label>
+              <label className="block text-sm font-bold" style={{ color: '#81059e87' }}>Loja</label>
               <select
                 name="loja"
                 value={formData.loja}
@@ -317,16 +317,15 @@ export  function AddMalote() {
 
           {/* Prestadores */}
           <div>
-            <label className="block text-sm font-bold" style={{ color: '#932A8387' }}>Prestadores</label>
+            <label className="block text-sm font-bold" style={{ color: '#81059e87' }}>Prestadores</label>
             <div className="flex flex-wrap gap-2">
               {prestadores.length > 0 ? (
                 prestadores.map((prestador) => (
                   <button
                     key={prestador.id}
                     type="button"
-                    className={`px-4 py-2 border rounded-lg ${
-                      formData.prestador === prestador.name ? 'bg-[#932A83] text-white' : 'border-[#932A83] text-black'
-                    }`}
+                    className={`px-4 py-2 border rounded-lg ${formData.prestador === prestador.name ? 'bg-[#81059e] text-white' : 'border-[#81059e] text-black'
+                      }`}
                     onClick={() => setFormData({ ...formData, prestador: prestador.name })} // Define o prestador selecionado
                   >
                     {prestador.name}
@@ -340,16 +339,15 @@ export  function AddMalote() {
 
           {/* Tipos de Montagem */}
           <div>
-            <label className="block text-sm font-bold" style={{ color: '#932A8387' }}>Tipo</label>
+            <label className="block text-sm font-bold" style={{ color: '#81059e87' }}>Tipo</label>
             <div className="flex flex-wrap gap-2">
               {tipoMontagem.length > 0 ? (
                 tipoMontagem.map((tipo, index) => (
                   <button
                     key={index}
                     type="button"
-                    className={`px-4 py-2 border rounded-lg ${
-                      formData.tipo === tipo ? 'bg-[#932A83] text-white' : 'border-[#932A83] text-black'
-                    }`}
+                    className={`px-4 py-2 border rounded-lg ${formData.tipo === tipo ? 'bg-[#81059e] text-white' : 'border-[#81059e] text-black'
+                      }`}
                     onClick={() => setFormData({ ...formData, tipo })} // Define o tipo selecionado
                   >
                     {tipo}
@@ -363,7 +361,7 @@ export  function AddMalote() {
 
           {/* Valor */}
           <div>
-            <label className="block text-sm font-bold" style={{ color: '#932A8387' }}>Valor</label>
+            <label className="block text-sm font-bold" style={{ color: '#81059e87' }}>Valor</label>
             <input
               type="text"
               name="valor"
@@ -380,7 +378,7 @@ export  function AddMalote() {
             <button
               type="submit"
               className="px-6 py-3 rounded-lg font-bold"
-              style={{ backgroundColor: '#932A83', color: 'white' }}
+              style={{ backgroundColor: '#81059e', color: 'white' }}
               disabled={isLoading}
             >
               {isLoading ? 'Registrando...' : 'REGISTRAR MALOTES'}

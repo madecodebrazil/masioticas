@@ -101,7 +101,7 @@ const CalendarConsultation = () => {
   return (
     <Layout>
       <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50">
-        <h2 className="text-2xl font-semibold text-[#932A83] mb-6">
+        <h2 className="text-2xl font-semibold text-[#81059e] mb-6">
           CALENDÁRIO DE CONSULTAS
         </h2>
 
@@ -109,16 +109,16 @@ const CalendarConsultation = () => {
         <div className="flex items-center justify-between mb-4">
           <button
             onClick={() => changeMonth("prev")}
-            className="px-4 py-2 bg-[#932A83] text-white rounded-lg hover:bg-[#820f76]"
+            className="px-4 py-2 bg-[#81059e] text-white rounded-lg hover:bg-[#820f76]"
           >
             Mês Anterior
           </button>
-          <h3 className="text-xl font-semibold text-[#932A83] mx-8">
+          <h3 className="text-xl font-semibold text-[#81059e] mx-8">
             {format(selectedDate, "MMMM yyyy")}
           </h3>
           <button
             onClick={() => changeMonth("next")}
-            className="px-4 py-2 bg-[#932A83] text-white rounded-lg hover:bg-[#820f76]"
+            className="px-4 py-2 bg-[#81059e] text-white rounded-lg hover:bg-[#820f76]"
           >
             Próximo Mês
           </button>
@@ -130,9 +130,8 @@ const CalendarConsultation = () => {
           {daysOfWeek.map((day, index) => (
             <div
               key={day}
-              className={`text-center font-semibold ${
-                index === 0 ? "text-red-500" : "text-black"
-              }`} // Domingo em vermelho e os outros dias em preto
+              className={`text-center font-semibold ${index === 0 ? "text-red-500" : "text-black"
+                }`} // Domingo em vermelho e os outros dias em preto
             >
               {day}
             </div>
@@ -143,17 +142,15 @@ const CalendarConsultation = () => {
             <div
               key={index}
               onClick={() => handleDayClick(day)}
-              className={`flex items-center justify-center p-4 rounded-lg cursor-pointer transition-all duration-200 ${
-                isSameDay(day, selectedDay)
+              className={`flex items-center justify-center p-4 rounded-lg cursor-pointer transition-all duration-200 ${isSameDay(day, selectedDay)
                   ? "bg-yellow-300 text-black border-2 border-yellow-600"
                   : hasConsultations(day)
-                  ? "bg-gray-100 text-black"
-                  : "bg-gray-100 text-black"
-              } ${isSameMonth(day, selectedDate) ? "" : "text-gray-400"} ${
-                isSameDay(day, selectedDay)
-                  ? "bg-[#932A83] text-white"
+                    ? "bg-gray-100 text-black"
+                    : "bg-gray-100 text-black"
+                } ${isSameMonth(day, selectedDate) ? "" : "text-gray-400"} ${isSameDay(day, selectedDay)
+                  ? "bg-[#81059e] text-white"
                   : ""
-              } hover:bg-gray-200`}
+                } hover:bg-gray-200`}
             >
               {format(day, "d")}
             </div>
@@ -162,7 +159,7 @@ const CalendarConsultation = () => {
 
         {/* Exibição de consultas para o dia selecionado */}
         <div className="w-full max-w-6xl p-4 md:p-8 bg-white rounded-lg shadow-md mt-8">
-          <h3 className="text-lg md:text-xl font-semibold text-[#932A83] mb-4 text-center md:text-left">
+          <h3 className="text-lg md:text-xl font-semibold text-[#81059e] mb-4 text-center md:text-left">
             {selectedDay
               ? `Consultas para o dia ${format(selectedDay, "dd/MM/yyyy")}`
               : "Selecione um dia para ver as consultas"}
@@ -173,16 +170,16 @@ const CalendarConsultation = () => {
               <table className="min-w-full bg-white border">
                 <thead className="border-b bg-gray-100">
                   <tr>
-                    <th className="text-left px-4 py-2 text-[#932A83]">CPF</th>
-                    <th className="text-left px-4 py-2 text-[#932A83]">Paciente</th>
-                    <th className="text-left px-4 py-2 text-[#932A83]">RG</th>
-                    <th className="text-left px-4 py-2 text-[#932A83]">Logradouro</th>
-                    <th className="text-left px-4 py-2 text-[#932A83]">Bairro</th>
-                    <th className="text-left px-4 py-2 text-[#932A83]">Nº</th>
-                    <th className="text-left px-4 py-2 text-[#932A83]">Ametropia</th>
-                    <th className="text-left px-4 py-2 text-[#932A83]">Data</th>
-                    <th className="text-left px-4 py-2 text-[#932A83]">Hora</th>
-                    <th className="text-left px-4 py-2 text-[#932A83]">Clínica</th>
+                    <th className="text-left px-4 py-2 text-[#81059e]">CPF</th>
+                    <th className="text-left px-4 py-2 text-[#81059e]">Paciente</th>
+                    <th className="text-left px-4 py-2 text-[#81059e]">RG</th>
+                    <th className="text-left px-4 py-2 text-[#81059e]">Logradouro</th>
+                    <th className="text-left px-4 py-2 text-[#81059e]">Bairro</th>
+                    <th className="text-left px-4 py-2 text-[#81059e]">Nº</th>
+                    <th className="text-left px-4 py-2 text-[#81059e]">Ametropia</th>
+                    <th className="text-left px-4 py-2 text-[#81059e]">Data</th>
+                    <th className="text-left px-4 py-2 text-[#81059e]">Hora</th>
+                    <th className="text-left px-4 py-2 text-[#81059e]">Clínica</th>
                   </tr>
                 </thead>
                 <tbody>

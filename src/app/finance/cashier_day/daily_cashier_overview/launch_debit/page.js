@@ -107,10 +107,10 @@ export function LancarDespesa() {
   return (
     <Layout>
       <div className="p-8">
-        <h2 className="text-2xl font-bold text-[#932A8387] mb-4">Lançar Despesa</h2>
+        <h2 className="text-2xl font-bold text-[#81059e87] mb-4">Lançar Despesa</h2>
         <div>
           <div className="mb-4">
-            <label className="block text-[#932A8387] mb-2">Descrição</label>
+            <label className="block text-[#81059e87] mb-2">Descrição</label>
             <input
               type="text"
               value={description}
@@ -121,7 +121,7 @@ export function LancarDespesa() {
           </div>
           <div className="mb-4 flex space-x-4">
             <div className="w-1/2">
-              <label className="block text-[#932A8387] mb-2">Data</label>
+              <label className="block text-[#81059e87] mb-2">Data</label>
               <input
                 type="text"
                 value={date}
@@ -131,7 +131,7 @@ export function LancarDespesa() {
               />
             </div>
             <div className="w-1/2">
-              <label className="block text-[#932A8387] mb-2">Hora</label>
+              <label className="block text-[#81059e87] mb-2">Hora</label>
               <input
                 type="text"
                 value={time}
@@ -142,7 +142,7 @@ export function LancarDespesa() {
             </div>
           </div>
           <div className="mb-4">
-            <label className="block text-[#932A8387] mb-2">Valor</label>
+            <label className="block text-[#81059e87] mb-2">Valor</label>
             <input
               type="number"
               value={amount}
@@ -153,7 +153,7 @@ export function LancarDespesa() {
             />
           </div>
           <div className="mb-4">
-            <label className="block text-[#932A8387] mb-2">Loja</label>
+            <label className="block text-[#81059e87] mb-2">Loja</label>
             <input
               type="text"
               value={store}
@@ -161,7 +161,7 @@ export function LancarDespesa() {
               readOnly
             />
           </div>
-          <button onClick={handleSubmit} className="bg-[#932A83] text-white px-4 py-2 rounded-lg hover:bg-[#932A8387]" disabled={loading}>
+          <button onClick={handleSubmit} className="bg-[#81059e] text-white px-4 py-2 rounded-lg hover:bg-[#81059e87]" disabled={loading}>
             {loading ? 'Registrando...' : 'REGISTRAR DESPESA'}
           </button>
         </div>

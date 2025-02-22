@@ -28,7 +28,7 @@ const formatTime = (dateString) => {
   return `${hours}:${minutes}`;
 };
 
-export  function ConfirmarBrinde() {
+export function ConfirmarBrinde() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
@@ -67,38 +67,38 @@ export  function ConfirmarBrinde() {
     <Layout>
       <div className="container mx-auto p-6 bg-white rounded-lg shadow min-h-screen flex justify-center items-center">
         <div className="bg-white w-full sm:w-[90%] md:w-[70%] lg:w-[50%] p-8 rounded-xl shadow-md border border-gray-300">
-          <h1 className="text-[#932A83] text-2xl font-bold mb-8 text-center">
+          <h1 className="text-[#81059e] text-2xl font-bold mb-8 text-center">
             Confirmar Brinde
           </h1>
 
           {/* Exibição dos dados formatada */}
           <div className="space-y-6">
             <div className="flex flex-col">
-              <span className="text-[#932A83] font-semibold">Nome do Cliente:</span>
+              <span className="text-[#81059e] font-semibold">Nome do Cliente:</span>
               <p className="text-black">{formData.nomeCliente}</p>
             </div>
             <div className="flex flex-col">
-              <span className="text-[#932A83] font-semibold">SKU:</span>
+              <span className="text-[#81059e] font-semibold">SKU:</span>
               <p className="text-black">{formData.sku}</p>
             </div>
             <div className="flex flex-col">
-              <span className="text-[#932A83] font-semibold">Produto Comprado:</span>
+              <span className="text-[#81059e] font-semibold">Produto Comprado:</span>
               <p className="text-black">{formData.produtoComprado}</p>
             </div>
             <div className="flex flex-col">
-              <span className="text-[#932A83] font-semibold">Descrição do Brinde:</span>
+              <span className="text-[#81059e] font-semibold">Descrição do Brinde:</span>
               <p className="text-black">{formData.descricaoBrinde}</p>
             </div>
             <div className="flex flex-col">
-              <span className="text-[#932A83] font-semibold">Data do Brinde:</span>
+              <span className="text-[#81059e] font-semibold">Data do Brinde:</span>
               <p className="text-black">{formatDate(formData.dataBrinde)}</p>
             </div>
             <div className="flex flex-col">
-              <span className="text-[#932A83] font-semibold">Hora do Brinde:</span>
+              <span className="text-[#81059e] font-semibold">Hora do Brinde:</span>
               <p className="text-black">{formatTime(formData.horaBrinde)}</p>
             </div>
             <div className="flex flex-col">
-              <span className="text-[#932A83] font-semibold">Loja:</span>
+              <span className="text-[#81059e] font-semibold">Loja:</span>
               <p className="text-black">{formData.loja}</p>
             </div>
           </div>
@@ -107,13 +107,13 @@ export  function ConfirmarBrinde() {
           <div className="flex justify-between gap-4 mt-8">
             <button
               onClick={handleEdit}
-              className="w-full sm:w-1/2 bg-[#932A83] text-white py-2 rounded-md hover:bg-[#781e6a] font-bold"
+              className="w-full sm:w-1/2 bg-[#81059e] text-white py-2 rounded-md hover:bg-[#781e6a] font-bold"
             >
               EDITAR
             </button>
             <button
               onClick={handleConfirm}
-              className="w-full sm:w-1/2 bg-[#932A83] text-white py-2 rounded-md hover:bg-[#781e6a] font-bold"
+              className="w-full sm:w-1/2 bg-[#81059e] text-white py-2 rounded-md hover:bg-[#781e6a] font-bold"
             >
               CONFIRMAR
             </button>

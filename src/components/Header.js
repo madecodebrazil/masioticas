@@ -19,7 +19,7 @@ export default function Header() {
             initial="hidden"
             animate="visible"
             variants={containerVariants}
-            className="absolute inset-0 bg-gradient-to-b from-[#932A83] to-[#E437CA] z-0"
+            className="absolute inset-0 bg-gradient-to-b from-[#81059e] to-[#E437CA] z-0"
         />
     );
 }

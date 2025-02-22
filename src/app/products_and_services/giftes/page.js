@@ -42,10 +42,10 @@ export default function ExibirBrindes() {
       <div className="container mx-auto p-4 bg-white rounded-lg shadow">
         {/* Cabeçalho */}
         <div className="flex items-center justify-between pb-4">
-          <div className="text-lg font-bold text-[#932A83]">BRINDES DOS CLIENTES</div>
+          <div className="text-lg font-bold text-[#81059e]">BRINDES DOS CLIENTES</div>
           <button
             onClick={handleAddGift}
-            className="bg-[#932A83] text-white px-4 py-2 rounded-md hover:bg-[#781e6a]"
+            className="bg-[#81059e] text-white px-4 py-2 rounded-md hover:bg-[#781e6a]"
           >
             ADICIONAR BRINDE
           </button>
@@ -58,7 +58,7 @@ export default function ExibirBrindes() {
             placeholder="Busque por SKU ou nome"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full p-2 border border-[#932A83] rounded-l-md focus:outline-none text-black"
+            className="w-full p-2 border border-[#81059e] rounded-l-md focus:outline-none text-black"
           />
         </div>
 
@@ -79,12 +79,12 @@ export default function ExibirBrindes() {
               {filteredGiftes.length > 0 ? (
                 filteredGiftes.map((brinde, index) => (
                   <tr key={index} className="text-black">
-                    <td className="border-t px-4 py-2 border-[#932A83]">{brinde.sku}</td>
-                    <td className="border-t px-4 py-2 border-[#932A83]">{brinde.nomeCliente}</td>
-                    <td className="border-t px-4 py-2 border-[#932A83]">{brinde.produtoComprado}</td>
-                    <td className="border-t px-4 py-2 border-[#932A83]">{brinde.descricaoBrinde}</td>
-                    <td className="border-t px-4 py-2 border-[#932A83]">{brinde.dataBrinde}</td>
-                    <td className="border-t px-4 py-2 border-[#932A83]">{brinde.loja}</td>
+                    <td className="border-t px-4 py-2 border-[#81059e]">{brinde.sku}</td>
+                    <td className="border-t px-4 py-2 border-[#81059e]">{brinde.nomeCliente}</td>
+                    <td className="border-t px-4 py-2 border-[#81059e]">{brinde.produtoComprado}</td>
+                    <td className="border-t px-4 py-2 border-[#81059e]">{brinde.descricaoBrinde}</td>
+                    <td className="border-t px-4 py-2 border-[#81059e]">{brinde.dataBrinde}</td>
+                    <td className="border-t px-4 py-2 border-[#81059e]">{brinde.loja}</td>
                   </tr>
                 ))
               ) : (

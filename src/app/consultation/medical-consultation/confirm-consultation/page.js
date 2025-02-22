@@ -56,54 +56,54 @@ const ConfirmConsultation = () => {
     <Layout>
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="w-full max-w-lg p-8 bg-white rounded-lg shadow-md">
-          <h2 className="text-2xl font-semibold text-[#932A83] mb-6">
+          <h2 className="text-2xl font-semibold text-[#81059e] mb-6">
             CONFIRMAR REGISTRO
           </h2>
 
           <div className="space-y-4">
             <div>
-              <span className="font-bold text-[#932A83]">Nome do Paciente</span>
+              <span className="font-bold text-[#81059e]">Nome do Paciente</span>
               <p className="text-black">{formData.nomePaciente}</p>
             </div>
             <div>
-              <span className="font-bold text-[#932A83]">CPF</span>
+              <span className="font-bold text-[#81059e]">CPF</span>
               <p className="text-black">{formData.cpf}</p>
             </div>
             <div>
-              <span className="font-bold text-[#932A83]">Logradouro</span>
+              <span className="font-bold text-[#81059e]">Logradouro</span>
               <p className="text-black">{formData.logradouro}</p>
             </div>
             <div>
-              <span className="font-bold text-[#932A83]">Bairro</span>
+              <span className="font-bold text-[#81059e]">Bairro</span>
               <p className="text-black">{formData.bairro}</p>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <span className="font-bold text-[#932A83]">Número</span>
+                <span className="font-bold text-[#81059e]">Número</span>
                 <p className="text-black">{formData.numeroCasa}</p>
               </div>
               <div>
-                <span className="font-bold text-[#932A83]">Ametropia</span>
+                <span className="font-bold text-[#81059e]">Ametropia</span>
                 <p className="text-black">{formData.ametropia}</p>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <span className="font-bold text-[#932A83]">Data</span>
+                <span className="font-bold text-[#81059e]">Data</span>
                 <p className="text-black">{formData.data}</p>
               </div>
               <div>
-                <span className="font-bold text-[#932A83]">Hora</span>
+                <span className="font-bold text-[#81059e]">Hora</span>
                 <p className="text-black">{formData.hora}</p>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <span className="font-bold text-[#932A83]">Clínica</span>
+                <span className="font-bold text-[#81059e]">Clínica</span>
                 <p className="text-black">{formData.clinica}</p>
               </div>
               <div>
-                <span className="font-bold text-[#932A83]">Loja</span>
+                <span className="font-bold text-[#81059e]">Loja</span>
                 <p className="text-black">
                   {formData.loja === "loja2"
                     ? "Óticas Popular 2"
@@ -112,7 +112,7 @@ const ConfirmConsultation = () => {
               </div>
             </div>
             <div>
-              <span className="font-bold text-[#932A83]">
+              <span className="font-bold text-[#81059e]">
                 Valor da Consulta
               </span>
               <p className="text-black">R$ {formData.valorConsulta}</p>
@@ -121,7 +121,7 @@ const ConfirmConsultation = () => {
 
           <div className="mt-6 flex space-x-4">
             <button
-              className="flex-1 px-4 py-2 bg-[#932A83] text-white rounded hover:bg-[#820f76] flex items-center justify-center"
+              className="flex-1 px-4 py-2 bg-[#81059e] text-white rounded hover:bg-[#820f76] flex items-center justify-center"
               onClick={handleEdit}
             >
               <Image
@@ -134,7 +134,7 @@ const ConfirmConsultation = () => {
               EDITAR
             </button>
             <button
-              className="flex-1 px-4 py-2 bg-[#932A83] text-white rounded hover:bg-[#820f76] flex items-center justify-center"
+              className="flex-1 px-4 py-2 bg-[#81059e] text-white rounded hover:bg-[#820f76] flex items-center justify-center"
               onClick={handleConfirm}
               disabled={isSubmitting}
             >

@@ -78,73 +78,74 @@ export default function ProductsPage() {
     ];
 
     return (
-        <div className="relative min-h-screen bg-[#932A83]">
+        <div className="relative min-h-screen bg-[#81059e]">
             <div className="flex flex-col lg:flex-row relative min-h-screen">
                 {/* Sidebar para telas grandes */}
                 <div className="hidden lg:block w-64 z-10">
                     <Sidebar /> {/* Instanciando o componente Sidebar em telas grandes */}
                 </div>
 
-                <MobileNavSidebar 
-            userPhotoURL={userPhotoURL} 
-            userData={userData}  // Certifique-se de passar o userData aqui
-            handleLogout={() => router.push("/login")}  // Função de logout que redireciona para a página de login
-        /> {/* Instanciando o MobileNavSidebar em telas pequenas */}
+                <MobileNavSidebar
+                    userPhotoURL={userPhotoURL}
+                    userData={userData}  // Certifique-se de passar o userData aqui
+                    handleLogout={() => router.push("/login")}  // Função de logout que redireciona para a página de login
+                /> {/* Instanciando o MobileNavSidebar em telas pequenas */}
 
                 {/* Main Content */}
-                    <div className="absolute top-4 right-4 z-30 hidden lg:block">
-                        <Image
-                            src={userPhotoURL}
-                            alt="User Avatar"
-                            width={80} // Largura da imagem
-                            height={80} // Altura da imagem
-                            className="rounded-full object-cover border-2 border-white shadow-md"
-                        />
-                    </div>
-                <main className="bg-white rounded-[25px] p-4 lg:p-6 w-full max-w-6xl mx-auto relative z-20 min-h-[400px] mt-8 mb-8">
+                <div className="absolute top-2 right-8 z-30 hidden lg:block">
+                    <Image
+                        src={userPhotoURL}
+                        alt="User Avatar"
+                        width={60} // Largura da imagem
+                        height={60} // Altura da imagem
+                        className="rounded-full object-cover border-4 border-purple-200 shadow-md bg-white"
+                    />
+                </div>
+                <main className="bg-white rounded-[25px] p-4 lg:p-6 w-full max-w-5xl mx-auto relative z-20 m-10 ml-0 md:ml-14 mt-20">
                     {/* Container para a foto do usuário - visível apenas em telas grandes */}
 
                     <div className="w-full">
-                       
-                        {/* Cards de Produtos com imagem de fundo opaca e animações */}
-                        <div className="grid grid-cols-2 gap-4 md:grid-cols-4 mb-20">
-                        {productsItems.map((item, index) => (
-    <Link key={index} href={item.route}>
-        <motion.div
-            className="relative flex justify-start items-center bg-gradient-to-r from-[#932A83] to-[#B7328C] text-white w-full h-[100px] rounded-xl transition-transform transform hover:scale-110 hover:shadow-2xl hover:brightness-110 cursor-pointer px-6 overflow-hidden"
-            style={{
-                boxShadow: '0px 10px 25px rgba(0, 0, 0, 0.5)',
-            }}
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5, delay: index * 0.1 }}
-        >
-            {/* Imagem de fundo sutil */}
-            <div
-                className="absolute inset-0 opacity-10 pointer-events-none"
-                style={{
-                    backgroundImage: `url('/images/fundo.png')`, // Substitua pelo caminho correto da imagem
-                    backgroundSize: 'cover',
-                    backgroundRepeat: 'no-repeat',
-                    backgroundPosition: 'center',
-                }}
-            ></div>
 
-            <div className="relative z-10 flex flex-row justify-start items-center w-full h-full">
-                <Image
-                    src={item.icon}
-                    alt={item.label}
-                    width={50}
-                    height={50}
-                    className="object-contain mr-4" // Adiciona margem à direita do ícone
-                />
-                <span className="text-white font-bold text-lg text-left flex-grow">
-                    {item.label}
-                </span>
-            </div>
-        </motion.div>
-    </Link>
-))}
+                        {/* Cards de Produtos com imagem de fundo opaca e animações */}
+                        <div className="grid items-center grid-cols-2 gap-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-2">
+                            {productsItems.map((item, index) => (
+                                <Link key={index} href={item.route}>
+                                    <motion.div
+                                        className="relative flex justify-center items-center text-white w-full h-[100px] sm:h-[90px] rounded-md transition-transform transform hover:scale-110 hover:shadow-2xl hover:brightness-110 cursor-pointer px-6 overflow-hidden"
+                                        style={{
+                                            background: 'linear-gradient(to right, #9a5fc7, #9a5fc7)',
+                                            boxShadow: '0px 10px 20px rgba(0, 0, 0, 0.5)',
+                                        }}
+                                        initial={{ opacity: 0, scale: 0.9 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        transition={{ duration: 0.5, delay: index * 0.1 }}
+                                    >
+                                        {/* Imagem de fundo sutil */}
+                                        <div
+                                            className="absolute inset-0 opacity-10 pointer-events-none"
+                                            style={{
+                                                backgroundImage: `url('/images/fundo.png')`, // Substitua pelo caminho correto da imagem
+                                                backgroundSize: 'cover',
+                                                backgroundRepeat: 'no-repeat',
+                                                backgroundPosition: 'center',
+                                            }}
+                                        ></div>
+
+                                        <div className="relative z-10 flex flex-row justify-start items-center w-full h-full">
+                                            <Image
+                                                src={item.icon}
+                                                alt={item.label}
+                                                width={50}
+                                                height={50}
+                                                className="object-contain mr-4" // Adiciona margem à direita do ícone
+                                            />
+                                            <span className="text-white font-bold text-lg text-left flex-grow">
+                                                {item.label}
+                                            </span>
+                                        </div>
+                                    </motion.div>
+                                </Link>
+                            ))}
 
                             {<BottomMobileNav />}
                         </div>
@@ -152,6 +153,6 @@ export default function ProductsPage() {
                 </main>
             </div>
         </div>
-        
+
     );
 }

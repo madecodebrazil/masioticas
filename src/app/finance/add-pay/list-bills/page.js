@@ -188,16 +188,16 @@ export default function ListaContas() {
 
   return (
     <Layout>
-      <div className="flex h-full p-8 justify-center items-center flex-col">
-        <div className="flex-1 w-full max-w-6xl bg-[#F7F7F9] rounded-lg p-8 shadow-lg">
-          <h2 className="text-3xl font-semibold text-[#932A83] mb-6">Contas a Pagar</h2>
+      <div className="min-h-screen p-2">
+        <div className="w-full max-w-5xl mx-auto rounded-lg">
+          <h2 className="text-3xl font-bold text-[#81059e] mb-6">PAGAMENTOS PENDENTES</h2>
 
           {/* Barra de busca e filtro de loja */}
           <div className="flex justify-between items-center mb-6 space-x-4">
             <input
               type="text"
               placeholder="Busque por código ou título"
-              className="p-3 flex-grow border border-[#932A83] rounded-lg text-black"
+              className="p-3 flex-grow border-2 border-[#81059e] rounded-lg text-black"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -206,7 +206,7 @@ export default function ListaContas() {
             <select
               value={selectedLoja}
               onChange={(e) => setSelectedLoja(e.target.value)}
-              className="p-3 border border-[#932A83] rounded-lg text-black"
+              className="p-3 border-2 border-[#81059e] rounded-lg text-black"
             >
               <option value="Ambas">Ambas</option>
               <option value="loja1">Loja 1</option>
@@ -214,7 +214,7 @@ export default function ListaContas() {
             </select>
 
             <Link href="/finance/add-pay">
-              <button className="bg-[#932A83] text-white py-2 px-6 rounded-md">
+              <button className="bg-[#81059e] text-white py-2 px-6 rounded-md">
                 Adicionar
               </button>
             </Link>
@@ -232,7 +232,7 @@ export default function ListaContas() {
               ) : (
                 <table className="min-w-full table-auto">
                   <thead>
-                    <tr className="bg-[#932A83] text-white">
+                    <tr className="bg-[#81059e] text-white">
                       <th className="px-4 py-2">Código</th>
                       <th className="px-4 py-2">Nome</th>
                       <th className="px-4 py-2">Valor</th>
@@ -272,7 +272,7 @@ export default function ListaContas() {
           {isModalOpen && selectedConta && (
             <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
               <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md relative text-black">
-                <h3 className="text-xl font-bold text-[#932A83] mb-4">
+                <h3 className="text-xl font-bold text-[#81059e] mb-4">
                   Detalhes da Conta
                 </h3>
                 <p>
@@ -303,7 +303,7 @@ export default function ListaContas() {
 
                 {/* Seção para quitar o pagamento */}
                 <div className="mt-6">
-                  <label className="block text-[#932A83] mb-2">
+                  <label className="block text-[#81059e] mb-2">
                     Forma de Pagamento
                   </label>
                   <select
@@ -329,7 +329,7 @@ export default function ListaContas() {
                 <div className="flex justify-around mt-6">
                   <button
                     onClick={generatePDF}
-                    className="bg-[#932A83] text-white px-4 py-2 rounded-md flex items-center"
+                    className="bg-[#81059e] text-white px-4 py-2 rounded-md flex items-center"
                   >
                     <img
                       src="/images/pdf.png"
@@ -340,7 +340,7 @@ export default function ListaContas() {
                   </button>
                   <button
                     onClick={handlePrint}
-                    className="bg-[#932A83] text-white px-4 py-2 rounded-md flex items-center"
+                    className="bg-[#81059e] text-white px-4 py-2 rounded-md flex items-center"
                   >
                     <img
                       src="/images/print.png"

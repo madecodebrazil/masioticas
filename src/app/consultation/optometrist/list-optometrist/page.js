@@ -58,7 +58,7 @@ const ListOptometrist = () => {
     <Layout>
       <div className="min-h-screen flex flex-col bg-gray-50">
         <div className="flex justify-between items-center p-4">
-          <h2 className="text-2xl font-semibold text-[#932A83]">OPTOMETRISTAS REGISTRADOS</h2>
+          <h2 className="text-2xl font-semibold text-[#81059e]">OPTOMETRISTAS REGISTRADOS</h2>
 
           {/* Campo de busca */}
           <div className="flex items-center space-x-4">
@@ -67,10 +67,10 @@ const ListOptometrist = () => {
               placeholder="Busque por nome ou registro"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="border rounded-lg px-4 py-2 border-[#932A83] focus:ring-2 focus:ring-[#932A83] text-black"
+              className="border rounded-lg px-4 py-2 border-[#81059e] focus:ring-2 focus:ring-[#81059e] text-black"
             />
             <button
-              className="bg-[#932A83] text-white px-4 py-2 rounded hover:bg-[#820f76]"
+              className="bg-[#81059e] text-white px-4 py-2 rounded hover:bg-[#820f76]"
               onClick={() => {
                 router.push('/consultation/optometrist');
               }}
@@ -87,7 +87,7 @@ const ListOptometrist = () => {
           ) : (
             <table className="min-w-full bg-white rounded-lg">
               <thead>
-                <tr className="bg-[#932A83] text-white">
+                <tr className="bg-[#81059e] text-white">
                   <th className="py-2 px-4 text-left">Registro</th>
                   <th className="py-2 px-4 text-left">Optometrista</th>
                   <th className="py-2 px-4 text-left">Gênero</th>

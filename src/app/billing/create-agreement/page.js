@@ -1,25 +1,23 @@
 "use client";
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import { collection, getDocs, setDoc, doc } from "firebase/firestore"; 
+import { collection, getDocs, setDoc, doc } from "firebase/firestore";
 import { firestore } from '../../../lib/firebaseConfig';
-import Sidebar from '@/components/Sidebar'; 
+import Sidebar from '@/components/Sidebar';
+import Layout from '@/components/Layout';
 
 export default function LentesPage() {
     return (
-        <div className="flex w-full min-h-screen">
-            <div className="hidden lg:block w-16">
-                <Sidebar />
-            </div>
 
-            <div className="flex-1 flex flex-col bg-gray-100 min-h-screen">
-                <div className="bg-[#932A83] flex-1 flex items-center justify-center p-4 md:p-8">
-                    <div className="z-50 bg-white w-full sm:w-[90%] md:w-[90%] lg:w-[60%] flex items-center justify-center p-4 sm:p-8 rounded-3xl shadow-lg border border-gray-300">
-                        <LensesForm />
-                    </div>
+        <Layout>
+            <div className="flex">
+                <Sidebar />
+                <div className="flex-1 p-8">
+                    <LensesForm />
                 </div>
             </div>
-        </div>
+        </Layout>
+
     );
 }
 
@@ -123,32 +121,32 @@ function LensesForm() {
         e.preventDefault();
         setIsLoading(true);
         console.log("Formulário enviado. Dados:", formData);
-    
+
         try {
             // Extrair a data e hora do formulário
             const { data, hora } = formData;
-    
+
             // Separar os componentes da data
             const [year, month, day] = data.split('-').map(Number);
             // Separar os componentes da hora
             const [hours, minutes] = hora.split(':').map(Number);
-    
+
             // Criar o timestamp correto usando Date.UTC
             const combinedDateTime = new Date(Date.UTC(year, month - 1, day, hours, minutes));
-    
+
             // Verificar se o valor do timestamp é válido
             if (isNaN(combinedDateTime.getTime())) {
                 throw new Error('Data ou hora inválida.');
             }
-    
+
             // Preparar os dados do formulário, incluindo o timestamp da data/hora combinada
             const agreementData = {
                 ...formData,
                 data: combinedDateTime, // Salvar o timestamp no campo 'data'
             };
-    
+
             console.log("Dados do acordo com timestamp:", agreementData);
-    
+
             // Definir as referências das coleções com base na loja selecionada
             let docRef;
             if (formData.loja === "Óticas Popular 1") {
@@ -156,43 +154,43 @@ function LensesForm() {
             } else if (formData.loja === "Óticas Popular 2") {
                 docRef = doc(collection(firestore, 'loja2', 'agreements', 'acordos'));
             }
-    
+
             // Salvar o acordo na coleção correta
             await setDoc(docRef, agreementData);
-    
+
             console.log("Acordo registrado com sucesso na loja:", formData.loja);
-    
+
             setShowSuccessPopup(true);
             setIsLoading(false);
-    
+
             setTimeout(() => {
                 setShowSuccessPopup(false);
                 router.push('/homepage');
             }, 2500);
-    
+
         } catch (error) {
             console.error('Erro ao enviar os dados de acordos:', error);
             setIsLoading(false);
         }
     };
-    
-    
-    
+
+
+
 
     return (
         <form onSubmit={handleSubmit} className="text-[#800080] w-full space-y-6">
-            <h1 className="text-[#932A83] text-2xl font-bold mb-6 text-center">FAZER UM ACORDO</h1>
+            <h1 className="text-[#81059e] text-2xl font-bold mb-6 text-center">FAZER UM ACORDO</h1>
 
             <div className="grid grid-cols-2 gap-4">
                 <div className="flex flex-col relative">
-                    <label className="block text-sm font-bold mb-2 text-[#932A83]">Nome do Cliente *</label>
+                    <label className="block text-sm font-bold mb-2 text-[#81059e]">Nome do Cliente *</label>
                     <input
                         type="text"
                         name="pessoa"
                         value={formData.pessoa}
                         onChange={handleChange}
                         placeholder="Nome do cliente"
-                        className="border border-[#932A83] rounded w-full py-2 px-3 text-gray-700"
+                        className="border border-[#81059e] rounded w-full py-2 px-3 text-gray-700"
                         required
                     />
                     {userSuggestions.length > 0 && (
@@ -211,62 +209,62 @@ function LensesForm() {
                 </div>
 
                 <div className="flex flex-col">
-                    <label className="block text-sm font-bold mb-2 text-[#932A83]">CPF *</label>
+                    <label className="block text-sm font-bold mb-2 text-[#81059e]">CPF *</label>
                     <input
                         type="text"
                         name="cpf"
                         value={formData.cpf}
                         onChange={handleChange}
                         placeholder="CPF"
-                        className="border border-[#932A83] rounded w-full py-2 px-3 text-gray-700"
+                        className="border border-[#81059e] rounded w-full py-2 px-3 text-gray-700"
                         required
                     />
                 </div>
 
                 <div className="flex flex-col">
-                    <label className="block text-sm font-bold mb-2 text-[#932A83]">Email *</label>
+                    <label className="block text-sm font-bold mb-2 text-[#81059e]">Email *</label>
                     <input
                         type="email"
                         name="email"
                         value={formData.email}
                         onChange={handleChange}
                         placeholder="Email"
-                        className="border border-[#932A83] rounded w-full py-2 px-3 text-gray-700"
+                        className="border border-[#81059e] rounded w-full py-2 px-3 text-gray-700"
                         required
                     />
                 </div>
 
                 <div className="flex flex-col">
-                    <label className="block text-sm font-bold mb-2 text-[#932A83]">Data *</label>
+                    <label className="block text-sm font-bold mb-2 text-[#81059e]">Data *</label>
                     <input
                         type="date"
                         name="data"
                         value={formData.data}
                         onChange={handleChange}
-                        className="border border-[#932A83] rounded w-full py-2 px-3 text-gray-700"
+                        className="border border-[#81059e] rounded w-full py-2 px-3 text-gray-700"
                         required
                     />
                 </div>
 
                 <div className="flex flex-col">
-                    <label className="block text-sm font-bold mb-2 text-[#932A83]">Hora *</label>
+                    <label className="block text-sm font-bold mb-2 text-[#81059e]">Hora *</label>
                     <input
                         type="time"
                         name="hora"
                         value={formData.hora}
                         onChange={handleChange}
-                        className="border border-[#932A83] rounded w-full py-2 px-3 text-gray-700"
+                        className="border border-[#81059e] rounded w-full py-2 px-3 text-gray-700"
                         required
                     />
                 </div>
 
                 <div className="flex flex-col">
-                    <label className="block text-sm font-bold mb-2 text-[#932A83]">Loja *</label>
+                    <label className="block text-sm font-bold mb-2 text-[#81059e]">Loja *</label>
                     <select
                         name="loja"
                         value={formData.loja}
                         onChange={handleChange}
-                        className="border border-[#932A83] rounded w-full py-2 px-3 text-gray-700"
+                        className="border border-[#81059e] rounded w-full py-2 px-3 text-gray-700"
                         required
                     >
                         <option value="Óticas Popular 1">Óticas Popular 1</option>
@@ -275,39 +273,39 @@ function LensesForm() {
                 </div>
 
                 <div className="flex flex-col">
-                    <label className="block text-sm font-bold mb-2 text-[#932A83]">Valor da Dívida *</label>
+                    <label className="block text-sm font-bold mb-2 text-[#81059e]">Valor da Dívida *</label>
                     <input
                         type="text"
                         name="valor"
                         value={formData.valor}
                         onChange={handleChange}
                         placeholder="Valor da dívida"
-                        className="border border-[#932A83] rounded w-full py-2 px-3 text-gray-700"
+                        className="border border-[#81059e] rounded w-full py-2 px-3 text-gray-700"
                         required
                     />
                 </div>
             </div>
 
             <div className="mt-6">
-                <label className="block text-sm font-bold mb-2 text-[#932A83]">Status *</label>
+                <label className="block text-sm font-bold mb-2 text-[#81059e]">Status *</label>
                 <div className="flex space-x-4">
                     <button
                         type="button"
-                        className={`border border-[#932A83] rounded py-2 px-4 ${formData.status === 'Em aberto' ? 'bg-[#932A83] text-white' : 'text-[#932A83] bg-white'}`}
+                        className={`border border-[#81059e] rounded py-2 px-4 ${formData.status === 'Em aberto' ? 'bg-[#81059e] text-white' : 'text-[#81059e] bg-white'}`}
                         onClick={() => handleStatusChange('Em aberto')}
                     >
                         EM ABERTO
                     </button>
                     <button
                         type="button"
-                        className={`border border-[#932A83] rounded py-2 px-4 ${formData.status === 'Advogado' ? 'bg-[#932A83] text-white' : 'text-[#932A83] bg-white'}`}
+                        className={`border border-[#81059e] rounded py-2 px-4 ${formData.status === 'Advogado' ? 'bg-[#81059e] text-white' : 'text-[#81059e] bg-white'}`}
                         onClick={() => handleStatusChange('Advogado')}
                     >
                         ADVOGADO
                     </button>
                     <button
                         type="button"
-                        className={`border border-[#932A83] rounded py-2 px-4 ${formData.status === 'Judicial' ? 'bg-[#932A83] text-white' : 'text-[#932A83] bg-white'}`}
+                        className={`border border-[#81059e] rounded py-2 px-4 ${formData.status === 'Judicial' ? 'bg-[#81059e] text-white' : 'text-[#81059e] bg-white'}`}
                         onClick={() => handleStatusChange('Judicial')}
                     >
                         JUDICIAL
@@ -318,7 +316,7 @@ function LensesForm() {
             <div className="flex justify-center space-x-4 mt-6">
                 <button
                     type="button"
-                    className="bg-[#932A83] text-white py-2 px-4 rounded hover:bg-[#7a1b6b]"
+                    className="bg-[#81059e] text-white py-2 px-4 rounded hover:bg-[#7a1b6b]"
                     onClick={() => setFormData({
                         data: '',
                         hora: '',
@@ -335,7 +333,7 @@ function LensesForm() {
 
                 <button
                     type="submit"
-                    className="bg-[#932A83] text-white py-2 px-4 rounded hover:bg-[#7a1b6b]"
+                    className="bg-[#81059e] text-white py-2 px-4 rounded hover:bg-[#7a1b6b]"
                     disabled={isLoading}
                 >
                     {isLoading ? 'Salvando...' : 'REGISTRAR'}

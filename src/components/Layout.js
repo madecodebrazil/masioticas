@@ -1,66 +1,98 @@
+// components/Layout.js
 "use client";
-import { useEffect, useState } from 'react';
-import { auth } from '@/lib/firebaseConfig';
-import { onAuthStateChanged } from "firebase/auth";
-import { getDoc, doc } from "firebase/firestore";
-import { firestore } from '@/lib/firebaseConfig';
-import Sidebar from '@/components/Sidebar'; 
+
+import { useEffect } from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import { usePathname, useRouter } from 'next/navigation';
+import Sidebar from '@/components/Sidebar';
 import MobileNavSidebar from '@/components/MB_NavSidebar';
-import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 
 const Layout = ({ children }) => {
-    const [userData, setUserData] = useState(null);
-    const [userPhotoURL, setUserPhotoURL] = useState('/default-avatar.png'); // Imagem padrão
-    const [loading, setLoading] = useState(true);
+    const { user, userData, loading, userPermissions, hasAccessToLoja } = useAuth();
     const router = useRouter();
+    const pathname = usePathname();
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                const docRef = doc(firestore, `loja1/users/${user.uid}/dados`);
-                const docSnap = await getDoc(docRef);
-
-                if (docSnap.exists()) {
-                    const userFirestoreData = docSnap.data();
-                    setUserData(userFirestoreData);
-                    setUserPhotoURL(userFirestoreData.imageUrl || '/default-avatar.png');
-                } else {
-                    console.log('Documento não encontrado no Firestore.');
-                }
-            } else {
+        if (!loading) {
+            // Se não estiver logado e não estiver na página de login
+            if (!user && !pathname.includes('/login')) {
                 router.push('/login');
+                return;
             }
 
-            setLoading(false); // Desativa o carregamento após a verificação
-        });
+            // Se estiver logado
+            if (user && userPermissions) {
+                // Verifica se é admin tentando acessar registro de usuários
+                if (pathname.includes('/login_register') && !userPermissions.isAdmin) {
+                    router.push('/acesso-negado');
+                    return;
+                }
 
-        return () => unsubscribe();
-    }, [router]);
+                // Verifica acesso às lojas
+                if (pathname.includes('/loja1') && !hasAccessToLoja('loja1')) {
+                    router.push('/acesso-negado');
+                    return;
+                }
+
+                if (pathname.includes('/loja2') && !hasAccessToLoja('loja2')) {
+                    router.push('/acesso-negado');
+                    return;
+                }
+            }
+        }
+    }, [loading, user, pathname, userPermissions, hasAccessToLoja, router]);
 
     if (loading) {
-        return <div>Carregando...</div>;
+        return (
+            <div className="flex justify-center items-center h-screen">
+                <p>Carregando...</p>
+            </div>
+        );
     }
 
     return (
         <>
-        <head>
-        <link rel="icon" type="image/x-icon" href="/favicon.ico" />
-        </head>
-        <div className=" flex flex-col w-full min-h-screen bg-[#932A83]"> {/* Fundo roxo aplicado */}
-            {/* Sidebar para telas grandes */}
-            <div className="hidden lg:block w-16">
-                <Sidebar />
-            </div>
+            <head>
+                <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+            </head>
+            <div className={`${
+                'lg:fixed lg:inset-0 lg:bg-[#81059e] lg:overflow-hidden'
+                } min-h-screen`}>
+                <div className="flex flex-col lg:flex-row h-full">
+                    <div className="hidden lg:block w-64 flex-shrink-0 z-10">
+                        <Sidebar userPermissions={userPermissions} />
+                    </div>
 
-            <div className="flex-1 flex flex-col bg-[#932A83] min-h-screen"> {/* Cor de fundo roxa */}
-                <MobileNavSidebar userPhotoURL={userPhotoURL} userData={userData} />
-                <div className="flex-1 flex items-center justify-center p-4 md:p-8">
-                    <div className=" lg:ml-64 z-30 justify-center bg-[#F0F4FD] w-full sm:w-[90%] sm:ml-0 md:ml-0 md:w-[90%] lg:w-[80%] lg:h-[100%] p-4 sm:p-8 rounded-3xl shadow-lg border border-gray-300bg-yellow-300 ">
-                        {children}
+                    <div className="lg:hidden flex-shrink-0 bg-[#81059e]">
+                        <MobileNavSidebar
+                            userPhotoURL={userData?.imageUrl || '/images/default-avatar.png'}
+                            userData={userData}
+                            userPermissions={userPermissions}
+                        />
+                    </div>
+
+                    <div className="absolute top-2 right-8 z-30 hidden lg:block">
+                        <Image
+                            src={userData?.imageUrl || '/images/default-avatar.png'}
+                            alt="User Avatar"
+                            width={60}
+                            height={60}
+                            className="rounded-full object-cover border-2 border-purple-400 shadow-md bg-white"
+                        />
+                    </div>
+
+                    <div className="flex-1 relative">
+                        <main className={`
+                            lg:absolute lg:inset-0 lg:overflow-auto lg:bg-white lg:rounded-[25px] 
+                            lg:p-6 lg:m-10 lg:ml-14 lg:mt-20 overflow-y-auto custom-scroll
+                            p-4 bg-white min-h-screen pb-10
+                        `}>
+                            {children}
+                        </main>
                     </div>
                 </div>
             </div>
-        </div>
         </>
     );
 };

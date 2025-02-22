@@ -127,11 +127,11 @@ export default function CreateCashier() {
   return (
     <Layout>
       <div className="p-8">
-        <h2 className="text-2xl font-bold text-[#932A8387] mb-4">ABERTURA DE CAIXA</h2>
+        <h2 className="text-2xl font-bold text-[#81059e87] mb-4">ABERTURA DE CAIXA</h2>
         {errorMessage && <p className="text-red-500 mb-4">{errorMessage}</p>} {/* Exibe mensagem de erro */}
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
-            <label className="block text-[#932A8387] mb-2">Observações</label>
+            <label className="block text-[#81059e87] mb-2">Observações</label>
             <input
               type="text"
               value={observations}
@@ -141,7 +141,7 @@ export default function CreateCashier() {
           </div>
           <div className="mb-4 flex space-x-4"> {/* Alinha os campos "Loja" e "Colaborador" lado a lado */}
             <div className="w-1/2">
-              <label className="block text-[#932A8387] mb-2">Loja</label>
+              <label className="block text-[#81059e87] mb-2">Loja</label>
               <select
                 value={loja}
                 onChange={(e) => setLoja(e.target.value)}
@@ -153,7 +153,7 @@ export default function CreateCashier() {
               </select>
             </div>
             <div className="w-1/2">
-              <label className="block text-[#932A8387] mb-2">Colaborador</label>
+              <label className="block text-[#81059e87] mb-2">Colaborador</label>
               <select
                 value={colaborador}
                 onChange={(e) => setColaborador(e.target.value)}
@@ -170,7 +170,7 @@ export default function CreateCashier() {
           </div>
           <div className="mb-4 flex space-x-4"> {/* Alinha os campos "Data" e "Hora" lado a lado */}
             <div className="w-1/2">
-              <label className="block text-[#932A8387] mb-2">Data</label>
+              <label className="block text-[#81059e87] mb-2">Data</label>
               <input
                 type="text"
                 value={date}
@@ -179,7 +179,7 @@ export default function CreateCashier() {
               />
             </div>
             <div className="w-1/2">
-              <label className="block text-[#932A8387] mb-2">Hora</label>
+              <label className="block text-[#81059e87] mb-2">Hora</label>
               <input
                 type="text"
                 value={time}
@@ -188,7 +188,7 @@ export default function CreateCashier() {
               />
             </div>
           </div>
-          <h2 className='text-[#932A8387] font-bold mb-2'>INSIRA O SALDO INICIAL DO CAIXA</h2>
+          <h2 className='text-[#81059e87] font-bold mb-2'>INSIRA O SALDO INICIAL DO CAIXA</h2>
           <div className="mb-4 flex items-center">
             <input
               type="number"
@@ -198,7 +198,7 @@ export default function CreateCashier() {
               placeholder="R$"
               required
             />
-            <button type="submit" className={`bg-[#932A83] text-white px-4 py-2 rounded-lg hover:bg-[#932A8387] ml-2 ${caixaExists ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={caixaExists}>
+            <button type="submit" className={`bg-[#81059e] text-white px-4 py-2 rounded-lg hover:bg-[#81059e87] ml-2 ${caixaExists ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={caixaExists}>
               ABRIR CAIXA
             </button>
           </div>

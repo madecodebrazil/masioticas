@@ -67,12 +67,12 @@ export default function GarantiaDosClientes() {
       <div className="container mx-auto p-4 bg-white rounded-lg shadow">
         {/* Cabeçalho */}
         <div className="flex flex-col md:flex-row items-center justify-between pb-4">
-          <div className="text-lg font-bold text-[#932A83] mb-4 md:mb-0">
+          <div className="text-lg font-bold text-[#81059e] mb-4 md:mb-0">
             GARANTIA DOS CLIENTES
           </div>
           <button
             onClick={handleAddWarranty}
-            className="bg-[#932A83] text-white px-4 py-2 rounded-md hover:bg-[#781e6a]"
+            className="bg-[#81059e] text-white px-4 py-2 rounded-md hover:bg-[#781e6a]"
           >
             ADICIONAR
           </button>
@@ -85,7 +85,7 @@ export default function GarantiaDosClientes() {
             placeholder="Busque por código ou nome"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full md:w-1/2 p-2 border border-[#932A83] rounded-md focus:outline-none text-black"
+            className="w-full md:w-1/2 p-2 border border-[#81059e] rounded-md focus:outline-none text-black"
           />
         </div>
 
@@ -107,25 +107,25 @@ export default function GarantiaDosClientes() {
               {filteredWarranties.length > 0 ? (
                 filteredWarranties.map((warranty, index) => (
                   <tr key={index} className="text-black">
-                    <td className="border-t px-4 py-2 border-[#932A83]">
+                    <td className="border-t px-4 py-2 border-[#81059e]">
                       {warranty.ncm}
                     </td>
-                    <td className="border-t px-4 py-2 border-[#932A83]">
+                    <td className="border-t px-4 py-2 border-[#81059e]">
                       {warranty.nomeCliente}
                     </td>
-                    <td className="border-t px-4 py-2 border-[#932A83]">
+                    <td className="border-t px-4 py-2 border-[#81059e]">
                       {warranty.produto}
                     </td>
-                    <td className="border-t px-4 py-2 border-[#932A83]">
+                    <td className="border-t px-4 py-2 border-[#81059e]">
                       {formatDate(warranty.dataVencimento)}
                     </td>
-                    <td className="border-t px-4 py-2 border-[#932A83]">
+                    <td className="border-t px-4 py-2 border-[#81059e]">
                       {formatTime(warranty.horaGarantia)}
                     </td>
-                    <td className="border-t px-4 py-2 border-[#932A83]">
+                    <td className="border-t px-4 py-2 border-[#81059e]">
                       {warranty.descricao}
                     </td>
-                    <td className="border-t px-4 py-2 border-[#932A83]">
+                    <td className="border-t px-4 py-2 border-[#81059e]">
                       {warranty.loja}
                     </td>
                   </tr>

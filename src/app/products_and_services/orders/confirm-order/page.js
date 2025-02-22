@@ -6,7 +6,7 @@ import { getFirestore, doc, setDoc } from "firebase/firestore"; // Importando Fi
 import { app } from '../../../../lib/firebaseConfig'; // Importando a configuração do Firebase App
 import { Suspense, useState } from 'react'; // Usando o useState para gerenciar o estado de carregamento e sucesso
 
-export  function ConfirmOrder() {
+export function ConfirmOrder() {
   const router = useRouter();
   const searchParams = useSearchParams(); // Captura dos parâmetros da URL
   const firestore = getFirestore(app); // Instanciando o Firestore a partir da configuração do app
@@ -19,7 +19,7 @@ export  function ConfirmOrder() {
   const handleEdit = () => {
     // Converte os dados de formData para query string
     const queryString = new URLSearchParams(formData).toString();
-    
+
     // Redireciona para a página anterior com os dados preenchidos na URL
     router.push(`/products_and_services/orders?${queryString}`);
   };
@@ -34,7 +34,7 @@ export  function ConfirmOrder() {
     // Salvar os dados no Firestore
     try {
       await setDoc(doc(firestore, "pedidos", pedidoId), formData);
-      
+
       // Mostrar popup de sucesso após salvar
       setSuccess(true);
 
@@ -55,12 +55,12 @@ export  function ConfirmOrder() {
   return (
     <Layout>
       <div className="max-w-3xl mx-auto bg-white shadow-md rounded-lg p-6">
-        <h2 className="text-2xl text-center text-[#932A83] mb-6">CONFIRMAR ORDEM DE SERVIÇO</h2>
+        <h2 className="text-2xl text-center text-[#81059e] mb-6">CONFIRMAR ORDEM DE SERVIÇO</h2>
 
         {/* Exibir spinner durante o carregamento */}
         {loading && (
           <div className="flex justify-center items-center">
-            <div className="loader border-t-4 border-b-4 border-[#932A83] rounded-full w-12 h-12 animate-spin"></div>
+            <div className="loader border-t-4 border-b-4 border-[#81059e] rounded-full w-12 h-12 animate-spin"></div>
           </div>
         )}
 
@@ -70,7 +70,7 @@ export  function ConfirmOrder() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {Object.keys(formData).map((key) => (
                 <div key={key}>
-                  <label className="block text-[#932A83] font-bold mb-1">{key.charAt(0).toUpperCase() + key.slice(1)}</label>
+                  <label className="block text-[#81059e] font-bold mb-1">{key.charAt(0).toUpperCase() + key.slice(1)}</label>
                   <p className="w-full px-3 py-2 text-black bg-transparent">
                     {formData[key]}
                   </p>
@@ -79,15 +79,15 @@ export  function ConfirmOrder() {
             </div>
 
             <div className="mt-6 flex justify-between">
-              <button 
-                onClick={handleEdit} 
+              <button
+                onClick={handleEdit}
                 className="bg-gray-500 text-white px-6 py-2 rounded-md hover:bg-gray-600"
               >
                 Editar
               </button>
-              <button 
-                onClick={handleSave} 
-                className="bg-[#932A83] text-white px-6 py-2 rounded-md hover:bg-[#932A83]/90"
+              <button
+                onClick={handleSave}
+                className="bg-[#81059e] text-white px-6 py-2 rounded-md hover:bg-[#81059e]/90"
               >
                 Confirmar e Salvar
               </button>
@@ -99,7 +99,7 @@ export  function ConfirmOrder() {
         {success && (
           <div className="fixed top-0 left-0 w-full h-full flex justify-center items-center bg-black bg-opacity-50">
             <div className="bg-white p-6 rounded-lg shadow-lg">
-              <h2 className="text-lg text-[#932A83]">Pedido salvo com sucesso!</h2>
+              <h2 className="text-lg text-[#81059e]">Pedido salvo com sucesso!</h2>
             </div>
           </div>
         )}
@@ -109,7 +109,7 @@ export  function ConfirmOrder() {
       <style jsx>{`
         .loader {
           border: 4px solid #f3f3f3; /* Light grey */
-          border-top: 4px solid #932A83; /* Purple */
+          border-top: 4px solid #81059e; /* Purple */
           border-radius: 50%;
           width: 36px;
           height: 36px;

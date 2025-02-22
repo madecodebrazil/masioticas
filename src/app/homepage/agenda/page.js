@@ -14,7 +14,7 @@ export default function Agenda() {
   const [year, setYear] = useState(new Date().getFullYear()); // Ano atual
   const [userPhotoURL, setUserPhotoURL] = useState("/images/default-avatar.png"); // Foto do usuário logado
   const [userData, setUserData] = useState({ name: '', level_perm: 'user' }); // Dados do usuário logado
-  const [color, setColor] = useState("#932A83"); // Cor do ponto que vai aparecer no calendário
+  const [color, setColor] = useState("#81059e"); // Cor do ponto que vai aparecer no calendário
   const [editIndex, setEditIndex] = useState(null); // Índice da nota a ser editada
 
   // Função para buscar a foto e os dados do usuário logado
@@ -70,7 +70,7 @@ export default function Agenda() {
     const existingNotes = notes[selectedDate] || [];
     if (editIndex !== null) {
       // Se estamos editando, atualizamos a nota existente
-      existingNotes[editIndex] = noteData; 
+      existingNotes[editIndex] = noteData;
     } else {
       // Caso contrário, adicionamos uma nova nota
       existingNotes.push(noteData);
@@ -80,7 +80,7 @@ export default function Agenda() {
       notes: existingNotes, // Adiciona nova nota ao array
     });
     setNote(""); // Limpar o campo de input após salvar
-    setColor("#932A83"); // Resetar a cor após salvar
+    setColor("#81059e"); // Resetar a cor após salvar
     setEditIndex(null); // Resetar o índice de edição
     fetchNotes(); // Atualizar as anotações salvas
   };
@@ -150,13 +150,13 @@ export default function Agenda() {
     <div className="flex flex-row min-h-screen bg-white">
       {/* Sidebar para telas maiores (desktop) */}
       <div>
-        <SidebarHomepage 
-          userPhotoURL={userPhotoURL} 
-          userData={userData} 
-          currentPage="agenda" 
+        <SidebarHomepage
+          userPhotoURL={userPhotoURL}
+          userData={userData}
+          currentPage="agenda"
         />
       </div>
-      
+
       {/* MobileNavSidebar no topo para mobile */}
       <div className="block lg:hidden fixed top-0 left-0 w-full z-10">
         <MobileNavSidebar
@@ -169,17 +169,17 @@ export default function Agenda() {
       <div className="flex flex-1 flex-col p-8 mt-16 lg:mt-0">
         {/* Cabeçalho com navegação do mês */}
         <div className="flex justify-between items-center mb-4">
-          <button onClick={() => changeMonth(-1)} className="text-[#932A83]">&lt;</button>
-          <h1 className="text-xl font-bold text-[#932A83]">
+          <button onClick={() => changeMonth(-1)} className="text-[#81059e]">&lt;</button>
+          <h1 className="text-xl font-bold text-[#81059e]">
             {new Date(year, month).toLocaleString('pt-BR', { month: 'long' })} {year}
           </h1>
-          <button onClick={() => changeMonth(1)} className="text-[#932A83]">&gt;</button>
+          <button onClick={() => changeMonth(1)} className="text-[#81059e]">&gt;</button>
         </div>
 
         {/* Calendário */}
         <div className="grid grid-cols-7 gap-2 text-center font-semibold">
           {['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB'].map((day) => (
-            <div key={day} className="text-[#932A83]">{day}</div>
+            <div key={day} className="text-[#81059e]">{day}</div>
           ))}
         </div>
         <div className="grid grid-cols-7 gap-2 mt-2">
@@ -193,9 +193,8 @@ export default function Agenda() {
               <div
                 key={day}
                 onClick={() => setSelectedDate(dateKey)}
-                className={`border p-1 cursor-pointer relative ${
-                  selectedDate === dateKey ? "bg-[#932A83] text-white" : "text-[#932A83] bg-white border-[#932A83]"
-                }`}
+                className={`border p-1 cursor-pointer relative ${selectedDate === dateKey ? "bg-[#81059e] text-white" : "text-[#81059e] bg-white border-[#81059e]"
+                  }`}
                 style={{ minHeight: '60px' }} // Ajuste conforme necessário
               >
                 <div className="absolute top-1 left-1 text-sm">{day}</div>
@@ -207,7 +206,7 @@ export default function Agenda() {
                       <span
                         key={index}
                         className="w-4 h-4 rounded-full cursor-pointer mr-1 mb-1"
-                        style={{ backgroundColor: noteData.color || "#932A83" }}
+                        style={{ backgroundColor: noteData.color || "#81059e" }}
                         onClick={(e) => {
                           e.stopPropagation(); // Evita que o clique na bolinha selecione a data
                           setSelectedDate(dateKey);
@@ -217,7 +216,7 @@ export default function Agenda() {
                     ))}
                     {/* Exibir "+" se houver mais anotações */}
                     {dayNotes.length > maxDots && (
-                      <span className="text-xs text-[#932A83]">+</span>
+                      <span className="text-xs text-[#81059e]">+</span>
                     )}
                   </div>
                 )}
@@ -229,7 +228,7 @@ export default function Agenda() {
         {/* Campo para adicionar anotações */}
         {selectedDate && (
           <>
-            <h2 className="mt-4 text-[#932A83] font-bold">Anotações para {selectedDate}</h2>
+            <h2 className="mt-4 text-[#81059e] font-bold">Anotações para {selectedDate}</h2>
             <textarea
               className="border p-2 w-full mt-2 text-black"
               placeholder="Adicionar anotação"
@@ -237,7 +236,7 @@ export default function Agenda() {
               onChange={(e) => setNote(e.target.value)}
             />
             <div className="flex items-center mt-2">
-              <label className="mr-2 text-[#932A83]">Cor do ponto:</label>
+              <label className="mr-2 text-[#81059e]">Cor do ponto:</label>
               <input
                 type="color"
                 value={color}
@@ -246,7 +245,7 @@ export default function Agenda() {
               />
             </div>
             <div className="mt-2 flex space-x-4">
-              <button onClick={saveNote} className="bg-[#932A83] text-white px-4 py-2">
+              <button onClick={saveNote} className="bg-[#81059e] text-white px-4 py-2">
                 Salvar Anotação
               </button>
             </div>
@@ -254,7 +253,7 @@ export default function Agenda() {
             {/* Exibir anotações já salvas */}
             {notes[selectedDate] && (
               <div className="mt-4">
-                <h3 className="text-[#932A83] font-semibold">Anotações salvas:</h3>
+                <h3 className="text-[#81059e] font-semibold">Anotações salvas:</h3>
                 {notes[selectedDate].map((noteData, index) => (
                   <div key={index} className="flex justify-between items-center  p-2 rounded-md mt-2">
                     <div>

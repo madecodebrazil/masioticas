@@ -4,7 +4,7 @@ export const dynamic = "force-dynamic";
 
 import React, { useState, Suspense, useEffect } from "react";
 import Layout from "@/components/Layout";
-import { firestore, db, auth } from "../../../../lib/firebaseConfig";
+import { firestore, auth } from "../../../../lib/firebaseConfig";
 import {
   collection,
   getDocs,
@@ -601,11 +601,11 @@ function NovaVendaContent() {
           ...prevData,
           cpf: rawCPF,
           nome: client.nome,
-          telefone: client.telefone && client.telefone.trim() !== "" 
-  ? client.telefone
-  : (client.telefones && client.telefones.length > 0 
-       ? client.telefones[0] 
-       : "")
+          telefone: client.telefone && client.telefone.trim() !== ""
+            ? client.telefone
+            : (client.telefones && client.telefones.length > 0
+              ? client.telefones[0]
+              : "")
         }));
         setClientFound(true);
 
@@ -694,10 +694,10 @@ function NovaVendaContent() {
         ...prevData,
         [name]:
           name === "valorVenda" ||
-          name === "entrada" ||
-          name === "desconto" ||
-          name === "parcelas" ||
-          name === "pixPaymentAmount"
+            name === "entrada" ||
+            name === "desconto" ||
+            name === "parcelas" ||
+            name === "pixPaymentAmount"
             ? parseFloat(value) || 0
             : value,
       }));
@@ -749,22 +749,18 @@ function NovaVendaContent() {
       if (formData.cardDetails.length > 1) {
         descricao = "Venda parcelada em múltiplos cartões de crédito:\n";
         formData.cardDetails.forEach((card, index) => {
-          descricao += `- Cartão ${index + 1} (${
-            card.bandeira || "N/A"
-          }): R$ ${card.amount.toFixed(2)} em ${
-            card.installments
-          } parcelas.\n`;
+          descricao += `- Cartão ${index + 1} (${card.bandeira || "N/A"
+            }): R$ ${card.amount.toFixed(2)} em ${card.installments
+            } parcelas.\n`;
         });
       } else if (formData.cardDetails.length === 1) {
         const card = formData.cardDetails[0];
         if (paymentCondition === "Parcelado") {
-          descricao = `Venda parcelada no cartão de crédito (${
-            card.bandeira || "N/A"
-          }) em ${installments} vezes.`;
+          descricao = `Venda parcelada no cartão de crédito (${card.bandeira || "N/A"
+            }) em ${installments} vezes.`;
         } else {
-          descricao = `Venda à vista no cartão de crédito (${
-            card.bandeira || "N/A"
-          }).`;
+          descricao = `Venda à vista no cartão de crédito (${card.bandeira || "N/A"
+            }).`;
         }
       } else {
         descricao = "Venda no cartão de crédito.";
@@ -773,15 +769,13 @@ function NovaVendaContent() {
       if (formData.debitCardDetails.length > 1) {
         descricao = "Venda em múltiplos cartões de débito:\n";
         formData.debitCardDetails.forEach((card, index) => {
-          descricao += `- Cartão ${index + 1} (${
-            card.bandeira || "N/A"
-          }): R$ ${card.amount.toFixed(2)}.\n`;
+          descricao += `- Cartão ${index + 1} (${card.bandeira || "N/A"
+            }): R$ ${card.amount.toFixed(2)}.\n`;
         });
       } else if (formData.debitCardDetails.length === 1) {
         const card = formData.debitCardDetails[0];
-        descricao = `Venda no cartão de débito (${
-          card.bandeira || "N/A"
-        }) no valor de R$ ${card.amount.toFixed(2)}.`;
+        descricao = `Venda no cartão de débito (${card.bandeira || "N/A"
+          }) no valor de R$ ${card.amount.toFixed(2)}.`;
       } else {
         descricao = "Venda no cartão de débito.";
       }
@@ -803,7 +797,7 @@ function NovaVendaContent() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (loading) return;
-  
+
     console.log("Iniciando validação do formulário...");
     // 1) CHAMA A FUNÇÃO DE VALIDAÇÃO
     const errors = validateForm(
@@ -827,7 +821,7 @@ function NovaVendaContent() {
     } else {
       setFormErrors({});
     }
-  
+
     // 2) VERIFICA SE O CARRINHO E O CLIENTE ESTÃO OK
     console.log("Verificando cliente e carrinho...");
     if (!clientFound || cartItems.length === 0 || totalValue <= 0) {
@@ -836,9 +830,9 @@ function NovaVendaContent() {
       );
       return;
     }
-  
+
     setLoading(true);
-  
+
     // 3) PEGA DATA DO CAIXA
     let currentDate = new Date();
     let caixaDate = currentDate;
@@ -851,16 +845,16 @@ function NovaVendaContent() {
       .getDate()
       .toString()
       .padStart(2, "0")}-${(caixaDate.getMonth() + 1)
-      .toString()
-      .padStart(2, "0")}-${caixaDate.getFullYear()}`;
-  
+        .toString()
+        .padStart(2, "0")}-${caixaDate.getFullYear()}`;
+
     try {
       console.log("Preparando dados da venda...");
       const desconto = discount;
       const entrada = Number(downPayment) || 0;
       const lojaFirestore = formData.loja === "Loja 1" ? "loja1" : "loja2";
       const descricaoVenda = gerarDescricaoVenda();
-  
+
       // MONTA DADOS DA VENDA
       const saleData = {
         title: `Venda ${formData.cpf}`,
@@ -891,9 +885,9 @@ function NovaVendaContent() {
         useSameCardDetails: useSameCardDetails,
         downPaymentInstallments: downPaymentInstallments,
       };
-  
+
       console.log("Dados da venda montados:", saleData);
-  
+
       // -------------------------------------------------------------------------
       // A) CHECA/ATUALIZA ESTOQUE ANTES DE CRIAR QUAISQUER DOCUMENTOS
       // -------------------------------------------------------------------------
@@ -901,18 +895,18 @@ function NovaVendaContent() {
       await updateStock(cartItems, formData.loja);
       // Se faltar estoque, updateStock deve lançar um erro (throw Error(...)).
       // Assim o fluxo cai no catch e aborta a venda.
-  
+
       // -------------------------------------------------------------------------
       // B) SE O ESTOQUE ESTÁ OK, PROSSEGUIR COM A CRIAÇÃO DOS DOCUMENTOS
       // -------------------------------------------------------------------------
-  
+
       // SE NÃO FOR CREDIÁRIO/BOLETO OU SE TIVER ENTRADA > 0, LANÇA PAGAMENTO À VISTA
       if (
         (paymentMethod !== "Crediário" && paymentMethod !== "Boleto") ||
         entrada > 0
       ) {
         console.log("Processando pagamento à vista...");
-  
+
         // DINHEIRO OU PIX
         if (paymentMethod === "Dinheiro" || paymentMethod === "Pix") {
           const cashflowData = {
@@ -928,7 +922,7 @@ function NovaVendaContent() {
           );
           await addDoc(transactionsRef, cashflowData);
         }
-  
+
         // CARTÃO DE CRÉDITO
         if (paymentMethod === "Cartão de Crédito") {
           const totalCreditCardAmount = formData.cardDetails.reduce(
@@ -955,7 +949,7 @@ function NovaVendaContent() {
             consolidatedCreditCardData
           );
         }
-  
+
         // CARTÃO DE DÉBITO
         if (paymentMethod === "Cartão de Débito") {
           const totalDebitCardAmount = formData.debitCardDetails.reduce(
@@ -982,7 +976,7 @@ function NovaVendaContent() {
           );
         }
       }
-  
+
       // AGENDAR ENTRADA (SE O USUÁRIO ESCOLHEU)
       if (scheduleEntry && scheduledEntryDate) {
         console.log("Agendando entrada...");
@@ -1014,7 +1008,7 @@ function NovaVendaContent() {
         await addDoc(collection(firestore, "crediarios"), entryCrediarioData);
         await handleScheduleEntry();
       }
-  
+
       // SE FOR CREDIÁRIO OU BOLETO, GERA PARCELAS
       let parcelasDetalhadas = [];
       if (paymentMethod === "Crediário" || paymentMethod === "Boleto") {
@@ -1036,10 +1030,10 @@ function NovaVendaContent() {
           await addDoc(collection(firestore, "a_receber"), receivableData);
         }
       }
-  
+
       // Certifique-se de que parcelasDetalhadas é um array
       parcelasDetalhadas = parcelasDetalhadas || [];
-  
+
       // SALVA A VENDA EM "VENDAS"
       console.log("Salvando venda...");
       const vendaRef = await addDoc(collection(firestore, "vendas"), {
@@ -1047,21 +1041,21 @@ function NovaVendaContent() {
         parcelasDetalhadas,
       });
       const saleId = vendaRef.id;
-  
+
       if (saleId) {
         console.log("Venda salva com sucesso, ID:", saleId);
-  
+
         // GERA PDF
         await generatePDF(saleData, saleId, parcelasDetalhadas);
-  
+
         // LIMPA CARRINHO
         const cartRef = doc(firestore, "cart", formData.cpf);
         await deleteDoc(cartRef);
-  
+
         alert("Venda finalizada com sucesso!");
         router.push("/commercial/sales");
       }
-  
+
       // LÓGICA PARA PAGAMENTOS ADICIONAIS (EXEMPLO)
       for (const pay of additionalPayments) {
         if (pay.method === "Cartão de Crédito") {
@@ -1079,7 +1073,7 @@ function NovaVendaContent() {
       setLoading(false);
     }
   };
-  
+
 
   const [endereco, setEndereco] = useState("");
   // ------------------------------------------------------------------------------------------------
@@ -1146,33 +1140,33 @@ function NovaVendaContent() {
 
   const fetchClienteEndereco = async (cpfCliente) => {
     try {
-  
+
       // Obter a referência ao documento no Firestore
       const clienteDocRef = doc(db, "consumers", cpfCliente);
       const clienteDoc = await getDoc(clienteDocRef);
-  
+
       if (!clienteDoc.exists()) {
         return "Endereço do cliente não informado";
       }
-  
+
       const clienteData = clienteDoc.data();
-  
+
       // Montar o endereço
       const logradouro = clienteData.logradouro || "Logradouro não informado";
       const numero = clienteData.numero || "s/n";
       const bairro = clienteData.bairro || "Bairro não informado";
       const cidade = clienteData.cidade || "Cidade não informada";
       const estado = clienteData.estado || "Estado não informado";
-  
+
       const enderecoFormatado = `${logradouro}, ${numero}, ${bairro}, ${cidade}, ${estado}`.trim();
-  
+
       return enderecoFormatado;
     } catch (error) {
       return "Endereço do cliente não informado";
     }
   };
-  
-  
+
+
   const cpfCliente = "12345678912";
   fetchClienteEndereco(cpfCliente).then((enderecoRetornado) => {
     setEndereco(enderecoRetornado);
@@ -1187,7 +1181,7 @@ function NovaVendaContent() {
       unit: "pt", // Se preferir mm, lembre-se de ajustar tudo (margens, colunas etc.).
       format: "a4",
     });
-  
+
     // ----------------------------------------------------------------------------
     // 2) Configurações de layout e variáveis de posição
     // ----------------------------------------------------------------------------
@@ -1196,7 +1190,7 @@ function NovaVendaContent() {
     const bottomMargin = 40;
     let cursorY = marginTop;
     const lineHeight = 14;
-  
+
     // ----------------------------------------------------------------------------
     // 3) Função para verificar e criar nova página se precisar
     // ----------------------------------------------------------------------------
@@ -1207,7 +1201,7 @@ function NovaVendaContent() {
         cursorY = marginTop;
       }
     };
-  
+
     // ----------------------------------------------------------------------------
     // 4) Função para desenhar textos multi-linha
     // ----------------------------------------------------------------------------
@@ -1219,37 +1213,37 @@ function NovaVendaContent() {
         cursorY += customLineHeight;
       });
     };
-  
+
     // ----------------------------------------------------------------------------
     // 5) Seção: Cabeçalho (Ótica Popular)
     // ----------------------------------------------------------------------------
     doc.setFont("helvetica", "bold");
     doc.setFontSize(12);
-  
+
     const pageWidth = doc.internal.pageSize.getWidth();
     const centralText = "Ótica Popular";
     let centralTextWidth = doc.getTextWidth(centralText);
     doc.text(centralText, (pageWidth - centralTextWidth) / 2, cursorY);
     cursorY += lineHeight;
-  
+
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
-  
+
     const infos = [
       "CNPJ: 10.187.550/0001-15",
       "Endereço: Rua Riachuelo, 510, Ed. J Benício, SL-02",
       "Telefone: (86) 99391-2222 / (86) 99595-6868",
     ];
-  
+
     infos.forEach((info) => {
       checkPageEnd(lineHeight);
       const infoWidth = doc.getTextWidth(info);
       doc.text(info, (pageWidth - infoWidth) / 2, cursorY);
       cursorY += lineHeight;
     });
-  
+
     cursorY += 20; // Espaço extra após cabeçalho
-  
+
     // ----------------------------------------------------------------------------
     // 6) Seção: Dados do Cliente
     // ----------------------------------------------------------------------------
@@ -1257,29 +1251,29 @@ function NovaVendaContent() {
     doc.setFont("helvetica", "bold");
     checkPageEnd(lineHeight);
     doc.text("Cliente:", marginLeft, cursorY);
-  
+
     doc.setFont("helvetica", "normal");
     doc.text(`${saleData.nome}`, marginLeft + 45, cursorY);
     cursorY += lineHeight;
-  
+
     // b) CPF
     doc.setFont("helvetica", "bold");
     checkPageEnd(lineHeight);
     doc.text("CPF:", marginLeft, cursorY);
-  
+
     doc.setFont("helvetica", "normal");
     doc.text(`${saleData.cpf}`, marginLeft + 28, cursorY);
     cursorY += lineHeight;
-  
+
     // c) Endereço
     const enderecoCliente = await fetchClienteEndereco(saleData.cpf);
     doc.setFont("helvetica", "bold");
     checkPageEnd(lineHeight);
     doc.text("Endereço:", marginLeft, cursorY);
-  
+
     doc.setFont("helvetica", "normal");
     drawMultiLineText(enderecoCliente, marginLeft + 55, 500);
-  
+
     // d) Telefones
     let telefonesCliente = [];
     if (Array.isArray(saleData.telefonesCliente)) {
@@ -1287,15 +1281,15 @@ function NovaVendaContent() {
     } else if (saleData.telefone) {
       telefonesCliente = [saleData.telefone];
     }
-  
+
     doc.setFont("helvetica", "bold");
     checkPageEnd(lineHeight);
     doc.text("Telefone(s):", marginLeft, cursorY);
-  
+
     doc.setFont("helvetica", "normal");
     doc.text(telefonesCliente.join(" / "), marginLeft + 65, cursorY);
     cursorY += 20;
-  
+
     // ----------------------------------------------------------------------------
     // 7) Seção: Data de Emissão / Número do Documento
     // ----------------------------------------------------------------------------
@@ -1305,24 +1299,24 @@ function NovaVendaContent() {
       hour: "2-digit",
       minute: "2-digit",
     });
-  
+
     doc.setFont("helvetica", "bold");
     checkPageEnd(lineHeight);
     doc.text("Data de Emissão:", marginLeft, cursorY);
-  
+
     doc.setFont("helvetica", "normal");
     doc.text(`${dataEmissao} às ${horaEmissao}`, marginLeft + 85, cursorY);
     cursorY += lineHeight;
-  
+
     const numeroDocumento = saleId || "----";
     doc.setFont("helvetica", "bold");
     checkPageEnd(lineHeight);
     doc.text("Número do Documento:", marginLeft, cursorY);
-  
+
     doc.setFont("helvetica", "normal");
     doc.text(`${numeroDocumento} - Via 1`, marginLeft + 115, cursorY);
     cursorY += 20;
-  
+
     // ----------------------------------------------------------------------------
     // 8) Seção: Tabela de Produtos (autoTable lida com a quebra de página)
     // ----------------------------------------------------------------------------
@@ -1336,7 +1330,7 @@ function NovaVendaContent() {
       const total = `R$ ${(qtd * valorUnit).toFixed(2)}`;
       return [qtd, unidade, codigo, descricao, unitario, total];
     });
-  
+
     doc.setFontSize(10);
     doc.autoTable({
       startY: cursorY,
@@ -1359,16 +1353,16 @@ function NovaVendaContent() {
         cursorY = data.cursor.y + 15;
       },
     });
-  
+
     // Volta a fonte para 10pt, helvetica normal
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
-  
+
     // ----------------------------------------------------------------------------
     // 9) Subtotal, Desconto e Entrada
     // ----------------------------------------------------------------------------
     let finalY = cursorY;
-  
+
     const subtotalSemDesconto = saleData.valorVenda || 0;
     const desconto = saleData.desconto || 0;
     const totalComDesconto = saleData.valorFinal || subtotalSemDesconto;
@@ -1376,18 +1370,18 @@ function NovaVendaContent() {
       saleData.discountType === "%"
         ? `${desconto}%`
         : `R$ ${desconto.toFixed(2)}`;
-  
+
     doc.setFont("helvetica", "bold");
     checkPageEnd(lineHeight);
     doc.text(`Subtotal (sem desconto): R$ ${subtotalSemDesconto.toFixed(2)}`, marginLeft, finalY);
     finalY += lineHeight;
-  
+
     if (desconto > 0) {
       const valorDescontoReais =
         saleData.discountType === "%"
           ? (subtotalSemDesconto * desconto) / 100
           : desconto;
-  
+
       checkPageEnd(lineHeight);
       doc.text(
         `Desconto de ${percentualDesconto}: R$ ${valorDescontoReais.toFixed(2)}`,
@@ -1396,22 +1390,22 @@ function NovaVendaContent() {
       );
       finalY += lineHeight;
     }
-  
+
     if (saleData.entrada && saleData.entrada > 0) {
       checkPageEnd(lineHeight);
       doc.text("Entrada:", marginLeft, finalY);
-  
+
       doc.setFont("helvetica", "normal");
       doc.text(`R$ ${saleData.entrada.toFixed(2)}`, marginLeft + 50, finalY);
       finalY += 20;
-  
+
       doc.setFont("helvetica", "bold");
     }
-  
+
     checkPageEnd(lineHeight);
     doc.text(`Total a Pagar: R$ ${totalComDesconto.toFixed(2)}`, marginLeft, finalY);
     finalY += 20;
-  
+
     // ----------------------------------------------------------------------------
     // 10) Detalhes da Forma de Pagamento
     // ----------------------------------------------------------------------------
@@ -1419,15 +1413,15 @@ function NovaVendaContent() {
     checkPageEnd(lineHeight);
     doc.text("Forma de Pagamento:", marginLeft, finalY);
     finalY += lineHeight;
-  
+
     doc.setFont("helvetica", "normal");
     const metodoPagamento = saleData.formaPagamento || "Não informado";
-  
+
     // ----------------------------------------------------------------------------
     // LÓGICA PRINCIPAL: Verificar o parcelamento
     // ----------------------------------------------------------------------------
     const isParcelado = parcelasDetalhadas && parcelasDetalhadas.length > 1;
-  
+
     if (!isParcelado) {
       // -- Caso seja À VISTA (ou só 1 parcela):
       checkPageEnd(lineHeight);
@@ -1439,18 +1433,18 @@ function NovaVendaContent() {
         finalY
       );
       finalY += lineHeight;
-  
+
       const dataPagamento = saleData.dataPagamento
         ? new Date(saleData.dataPagamento).toLocaleDateString("pt-BR")
         : new Date().toLocaleDateString("pt-BR");
-  
+
       doc.text(`Método: ${metodoPagamento}`, marginLeft + 20, finalY);
       finalY += lineHeight;
       doc.text(`Data: ${dataPagamento}`, marginLeft + 20, finalY);
       finalY += lineHeight;
-  
+
       finalY += 20;
-  
+
       // -------------------------------------------------------------------------
       // 11) Assinatura do Cliente (mesma página, pois não é parcelado)
       // -------------------------------------------------------------------------
@@ -1458,12 +1452,12 @@ function NovaVendaContent() {
       doc.setFont("helvetica", "bold");
       doc.text("Assinatura do Cliente:", marginLeft, finalY);
       finalY += 40;
-  
+
       doc.text(`${saleData.nome}`, marginLeft, finalY);
       finalY += lineHeight;
       doc.text(`CPF: ${saleData.cpf}`, marginLeft, finalY);
       finalY += lineHeight;
-  
+
     } else {
       // -- Caso seja PARCELADO (mais de 1 parcela):
       checkPageEnd(lineHeight);
@@ -1473,7 +1467,7 @@ function NovaVendaContent() {
         finalY
       );
       finalY += lineHeight;
-  
+
       // Preview rápido das parcelas na página atual (opcional)
       parcelasDetalhadas.forEach((parcela, index) => {
         checkPageEnd(lineHeight);
@@ -1481,35 +1475,34 @@ function NovaVendaContent() {
         doc.text(resumo, marginLeft + 20, finalY);
         finalY += lineHeight;
       });
-  
+
       finalY += 20;
-  
+
       // 2) Agora sim, criamos NOVA PÁGINA para a Confissão, Tabela de Parcelas e Assinatura
       doc.addPage();
       cursorY = marginTop;
-  
+
       // 2.1) Declaração de Confissão de Dívida (um parágrafo único)
       doc.setFont("helvetica", "bold");
       doc.text("8. Declaração de Confissão de Dívida", marginLeft, cursorY);
       cursorY += lineHeight;
-  
+
       doc.setFont("helvetica", "normal");
       // Texto sem quebras manuais: um parágrafo único
       const declaracao = `Eu, ${saleData.nome}, portador do CPF nº ${saleData.cpf}, declaro que tenho uma dívida no valor de R$ ${totalComDesconto.toFixed(
         2
-      )} referente à compra dos produtos acima discriminados, a ser paga em ${
-        parcelasDetalhadas.length
-      } parcela(s). Caso haja atraso no pagamento, incidirão juros e multa conforme previsto.`;
-      
+      )} referente à compra dos produtos acima discriminados, a ser paga em ${parcelasDetalhadas.length
+        } parcela(s). Caso haja atraso no pagamento, incidirão juros e multa conforme previsto.`;
+
       drawMultiLineText(declaracao, marginLeft, 500);
       cursorY += 10;
-  
+
       // 2.2) Tabela de Parcelas
       doc.setFont("helvetica", "bold");
       checkPageEnd(lineHeight);
       doc.text("Parcela   Data de Vencimento   Nº do Doc   Valor", marginLeft, cursorY);
       cursorY += lineHeight;
-  
+
       doc.setFont("helvetica", "normal");
       parcelasDetalhadas.forEach((parcela) => {
         checkPageEnd(lineHeight);
@@ -1517,37 +1510,37 @@ function NovaVendaContent() {
         const textoData = parcela.dataVencimento;
         const numDocParcela = saleId || "----";
         const valorParcela = `R$ ${parseFloat(parcela.valorParcela).toFixed(2)}`;
-  
+
         const linha = `${textoParcela}           ${textoData}           ${numDocParcela}           ${valorParcela}`;
         doc.text(linha, marginLeft, cursorY);
         cursorY += lineHeight;
       });
-  
+
       cursorY += 20;
-  
+
       // 2.3) Assinatura do Cliente (na NOVA página)
       checkPageEnd(54);
       doc.setFont("helvetica", "bold");
       doc.text("Assinatura do Cliente:", marginLeft, cursorY);
       cursorY += 40;
-  
+
       doc.text(`${saleData.nome}`, marginLeft, cursorY);
       cursorY += lineHeight;
       doc.text(`CPF: ${saleData.cpf}`, marginLeft, cursorY);
       cursorY += lineHeight;
     }
-  
+
     // ----------------------------------------------------------------------------
     // 12) Gerar Blob e fazer Upload
     // ----------------------------------------------------------------------------
     const pdfBlob = doc.output("blob");
     await uploadPDFToFirebase(pdfBlob, saleData.cpf, saleId);
   };
-  
-  
-  
-  
-  
+
+
+
+
+
 
   // ------------------------------------------------------------------------------------------------
   // FUNÇÃO UPLOAD PDF PARA STORAGE
@@ -1592,7 +1585,7 @@ function NovaVendaContent() {
   return (
     <Layout>
       <div className="p-6">
-        <h1 className="text-2xl font-bold mb-4" style={{ color: "#932A83" }}>
+        <h1 className="text-2xl font-bold mb-4" style={{ color: "#81059e" }}>
           NOVA VENDA
         </h1>
 
@@ -1606,7 +1599,7 @@ function NovaVendaContent() {
               <label
                 htmlFor="cpf"
                 className="block text-sm font-bold mb-1"
-                style={{ color: "#932A8387" }}
+                style={{ color: "#81059e87" }}
               >
                 CPF
               </label>
@@ -1617,9 +1610,8 @@ function NovaVendaContent() {
                 value={formData.cpf}
                 onChange={handleChange}
                 placeholder="Buscar CPF"
-                className={`border border-gray-300 p-2 rounded-lg w-full text-black ${
-                  formErrors.cpf ? "border-red-500" : ""
-                }`}
+                className={`border border-gray-300 p-2 rounded-lg w-full text-black ${formErrors.cpf ? "border-red-500" : ""
+                  }`}
               />
               {formErrors.cpf && (
                 <p className="text-red-600 text-sm mt-1">{formErrors.cpf}</p>
@@ -1628,7 +1620,7 @@ function NovaVendaContent() {
             <button
               type="button"
               onClick={() => handleSearchCPF()}
-              className="bg-[#932A83] text-white font-bold px-4 py-2 rounded-lg self-end"
+              className="bg-[#81059e] text-white font-bold px-4 py-2 rounded-lg self-end"
               disabled={loadingClientData}
               style={{ height: "42px" }}
             >
@@ -1641,7 +1633,7 @@ function NovaVendaContent() {
             <label
               htmlFor="nome"
               className="block text-sm font-bold mb-1"
-              style={{ color: "#932A8387" }}
+              style={{ color: "#81059e87" }}
             >
               Nome
             </label>
@@ -1652,9 +1644,8 @@ function NovaVendaContent() {
               value={formData.nome}
               onChange={handleChange}
               placeholder="Nome do cliente"
-              className={`border border-gray-300 p-2 rounded-lg w-full text-black ${
-                formErrors.nome ? "border-red-500" : ""
-              }`}
+              className={`border border-gray-300 p-2 rounded-lg w-full text-black ${formErrors.nome ? "border-red-500" : ""
+                }`}
               readOnly={clientFound}
             />
             {formErrors.nome && (
@@ -1666,7 +1657,7 @@ function NovaVendaContent() {
             <label
               htmlFor="telefone"
               className="block text-sm font-bold mb-1"
-              style={{ color: "#932A8387" }}
+              style={{ color: "#81059e87" }}
             >
               Telefone
             </label>
@@ -1677,9 +1668,8 @@ function NovaVendaContent() {
               value={formData.telefone}
               onChange={handleChange}
               placeholder="Telefone"
-              className={`border border-gray-300 p-2 rounded-lg w-full text-black ${
-                formErrors.telefone ? "border-red-500" : ""
-              }`}
+              className={`border border-gray-300 p-2 rounded-lg w-full text-black ${formErrors.telefone ? "border-red-500" : ""
+                }`}
               readOnly={clientFound}
             />
             {formErrors.telefone && (
@@ -1692,7 +1682,7 @@ function NovaVendaContent() {
             <label
               htmlFor="loja"
               className="block text-sm font-bold mb-1"
-              style={{ color: "#932A8387" }}
+              style={{ color: "#81059e87" }}
             >
               Loja
             </label>
@@ -1701,9 +1691,8 @@ function NovaVendaContent() {
               name="loja"
               value={formData.loja}
               onChange={handleChange}
-              className={`border border-gray-300 p-2 rounded-lg w-full text-black ${
-                formErrors.loja ? "border-red-500" : ""
-              }`}
+              className={`border border-gray-300 p-2 rounded-lg w-full text-black ${formErrors.loja ? "border-red-500" : ""
+                }`}
             >
               <option value="Loja 1">Loja 1</option>
               <option value="Loja 2">Loja 2</option>
@@ -1718,7 +1707,7 @@ function NovaVendaContent() {
             <label
               htmlFor="data"
               className="block text-sm font-bold mb-1"
-              style={{ color: "#932A8387" }}
+              style={{ color: "#81059e87" }}
             >
               Data
             </label>
@@ -1738,7 +1727,7 @@ function NovaVendaContent() {
             <label
               htmlFor="discountType"
               className="block text-sm font-bold mb-1"
-              style={{ color: "#932A8387" }}
+              style={{ color: "#81059e87" }}
             >
               Tipo de Desconto
             </label>
@@ -1759,7 +1748,7 @@ function NovaVendaContent() {
             <label
               htmlFor="desconto"
               className="block text-sm font-bold mb-1"
-              style={{ color: "#932A8387" }}
+              style={{ color: "#81059e87" }}
             >
               Desconto
             </label>
@@ -1785,7 +1774,7 @@ function NovaVendaContent() {
             <label
               htmlFor="formaPagamento"
               className="block text-sm font-bold mb-1"
-              style={{ color: "#932A8387" }}
+              style={{ color: "#81059e87" }}
             >
               Forma de Pagamento
             </label>
@@ -1794,9 +1783,8 @@ function NovaVendaContent() {
               name="formaPagamento"
               value={paymentMethod}
               onChange={(e) => handleChange(e)}
-              className={`border border-gray-300 p-2 rounded-lg w-full text-black ${
-                formErrors.formaPagamento ? "border-red-500" : ""
-              }`}
+              className={`border border-gray-300 p-2 rounded-lg w-full text-black ${formErrors.formaPagamento ? "border-red-500" : ""
+                }`}
             >
               <option value="Pix">Pix</option>
               <option value="Dinheiro">Dinheiro</option>
@@ -1816,7 +1804,7 @@ function NovaVendaContent() {
               <div className="mt-2">
                 <label
                   className="block text-sm font-bold mb-1"
-                  style={{ color: "#932A8387" }}
+                  style={{ color: "#81059e87" }}
                 >
                   Número de Parcelas (Crediário)
                 </label>
@@ -1829,9 +1817,8 @@ function NovaVendaContent() {
                   }
                   min={1}
                   placeholder="Digite o número de parcelas"
-                  className={`border border-gray-300 p-2 rounded-lg w-full text-black ${
-                    formErrors.crediarioInstallments ? "border-red-500" : ""
-                  }`}
+                  className={`border border-gray-300 p-2 rounded-lg w-full text-black ${formErrors.crediarioInstallments ? "border-red-500" : ""
+                    }`}
                 />
                 {formErrors.crediarioInstallments && (
                   <p className="text-red-600 text-sm mt-1">
@@ -1846,7 +1833,7 @@ function NovaVendaContent() {
               <div className="mt-2">
                 <label
                   className="block text-sm font-bold mb-1"
-                  style={{ color: "#932A8387" }}
+                  style={{ color: "#81059e87" }}
                 >
                   Número de Parcelas (Boleto)
                 </label>
@@ -1859,9 +1846,8 @@ function NovaVendaContent() {
                   }
                   min={1}
                   placeholder="Digite o número de parcelas para boleto"
-                  className={`border border-gray-300 p-2 rounded-lg w-full text-black ${
-                    formErrors.crediarioInstallments ? "border-red-500" : ""
-                  }`}
+                  className={`border border-gray-300 p-2 rounded-lg w-full text-black ${formErrors.crediarioInstallments ? "border-red-500" : ""
+                    }`}
                 />
                 {formErrors.crediarioInstallments && (
                   <p className="text-red-600 text-sm mt-1">
@@ -1877,7 +1863,7 @@ function NovaVendaContent() {
                 <label
                   htmlFor="paymentValue"
                   className="block text-sm font-bold mb-1"
-                  style={{ color: "#932A8387" }}
+                  style={{ color: "#81059e87" }}
                 >
                   Valor em {paymentMethod}
                 </label>
@@ -1896,9 +1882,8 @@ function NovaVendaContent() {
                       pixPaymentAmount: parseFloat(value) || 0,
                     }));
                   }}
-                  className={`border border-gray-300 p-2 rounded-lg w-full text-black ${
-                    formErrors.pixPaymentAmount ? "border-red-500" : ""
-                  }`}
+                  className={`border border-gray-300 p-2 rounded-lg w-full text-black ${formErrors.pixPaymentAmount ? "border-red-500" : ""
+                    }`}
                 />
                 {formErrors.pixPaymentAmount && (
                   <p className="text-red-600 text-sm mt-1">
@@ -1927,7 +1912,7 @@ function NovaVendaContent() {
               >
                 <h4
                   className="text-lg font-bold mb-4"
-                  style={{ color: "#932A8387" }}
+                  style={{ color: "#81059e87" }}
                 >
                   Método de Pagamento Adicional
                 </h4>
@@ -1936,7 +1921,7 @@ function NovaVendaContent() {
                 <div>
                   <label
                     className="block text-sm font-bold mb-1"
-                    style={{ color: "#932A8387" }}
+                    style={{ color: "#81059e87" }}
                   >
                     Método
                   </label>
@@ -1949,11 +1934,10 @@ function NovaVendaContent() {
                         e.target.value
                       )
                     }
-                    className={`border border-gray-300 p-2 rounded-lg w-full text-black ${
-                      formErrors[`additionalMethod_${payment.id}`]
+                    className={`border border-gray-300 p-2 rounded-lg w-full text-black ${formErrors[`additionalMethod_${payment.id}`]
                         ? "border-red-500"
                         : ""
-                    }`}
+                      }`}
                   >
                     <option value="">Selecione</option>
                     <option value="Pix">Pix</option>
@@ -1974,7 +1958,7 @@ function NovaVendaContent() {
                 <div>
                   <label
                     className="block text-sm font-bold mb-1"
-                    style={{ color: "#932A8387" }}
+                    style={{ color: "#81059e87" }}
                   >
                     Valor
                   </label>
@@ -1991,11 +1975,10 @@ function NovaVendaContent() {
                       handleAdditionalPaymentChange(payment.id, "value", parsedVal);
                       handleAdditionalPaymentChange(payment.id, "amount", parsedVal);
                     }}
-                    className={`border border-gray-300 p-2 rounded-lg w-full text-black ${
-                      formErrors[`additionalValue_${payment.id}`]
+                    className={`border border-gray-300 p-2 rounded-lg w-full text-black ${formErrors[`additionalValue_${payment.id}`]
                         ? "border-red-500"
                         : ""
-                    }`}
+                      }`}
                   />
                   {formErrors[`additionalValue_${payment.id}`] && (
                     <p className="text-red-600 text-sm mt-1">
@@ -2007,47 +1990,47 @@ function NovaVendaContent() {
                 {/* Se boleto ou crediário, parcelas e data inicial */}
                 {(payment.method === "Boleto" ||
                   payment.method === "Crediário") && (
-                  <>
-                    <div>
-                      <label
-                        className="block text-sm font-bold mb-1"
-                        style={{ color: "#932A8387" }}
-                      >
-                        Número de Parcelas
-                      </label>
-                      <input
-                        type="number"
-                        value={payment.installments || 1}
-                        onChange={(e) =>
-                          handleAdditionalPaymentChange(
-                            payment.id,
-                            "installments",
-                            parseInt(e.target.value, 10) || 1
-                          )
-                        }
-                        min={1}
-                        className="border border-gray-300 p-2 rounded-lg w-full text-black"
-                      />
-                    </div>
+                    <>
+                      <div>
+                        <label
+                          className="block text-sm font-bold mb-1"
+                          style={{ color: "#81059e87" }}
+                        >
+                          Número de Parcelas
+                        </label>
+                        <input
+                          type="number"
+                          value={payment.installments || 1}
+                          onChange={(e) =>
+                            handleAdditionalPaymentChange(
+                              payment.id,
+                              "installments",
+                              parseInt(e.target.value, 10) || 1
+                            )
+                          }
+                          min={1}
+                          className="border border-gray-300 p-2 rounded-lg w-full text-black"
+                        />
+                      </div>
 
-                    <div>
-                      <label
-                        className="block text-sm font-bold mb-1"
-                        style={{ color: "#932A8387" }}
-                      >
-                        Data de Vencimento Inicial
-                      </label>
-                      <DatePicker
-                        selected={payment.startDate || new Date()}
-                        onChange={(date) =>
-                          handleAdditionalPaymentChange(payment.id, "startDate", date)
-                        }
-                        dateFormat="dd/MM/yyyy"
-                        className="border border-gray-300 p-2 rounded-lg w-full text-black"
-                      />
-                    </div>
-                  </>
-                )}
+                      <div>
+                        <label
+                          className="block text-sm font-bold mb-1"
+                          style={{ color: "#81059e87" }}
+                        >
+                          Data de Vencimento Inicial
+                        </label>
+                        <DatePicker
+                          selected={payment.startDate || new Date()}
+                          onChange={(date) =>
+                            handleAdditionalPaymentChange(payment.id, "startDate", date)
+                          }
+                          dateFormat="dd/MM/yyyy"
+                          className="border border-gray-300 p-2 rounded-lg w-full text-black"
+                        />
+                      </div>
+                    </>
+                  )}
 
                 {/* Se cartão de crédito adicional */}
                 {payment.method === "Cartão de Crédito" && (
@@ -2055,7 +2038,7 @@ function NovaVendaContent() {
                     <div>
                       <label
                         className="block text-sm font-bold mb-1"
-                        style={{ color: "#932A8387" }}
+                        style={{ color: "#81059e87" }}
                       >
                         Parcelas (Crédito)
                       </label>
@@ -2078,7 +2061,7 @@ function NovaVendaContent() {
                     <div>
                       <label
                         className="block text-sm font-bold mb-1"
-                        style={{ color: "#932A8387" }}
+                        style={{ color: "#81059e87" }}
                       >
                         Número do Cartão (Crédito)
                       </label>
@@ -2094,11 +2077,10 @@ function NovaVendaContent() {
                           handleAdditionalPaymentCardBrand(payment.id, e.target.value);
                         }}
                         placeholder="Número do Cartão"
-                        className={`border border-gray-300 p-2 rounded-lg w-full text-black ${
-                          formErrors[`additionalCardNumber_${payment.id}`]
+                        className={`border border-gray-300 p-2 rounded-lg w-full text-black ${formErrors[`additionalCardNumber_${payment.id}`]
                             ? "border-red-500"
                             : ""
-                        }`}
+                          }`}
                       />
                       {formErrors[`additionalCardNumber_${payment.id}`] && (
                         <p className="text-red-600 text-sm mt-1">
@@ -2111,7 +2093,7 @@ function NovaVendaContent() {
                       <div className="w-1/2">
                         <label
                           className="block text-sm font-bold mb-1"
-                          style={{ color: "#932A8387" }}
+                          style={{ color: "#81059e87" }}
                         >
                           Validade (Crédito)
                         </label>
@@ -2126,11 +2108,10 @@ function NovaVendaContent() {
                             )
                           }
                           placeholder="MM/AA"
-                          className={`border border-gray-300 p-2 rounded-lg w-full text-black ${
-                            formErrors[`additionalExpiryDate_${payment.id}`]
+                          className={`border border-gray-300 p-2 rounded-lg w-full text-black ${formErrors[`additionalExpiryDate_${payment.id}`]
                               ? "border-red-500"
                               : ""
-                          }`}
+                            }`}
                         />
                         {formErrors[`additionalExpiryDate_${payment.id}`] && (
                           <p className="text-red-600 text-sm mt-1">
@@ -2141,7 +2122,7 @@ function NovaVendaContent() {
                       <div className="w-1/2">
                         <label
                           className="block text-sm font-bold mb-1"
-                          style={{ color: "#932A8387" }}
+                          style={{ color: "#81059e87" }}
                         >
                           CVV (Crédito)
                         </label>
@@ -2152,11 +2133,10 @@ function NovaVendaContent() {
                             handleAdditionalPaymentChange(payment.id, "cvv", e.target.value)
                           }
                           placeholder="CVV"
-                          className={`border border-gray-300 p-2 rounded-lg w-full text-black ${
-                            formErrors[`additionalCvv_${payment.id}`]
+                          className={`border border-gray-300 p-2 rounded-lg w-full text-black ${formErrors[`additionalCvv_${payment.id}`]
                               ? "border-red-500"
                               : ""
-                          }`}
+                            }`}
                         />
                         {formErrors[`additionalCvv_${payment.id}`] && (
                           <p className="text-red-600 text-sm mt-1">
@@ -2169,7 +2149,7 @@ function NovaVendaContent() {
                     <div>
                       <label
                         className="block text-sm font-bold mb-1"
-                        style={{ color: "#932A8387" }}
+                        style={{ color: "#81059e87" }}
                       >
                         AUT (Crédito)
                       </label>
@@ -2187,7 +2167,7 @@ function NovaVendaContent() {
                     <div>
                       <label
                         className="block text-sm font-bold mb-1"
-                        style={{ color: "#932A8387" }}
+                        style={{ color: "#81059e87" }}
                       >
                         Bandeira (Crédito)
                       </label>
@@ -2207,7 +2187,7 @@ function NovaVendaContent() {
                     <div>
                       <label
                         className="block text-sm font-bold mb-1"
-                        style={{ color: "#932A8387" }}
+                        style={{ color: "#81059e87" }}
                       >
                         Número do Cartão (Débito)
                       </label>
@@ -2223,11 +2203,10 @@ function NovaVendaContent() {
                           handleAdditionalPaymentCardBrand(payment.id, e.target.value);
                         }}
                         placeholder="Número do Cartão"
-                        className={`border border-gray-300 p-2 rounded-lg w-full text-black ${
-                          formErrors[`additionalCardNumber_${payment.id}`]
+                        className={`border border-gray-300 p-2 rounded-lg w-full text-black ${formErrors[`additionalCardNumber_${payment.id}`]
                             ? "border-red-500"
                             : ""
-                        }`}
+                          }`}
                       />
                       {formErrors[`additionalCardNumber_${payment.id}`] && (
                         <p className="text-red-600 text-sm mt-1">
@@ -2240,7 +2219,7 @@ function NovaVendaContent() {
                       <div className="w-1/2">
                         <label
                           className="block text-sm font-bold mb-1"
-                          style={{ color: "#932A8387" }}
+                          style={{ color: "#81059e87" }}
                         >
                           Validade (Débito)
                         </label>
@@ -2255,11 +2234,10 @@ function NovaVendaContent() {
                             )
                           }
                           placeholder="MM/AA"
-                          className={`border border-gray-300 p-2 rounded-lg w-full text-black ${
-                            formErrors[`additionalExpiryDate_${payment.id}`]
+                          className={`border border-gray-300 p-2 rounded-lg w-full text-black ${formErrors[`additionalExpiryDate_${payment.id}`]
                               ? "border-red-500"
                               : ""
-                          }`}
+                            }`}
                         />
                         {formErrors[`additionalExpiryDate_${payment.id}`] && (
                           <p className="text-red-600 text-sm mt-1">
@@ -2270,7 +2248,7 @@ function NovaVendaContent() {
                       <div className="w-1/2">
                         <label
                           className="block text-sm font-bold mb-1"
-                          style={{ color: "#932A8387" }}
+                          style={{ color: "#81059e87" }}
                         >
                           CVV (Débito)
                         </label>
@@ -2281,11 +2259,10 @@ function NovaVendaContent() {
                             handleAdditionalPaymentChange(payment.id, "cvv", e.target.value)
                           }
                           placeholder="CVV"
-                          className={`border border-gray-300 p-2 rounded-lg w-full text-black ${
-                            formErrors[`additionalCvv_${payment.id}`]
+                          className={`border border-gray-300 p-2 rounded-lg w-full text-black ${formErrors[`additionalCvv_${payment.id}`]
                               ? "border-red-500"
                               : ""
-                          }`}
+                            }`}
                         />
                         {formErrors[`additionalCvv_${payment.id}`] && (
                           <p className="text-red-600 text-sm mt-1">
@@ -2298,7 +2275,7 @@ function NovaVendaContent() {
                     <div>
                       <label
                         className="block text-sm font-bold mb-1"
-                        style={{ color: "#932A8387" }}
+                        style={{ color: "#81059e87" }}
                       >
                         AUT (Débito)
                       </label>
@@ -2316,7 +2293,7 @@ function NovaVendaContent() {
                     <div>
                       <label
                         className="block text-sm font-bold mb-1"
-                        style={{ color: "#932A8387" }}
+                        style={{ color: "#81059e87" }}
                       >
                         Bandeira (Débito)
                       </label>
@@ -2351,7 +2328,7 @@ function NovaVendaContent() {
                 >
                   <h4
                     className="text-lg font-bold mb-4"
-                    style={{ color: "#932A8387" }}
+                    style={{ color: "#81059e87" }}
                   >
                     Cartão {index + 1}
                   </h4>
@@ -2359,7 +2336,7 @@ function NovaVendaContent() {
                   <div>
                     <label
                       className="block text-sm font-bold mb-1"
-                      style={{ color: "#932A8387" }}
+                      style={{ color: "#81059e87" }}
                     >
                       Número de Parcelas (Cartão {index + 1})
                     </label>
@@ -2370,9 +2347,8 @@ function NovaVendaContent() {
                       onChange={(e) =>
                         handleCardDetailChange(index, "installments", Number(e.target.value))
                       }
-                      className={`border border-gray-300 p-2 rounded-lg w-full text-black ${
-                        formErrors.cardDetails ? "border-red-500" : ""
-                      }`}
+                      className={`border border-gray-300 p-2 rounded-lg w-full text-black ${formErrors.cardDetails ? "border-red-500" : ""
+                        }`}
                       placeholder="Digite o número de parcelas"
                     />
                   </div>
@@ -2380,7 +2356,7 @@ function NovaVendaContent() {
                   <div>
                     <label
                       className="block text-sm font-bold mb-1"
-                      style={{ color: "#932A8387" }}
+                      style={{ color: "#81059e87" }}
                     >
                       Valor
                     </label>
@@ -2406,7 +2382,7 @@ function NovaVendaContent() {
                   <div>
                     <label
                       className="block text-sm font-bold mb-1"
-                      style={{ color: "#932A8387" }}
+                      style={{ color: "#81059e87" }}
                     >
                       Número do Cartão
                     </label>
@@ -2417,9 +2393,8 @@ function NovaVendaContent() {
                         handleCardDetailChange(index, "cardNumber", e.target.value)
                       }
                       placeholder="Número do Cartão"
-                      className={`border border-gray-300 p-2 rounded-lg w-full text-black ${
-                        formErrors[`cardNumber_${index}`] ? "border-red-500" : ""
-                      }`}
+                      className={`border border-gray-300 p-2 rounded-lg w-full text-black ${formErrors[`cardNumber_${index}`] ? "border-red-500" : ""
+                        }`}
                     />
                     {formErrors[`cardNumber_${index}`] && (
                       <p className="text-red-600 text-sm mt-1">
@@ -2432,7 +2407,7 @@ function NovaVendaContent() {
                     <div className="w-1/2">
                       <label
                         className="block text-sm font-bold mb-1"
-                        style={{ color: "#932A8387" }}
+                        style={{ color: "#81059e87" }}
                       >
                         Validade
                       </label>
@@ -2443,9 +2418,8 @@ function NovaVendaContent() {
                           handleCardDetailChange(index, "expiryDate", e.target.value)
                         }
                         placeholder="MM/AA"
-                        className={`border border-gray-300 p-2 rounded-lg w-full text-black ${
-                          formErrors[`expiryDate_${index}`] ? "border-red-500" : ""
-                        }`}
+                        className={`border border-gray-300 p-2 rounded-lg w-full text-black ${formErrors[`expiryDate_${index}`] ? "border-red-500" : ""
+                          }`}
                       />
                       {formErrors[`expiryDate_${index}`] && (
                         <p className="text-red-600 text-sm mt-1">
@@ -2456,7 +2430,7 @@ function NovaVendaContent() {
                     <div className="w-1/2">
                       <label
                         className="block text-sm font-bold mb-1"
-                        style={{ color: "#932A8387" }}
+                        style={{ color: "#81059e87" }}
                       >
                         CVV
                       </label>
@@ -2467,9 +2441,8 @@ function NovaVendaContent() {
                           handleCardDetailChange(index, "cvv", e.target.value)
                         }
                         placeholder="CVV"
-                        className={`border border-gray-300 p-2 rounded-lg w-full text-black ${
-                          formErrors[`cvv_${index}`] ? "border-red-500" : ""
-                        }`}
+                        className={`border border-gray-300 p-2 rounded-lg w-full text-black ${formErrors[`cvv_${index}`] ? "border-red-500" : ""
+                          }`}
                       />
                       {formErrors[`cvv_${index}`] && (
                         <p className="text-red-600 text-sm mt-1">
@@ -2482,7 +2455,7 @@ function NovaVendaContent() {
                   <div>
                     <label
                       className="block text-sm font-bold mb-1"
-                      style={{ color: "#932A8387" }}
+                      style={{ color: "#81059e87" }}
                     >
                       Bandeira
                     </label>
@@ -2524,7 +2497,7 @@ function NovaVendaContent() {
                 >
                   <h4
                     className="text-lg font-bold mb-4"
-                    style={{ color: "#932A8387" }}
+                    style={{ color: "#81059e87" }}
                   >
                     Cartão Débito {index + 1}
                   </h4>
@@ -2532,7 +2505,7 @@ function NovaVendaContent() {
                   <div>
                     <label
                       className="block text-sm font-bold mb-1"
-                      style={{ color: "#932A8387" }}
+                      style={{ color: "#81059e87" }}
                     >
                       Valor
                     </label>
@@ -2558,7 +2531,7 @@ function NovaVendaContent() {
                   <div>
                     <label
                       className="block text-sm font-bold mb-1"
-                      style={{ color: "#932A8387" }}
+                      style={{ color: "#81059e87" }}
                     >
                       Número do Cartão
                     </label>
@@ -2569,9 +2542,8 @@ function NovaVendaContent() {
                         handleDebitCardDetailChange(index, "cardNumber", e.target.value)
                       }
                       placeholder="Número do Cartão"
-                      className={`border border-gray-300 p-2 rounded-lg w-full text-black ${
-                        formErrors.debitCardDetails ? "border-red-500" : ""
-                      }`}
+                      className={`border border-gray-300 p-2 rounded-lg w-full text-black ${formErrors.debitCardDetails ? "border-red-500" : ""
+                        }`}
                     />
                   </div>
 
@@ -2579,7 +2551,7 @@ function NovaVendaContent() {
                     <div className="w-1/2">
                       <label
                         className="block text-sm font-bold mb-1"
-                        style={{ color: "#932A8387" }}
+                        style={{ color: "#81059e87" }}
                       >
                         Validade
                       </label>
@@ -2590,11 +2562,10 @@ function NovaVendaContent() {
                           handleDebitCardDetailChange(index, "expiryDate", e.target.value)
                         }
                         placeholder="MM/AA"
-                        className={`border border-gray-300 p-2 rounded-lg w-full text-black ${
-                          formErrors[`debitCardExpiryDate_${index}`]
+                        className={`border border-gray-300 p-2 rounded-lg w-full text-black ${formErrors[`debitCardExpiryDate_${index}`]
                             ? "border-red-500"
                             : ""
-                        }`}
+                          }`}
                       />
                       {formErrors[`debitCardExpiryDate_${index}`] && (
                         <p className="text-red-600 text-sm mt-1">
@@ -2606,7 +2577,7 @@ function NovaVendaContent() {
                     <div className="w-1/2">
                       <label
                         className="block text-sm font-bold mb-1"
-                        style={{ color: "#932A8387" }}
+                        style={{ color: "#81059e87" }}
                       >
                         CVV
                       </label>
@@ -2617,9 +2588,8 @@ function NovaVendaContent() {
                           handleDebitCardDetailChange(index, "cvv", e.target.value)
                         }
                         placeholder="CVV"
-                        className={`border border-gray-300 p-2 rounded-lg w-full text-black ${
-                          formErrors[`debitCardCvv_${index}`] ? "border-red-500" : ""
-                        }`}
+                        className={`border border-gray-300 p-2 rounded-lg w-full text-black ${formErrors[`debitCardCvv_${index}`] ? "border-red-500" : ""
+                          }`}
                       />
                       {formErrors[`debitCardCvv_${index}`] && (
                         <p className="text-red-600 text-sm mt-1">
@@ -2632,7 +2602,7 @@ function NovaVendaContent() {
                   <div>
                     <label
                       className="block text-sm font-bold mb-1"
-                      style={{ color: "#932A8387" }}
+                      style={{ color: "#81059e87" }}
                     >
                       AUT
                     </label>
@@ -2650,7 +2620,7 @@ function NovaVendaContent() {
                   <div>
                     <label
                       className="block text-sm font-bold mb-1"
-                      style={{ color: "#932A8387" }}
+                      style={{ color: "#81059e87" }}
                     >
                       Bandeira
                     </label>
@@ -2687,7 +2657,7 @@ function NovaVendaContent() {
             <label
               htmlFor="entrada"
               className="block text-sm font-bold mb-1"
-              style={{ color: "#932A8387" }}
+              style={{ color: "#81059e87" }}
             >
               Entrada
             </label>
@@ -2714,7 +2684,7 @@ function NovaVendaContent() {
                 <label
                   htmlFor="downPaymentMethod"
                   className="block text-sm font-bold mb-1"
-                  style={{ color: "#932A8387" }}
+                  style={{ color: "#81059e87" }}
                 >
                   Forma de Pagamento da Entrada
                 </label>
@@ -2723,9 +2693,8 @@ function NovaVendaContent() {
                   name="downPaymentMethod"
                   value={downPaymentMethod}
                   onChange={(e) => handleDownPaymentMethodChange(e.target.value)}
-                  className={`border border-gray-300 p-2 rounded-lg w-full text-black ${
-                    formErrors.downPaymentMethod ? "border-red-500" : ""
-                  }`}
+                  className={`border border-gray-300 p-2 rounded-lg w-full text-black ${formErrors.downPaymentMethod ? "border-red-500" : ""
+                    }`}
                 >
                   <option value="">Selecione</option>
                   <option value="Dinheiro">Dinheiro</option>
@@ -2752,7 +2721,7 @@ function NovaVendaContent() {
                 <label
                   htmlFor="scheduleEntry"
                   className="text-sm"
-                  style={{ color: "#932A8387" }}
+                  style={{ color: "#81059e87" }}
                 >
                   Agendar a entrada?
                 </label>
@@ -2763,7 +2732,7 @@ function NovaVendaContent() {
                   <label
                     htmlFor="scheduledEntryDate"
                     className="block text-sm font-bold mb-1"
-                    style={{ color: "#932A8387" }}
+                    style={{ color: "#81059e87" }}
                   >
                     Data do Agendamento
                   </label>
@@ -2785,7 +2754,7 @@ function NovaVendaContent() {
                     <label
                       htmlFor="downPaymentCondition"
                       className="block text-sm font-bold mb-1"
-                      style={{ color: "#932A8387" }}
+                      style={{ color: "#81059e87" }}
                     >
                       Condição de Pagamento da Entrada
                     </label>
@@ -2806,7 +2775,7 @@ function NovaVendaContent() {
                       <div>
                         <label
                           className="block text-sm font-bold mb-1"
-                          style={{ color: "#932A8387" }}
+                          style={{ color: "#81059e87" }}
                         >
                           Número de Parcelas da Entrada
                         </label>
@@ -2830,7 +2799,7 @@ function NovaVendaContent() {
                     <label
                       htmlFor="downPaymentCardNumber"
                       className="block text-sm font-bold mb-1"
-                      style={{ color: "#932A8387" }}
+                      style={{ color: "#81059e87" }}
                     >
                       Número do Cartão (Entrada)
                     </label>
@@ -2851,7 +2820,7 @@ function NovaVendaContent() {
                       <label
                         htmlFor="downPaymentCardExpiry"
                         className="block text-sm font-bold mb-1"
-                        style={{ color: "#932A8387" }}
+                        style={{ color: "#81059e87" }}
                       >
                         Validade (Entrada)
                       </label>
@@ -2871,7 +2840,7 @@ function NovaVendaContent() {
                       <label
                         htmlFor="downPaymentCardCVV"
                         className="block text-sm font-bold mb-1"
-                        style={{ color: "#932A8387" }}
+                        style={{ color: "#81059e87" }}
                       >
                         CVV (Entrada)
                       </label>
@@ -2892,7 +2861,7 @@ function NovaVendaContent() {
                     <label
                       htmlFor="downPaymentCardAut"
                       className="block text-sm font-bold mb-1"
-                      style={{ color: "#932A8387" }}
+                      style={{ color: "#81059e87" }}
                     >
                       AUT (Entrada)
                     </label>
@@ -2912,7 +2881,7 @@ function NovaVendaContent() {
                     <label
                       htmlFor="downPaymentCardBandeira"
                       className="block text-sm font-bold mb-1"
-                      style={{ color: "#932A8387" }}
+                      style={{ color: "#81059e87" }}
                     >
                       Bandeira (Entrada)
                     </label>
@@ -2935,7 +2904,7 @@ function NovaVendaContent() {
                     <label
                       htmlFor="downPaymentDebitCardNumber"
                       className="block text-sm font-bold mb-1"
-                      style={{ color: "#932A8387" }}
+                      style={{ color: "#81059e87" }}
                     >
                       Número do Cartão (Débito)
                     </label>
@@ -2956,7 +2925,7 @@ function NovaVendaContent() {
                       <label
                         htmlFor="downPaymentDebitCardExpiry"
                         className="block text-sm font-bold mb-1"
-                        style={{ color: "#932A8387" }}
+                        style={{ color: "#81059e87" }}
                       >
                         Validade (Débito)
                       </label>
@@ -2976,7 +2945,7 @@ function NovaVendaContent() {
                       <label
                         htmlFor="downPaymentDebitCardCVV"
                         className="block text-sm font-bold mb-1"
-                        style={{ color: "#932A8387" }}
+                        style={{ color: "#81059e87" }}
                       >
                         CVV (Débito)
                       </label>
@@ -2997,7 +2966,7 @@ function NovaVendaContent() {
                     <label
                       htmlFor="downPaymentDebitCardAut"
                       className="block text-sm font-bold mb-1"
-                      style={{ color: "#932A8387" }}
+                      style={{ color: "#81059e87" }}
                     >
                       AUT (Débito)
                     </label>
@@ -3017,7 +2986,7 @@ function NovaVendaContent() {
                     <label
                       htmlFor="downPaymentDebitCardBandeira"
                       className="block text-sm font-bold mb-1"
-                      style={{ color: "#932A8387" }}
+                      style={{ color: "#81059e87" }}
                     >
                       Bandeira (Débito)
                     </label>
@@ -3038,7 +3007,7 @@ function NovaVendaContent() {
           {/* LISTA DE ITENS NO CARRINHO (SE HOUVER) */}
           {cartItems.length > 0 && (
             <div className="my-4">
-              <h2 className="text-xl font-bold mb-2" style={{ color: "#932A83" }}>
+              <h2 className="text-xl font-bold mb-2" style={{ color: "#81059e" }}>
                 Itens no Carrinho
               </h2>
               {cartItems.map((item, index) => (
@@ -3099,9 +3068,8 @@ function NovaVendaContent() {
           <div className="flex justify-end">
             <button
               type="submit"
-              className={`bg-[#932A83] text-white font-bold px-6 py-3 rounded-lg mt-4 ${
-                loading ? "opacity-50 cursor-not-allowed" : ""
-              }`}
+              className={`bg-[#81059e] text-white font-bold px-6 py-3 rounded-lg mt-4 ${loading ? "opacity-50 cursor-not-allowed" : ""
+                }`}
               disabled={loading}
             >
               {loading ? "Finalizando..." : "Finalizar Venda"}

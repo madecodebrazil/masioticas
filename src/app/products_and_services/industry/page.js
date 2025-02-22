@@ -89,8 +89,8 @@ const LentesFabricantes = () => {
           <title>Imprimir Fabricante</title>
           <style>
             body { font-family: Arial, sans-serif; padding: 20px; }
-            .title { font-size: 20px; color: #932A83; font-weight: bold; }
-            .field { font-weight: bold; color: #932A83; }
+            .title { font-size: 20px; color: #81059e; font-weight: bold; }
+            .field { font-weight: bold; color: #81059e; }
             .value { margin-bottom: 10px; }
           </style>
         </head>
@@ -119,11 +119,11 @@ const LentesFabricantes = () => {
     <Layout>
       <div className="p-4">
         <div className="flex flex-col md:flex-row justify-between items-center mb-4">
-          <h1 className="text-2xl font-bold text-[#932A83] mb-4 md:mb-0">
+          <h1 className="text-2xl font-bold text-[#81059e] mb-4 md:mb-0">
             Fabricantes de Lentes Registrados
           </h1>
           <Link href="/products_and_services/industry/add-industry">
-            <button className="bg-[#932A83] text-white py-2 px-4 rounded hover:bg-[#7a206b] transition-colors">
+            <button className="bg-[#81059e] text-white py-2 px-4 rounded hover:bg-[#7a206b] transition-colors">
               ADICIONAR
             </button>
           </Link>
@@ -132,13 +132,13 @@ const LentesFabricantes = () => {
         <input
           type="text"
           placeholder="Busque por nome"
-          className="border rounded p-2 mb-4 w-full shadow-sm focus:outline-none focus:ring focus:ring-[#932A83]"
+          className="border rounded p-2 mb-4 w-full shadow-sm focus:outline-none focus:ring focus:ring-[#81059e]"
         />
 
         <div className="overflow-x-auto">
           <table className="table-auto w-full border-collapse shadow-lg">
             <thead>
-              <tr className="bg-[#932A83] text-white">
+              <tr className="bg-[#81059e] text-white">
                 <th className="px-4 py-2">CNPJ</th>
                 <th className="px-4 py-2">Nome Fantasia</th>
                 <th className="px-4 py-2">Razão Social</th>
@@ -152,9 +152,8 @@ const LentesFabricantes = () => {
               {fabricantes.map((fabricante, index) => (
                 <tr
                   key={index}
-                  className={`cursor-pointer hover:bg-gray-100 transition-colors ${
-                    index % 2 === 0 ? "bg-gray-50" : ""
-                  }`}
+                  className={`cursor-pointer hover:bg-gray-100 transition-colors ${index % 2 === 0 ? "bg-gray-50" : ""
+                    }`}
                   onClick={() => handleRowClick(fabricante)}
                 >
                   <td className="px-4 py-2 text-black whitespace-nowrap overflow-hidden text-ellipsis">
@@ -194,7 +193,7 @@ const LentesFabricantes = () => {
                 X
               </button>
               <div className="flex items-center mb-4">
-                <h2 className="text-2xl font-bold text-[#932A83] mr-2">
+                <h2 className="text-2xl font-bold text-[#81059e] mr-2">
                   {selectedFabricante.nomeFantasia}
                 </h2>
                 <Image
@@ -207,7 +206,7 @@ const LentesFabricantes = () => {
               </div>
 
               <div className="flex flex-col mb-2">
-                <label className="font-bold text-[#932A83]">Razão Social</label>
+                <label className="font-bold text-[#81059e]">Razão Social</label>
                 <input
                   name="razaoSocial"
                   value={editableData.razaoSocial}
@@ -219,7 +218,7 @@ const LentesFabricantes = () => {
               </div>
 
               <div className="flex flex-col mb-2">
-                <label className="font-bold text-[#932A83]">CNPJ</label>
+                <label className="font-bold text-[#81059e]">CNPJ</label>
                 <input
                   name="cnpj"
                   value={editableData.cnpj}
@@ -231,7 +230,7 @@ const LentesFabricantes = () => {
               </div>
 
               <div className="flex flex-col mb-2">
-                <label className="font-bold text-[#932A83]">Email</label>
+                <label className="font-bold text-[#81059e]">Email</label>
                 <input
                   name="email"
                   value={editableData.email}
@@ -244,7 +243,7 @@ const LentesFabricantes = () => {
 
               <div className="flex flex-wrap justify-between mt-4 space-y-2 md:space-y-0 md:space-x-4">
                 <button
-                  className="bg-[#932A83] text-white py-2 px-4 rounded flex items-center"
+                  className="bg-[#81059e] text-white py-2 px-4 rounded flex items-center"
                   onClick={() => setIsEditing(!isEditing)}
                 >
                   <Image
@@ -258,14 +257,14 @@ const LentesFabricantes = () => {
                 </button>
                 {isEditing && (
                   <button
-                    className="bg-[#932A83] text-white py-2 px-4 rounded"
+                    className="bg-[#81059e] text-white py-2 px-4 rounded"
                     onClick={handleSaveChanges}
                   >
                     Salvar
                   </button>
                 )}
                 <button
-                  className="bg-[#932A83] text-white py-2 px-4 rounded flex items-center"
+                  className="bg-[#81059e] text-white py-2 px-4 rounded flex items-center"
                   onClick={generatePDF}
                 >
                   <Image
@@ -278,7 +277,7 @@ const LentesFabricantes = () => {
                   PDF
                 </button>
                 <button
-                  className="bg-[#932A83] text-white py-2 px-4 rounded flex items-center"
+                  className="bg-[#81059e] text-white py-2 px-4 rounded flex items-center"
                   onClick={printContent}
                 >
                   <Image

@@ -36,12 +36,12 @@ export default function ListOrders() {
   return (
     <Layout>
       <div className="max-w-5xl mx-auto bg-white shadow-md rounded-lg p-6">
-        <h2 className="text-2xl text-center text-[#932A83] mb-6">LISTA DE PEDIDOS</h2>
+        <h2 className="text-2xl text-center text-[#81059e] mb-6">LISTA DE PEDIDOS</h2>
 
         {/* Exibir spinner de carregamento */}
         {loading && (
           <div className="flex justify-center items-center">
-            <div className="loader border-t-4 border-b-4 border-[#932A83] rounded-full w-12 h-12 animate-spin"></div>
+            <div className="loader border-t-4 border-b-4 border-[#81059e] rounded-full w-12 h-12 animate-spin"></div>
           </div>
         )}
 
@@ -58,11 +58,11 @@ export default function ListOrders() {
             <table className="min-w-full bg-white border-collapse">
               <thead>
                 <tr>
-                  <th className="py-3 px-6 bg-[#932A83] text-white text-left">ID</th>
-                  <th className="py-3 px-6 bg-[#932A83] text-white text-left">Cliente</th>
-                  <th className="py-3 px-6 bg-[#932A83] text-white text-left">Distribuidor</th>
-                  <th className="py-3 px-6 bg-[#932A83] text-white text-left">Valor</th>
-                  <th className="py-3 px-6 bg-[#932A83] text-white text-left">Status</th>
+                  <th className="py-3 px-6 bg-[#81059e] text-white text-left">ID</th>
+                  <th className="py-3 px-6 bg-[#81059e] text-white text-left">Cliente</th>
+                  <th className="py-3 px-6 bg-[#81059e] text-white text-left">Distribuidor</th>
+                  <th className="py-3 px-6 bg-[#81059e] text-white text-left">Valor</th>
+                  <th className="py-3 px-6 bg-[#81059e] text-white text-left">Status</th>
                 </tr>
               </thead>
               <tbody>
@@ -92,7 +92,7 @@ export default function ListOrders() {
       <style jsx>{`
         .loader {
           border: 4px solid #f3f3f3; /* Light grey */
-          border-top: 4px solid #932A83; /* Purple */
+          border-top: 4px solid #81059e; /* Purple */
           border-radius: 50%;
           width: 36px;
           height: 36px;

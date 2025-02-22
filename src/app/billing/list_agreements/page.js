@@ -6,6 +6,8 @@ import { firestore } from '@/lib/firebaseConfig';
 import Sidebar from '@/components/Sidebar';
 import { FaPencilAlt } from 'react-icons/fa'; 
 import { Popover } from '@headlessui/react';
+import Layout from '@/components/Layout';
+
 
 export default function ListAgreementsPage() {
     const [selectedStore, setSelectedStore] = useState('both');
@@ -66,73 +68,73 @@ export default function ListAgreementsPage() {
     }, [selectedStore, statusFilter, startDate, endDate]);
 
     return (
-        <div className="flex w-full min-h-screen">
-            <div className="hidden lg:block w-16">
+        <Layout>
+            <div className="flex">
                 <Sidebar />
-            </div>
-
-            <div className="flex-1 flex flex-col bg-gray-100 min-h-screen">
-                <div className="bg-[#932A83] flex-1 flex items-center justify-center p-4 md:p-8">
-                    <div className="z-50 bg-white w-full sm:w-[90%] md:w-[90%] lg:w-[60%] flex flex-col p-4 sm:p-8 rounded-3xl shadow-lg border border-gray-300">
-                        <h1 className="text-purple-700 text-xl font-bold mb-4">Lista de Acordos</h1>
-                        
-                        <div className="mb-6">
-                            <label className="block text-sm font-bold text-gray-700 mb-2">Selecione a Loja:</label>
-                            <select 
-                                value={selectedStore} 
-                                onChange={(e) => setSelectedStore(e.target.value)} 
-                                className="border rounded w-full py-2 px-3 text-gray-700"
-                            >
-                                <option value="both">Ambas as Lojas</option>
-                                <option value="loja1">Loja 1</option>
-                                <option value="loja2">Loja 2</option>
-                            </select>
-                        </div>
-
-                        <div className="mb-6 flex flex-col sm:flex-row gap-4">
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-2">Data Inicial:</label>
-                                <input 
-                                    type="date" 
-                                    value={startDate} 
-                                    onChange={(e) => setStartDate(e.target.value)} 
+                <div className="flex-1 min-h-screen">
+                    <div>
+                        <div>
+                            <h1 className="text-purple-700 text-xl font-bold mb-4">Lista de Acordos</h1>
+                            
+                            {/* Resto do conteúdo permanece igual */}
+                            <div className="mb-6">
+                                <label className="block text-sm font-bold text-gray-700 mb-2">Selecione a Loja:</label>
+                                <select 
+                                    value={selectedStore} 
+                                    onChange={(e) => setSelectedStore(e.target.value)} 
                                     className="border rounded w-full py-2 px-3 text-gray-700"
-                                />
+                                >
+                                    <option value="both">Ambas as Lojas</option>
+                                    <option value="loja1">Loja 1</option>
+                                    <option value="loja2">Loja 2</option>
+                                </select>
                             </div>
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-2">Data Final:</label>
-                                <input 
-                                    type="date" 
-                                    value={endDate} 
-                                    onChange={(e) => setEndDate(e.target.value)} 
+
+                            <div className="mb-6 flex flex-col sm:flex-row gap-4">
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-2">Data Inicial:</label>
+                                    <input 
+                                        type="date" 
+                                        value={startDate} 
+                                        onChange={(e) => setStartDate(e.target.value)} 
+                                        className="border rounded w-full py-2 px-3 text-gray-700"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-2">Data Final:</label>
+                                    <input 
+                                        type="date" 
+                                        value={endDate} 
+                                        onChange={(e) => setEndDate(e.target.value)} 
+                                        className="border rounded w-full py-2 px-3 text-gray-700"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="mb-6">
+                                <label className="block text-sm font-bold text-gray-700 mb-2">Status:</label>
+                                <select 
+                                    value={statusFilter} 
+                                    onChange={(e) => setStatusFilter(e.target.value)} 
                                     className="border rounded w-full py-2 px-3 text-gray-700"
-                                />
+                                >
+                                    <option value="all">Todos</option>
+                                    <option value="Em aberto">Em aberto</option>
+                                    <option value="Judicial">Judicial</option>
+                                    <option value="Advogado">Advogado</option>
+                                </select>
                             </div>
-                        </div>
 
-                        <div className="mb-6">
-                            <label className="block text-sm font-bold text-gray-700 mb-2">Status:</label>
-                            <select 
-                                value={statusFilter} 
-                                onChange={(e) => setStatusFilter(e.target.value)} 
-                                className="border rounded w-full py-2 px-3 text-gray-700"
-                            >
-                                <option value="all">Todos</option>
-                                <option value="Em aberto">Em aberto</option>
-                                <option value="Judicial">Judicial</option>
-                                <option value="Advogado">Advogado</option>
-                            </select>
+                            {isLoading ? (
+                                <p className="text-center text-gray-600">Carregando acordos...</p>
+                            ) : (
+                                <AgreementList agreements={agreements} fetchAgreements={() => fetchAgreements(selectedStore)} />
+                            )}
                         </div>
-
-                        {isLoading ? (
-                            <p className="text-center text-gray-600">Carregando acordos...</p>
-                        ) : (
-                            <AgreementList agreements={agreements} fetchAgreements={() => fetchAgreements(selectedStore)} />
-                        )}
                     </div>
                 </div>
             </div>
-        </div>
+        </Layout>
     );
 }
 

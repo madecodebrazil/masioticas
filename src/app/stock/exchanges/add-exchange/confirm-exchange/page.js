@@ -1,12 +1,12 @@
 "use client";
-import React, {Suspense} from 'react';
+import React, { Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Layout from '@/components/Layout';
 import { FaCheck, FaEdit } from 'react-icons/fa';
 import { collection, setDoc, doc } from "firebase/firestore";
 import { firestore } from '../../../../../lib/firebaseConfig';
 
-export  function ConfirmExchange() {
+export function ConfirmExchange() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -50,10 +50,10 @@ export  function ConfirmExchange() {
   return (
     <Layout>
       <div className="p-6">
-        <h1 className="text-2xl font-bold" style={{ color: '#932A83' }}>CONFIRMAR TROCA</h1>
+        <h1 className="text-2xl font-bold" style={{ color: '#81059e' }}>CONFIRMAR TROCA</h1>
 
         <div className="bg-white p-6 rounded-lg shadow-lg mt-6">
-          <h2 className="text-lg font-bold mb-4" style={{ color: '#932A83' }}>Resumo da Troca:</h2>
+          <h2 className="text-lg font-bold mb-4" style={{ color: '#81059e' }}>Resumo da Troca:</h2>
 
           <div className="space-y-2 text-black">
             <p><span className="font-semibold">Nome do Cliente:</span> {formDataFromQuery.nomeCliente}</p>

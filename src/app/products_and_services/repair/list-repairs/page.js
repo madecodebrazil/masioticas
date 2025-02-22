@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import Layout from '@/components/Layout';
 import { useRouter } from 'next/navigation';
-import { collection, getDocs, deleteDoc, doc, updateDoc } from "firebase/firestore"; 
+import { collection, getDocs, deleteDoc, doc, updateDoc } from "firebase/firestore";
 import { firestore } from '../../../../lib/firebaseConfig';
 import { FaFilePdf, FaPrint, FaEdit } from 'react-icons/fa'; // Importa os ícones
 import jsPDF from 'jspdf'; // Para gerar o PDF
@@ -126,11 +126,11 @@ export default function ListRepairs() {
     <Layout>
       <div className="p-6">
         <div className="flex justify-between items-center mb-4">
-          <h1 className="text-2xl font-bold" style={{ color: '#932A83' }}>LISTA DE REPAROS</h1>
+          <h1 className="text-2xl font-bold" style={{ color: '#81059e' }}>LISTA DE REPAROS</h1>
           {/* Botão de Adicionar Reparo */}
           <button
             onClick={() => router.push('/products_and_services/repair')}
-            className="bg-[#932A83] text-white font-bold px-6 py-2 rounded-lg shadow hover:bg-[#850f56] transition"
+            className="bg-[#81059e] text-white font-bold px-6 py-2 rounded-lg shadow hover:bg-[#850f56] transition"
           >
             Adicionar Reparo
           </button>
@@ -192,9 +192,9 @@ export default function ListRepairs() {
             {!isEditing ? (
               <div>
                 <div className="text-center">
-                  <h2 className="text-lg font-bold mb-4" style={{ color: '#932A83' }}>{selectedRepair.nomeCliente}</h2>
+                  <h2 className="text-lg font-bold mb-4" style={{ color: '#81059e' }}>{selectedRepair.nomeCliente}</h2>
                 </div>
-                
+
                 <div className="space-y-4 text-black">
                   <p><span className="font-semibold">Nome do Cliente:</span> {selectedRepair.nomeCliente}</p>
                   <p><span className="font-semibold">Produto:</span> {selectedRepair.produto}</p>
@@ -207,7 +207,7 @@ export default function ListRepairs() {
                 <div className="mt-8 flex justify-center space-x-4">
                   <button
                     onClick={() => generatePDF(selectedRepair)}
-                    className="flex items-center px-6 py-3 bg-[#932A83] text-white font-bold rounded-lg hover:bg-green-700 transition"
+                    className="flex items-center px-6 py-3 bg-[#81059e] text-white font-bold rounded-lg hover:bg-green-700 transition"
                   >
                     <FaFilePdf className="mr-2" />
                     PDF
@@ -215,7 +215,7 @@ export default function ListRepairs() {
 
                   <button
                     onClick={handlePrint}
-                    className="flex items-center px-6 py-3 bg-[#932A83] text-white font-bold rounded-lg hover:bg-blue-700 transition"
+                    className="flex items-center px-6 py-3 bg-[#81059e] text-white font-bold rounded-lg hover:bg-blue-700 transition"
                   >
                     <FaPrint className="mr-2" />
                     Imprimir
@@ -223,7 +223,7 @@ export default function ListRepairs() {
 
                   <button
                     onClick={handleEdit}
-                    className="flex items-center px-6 py-3 bg-[#932A83] text-white font-bold rounded-lg hover:bg-purple-600 transition"
+                    className="flex items-center px-6 py-3 bg-[#81059e] text-white font-bold rounded-lg hover:bg-purple-600 transition"
                   >
                     <FaEdit className="mr-2" />
                     Editar
@@ -232,7 +232,7 @@ export default function ListRepairs() {
               </div>
             ) : (
               <div>
-                <h2 className="text-lg font-bold mb-4" style={{ color: '#932A83' }}>Editar Reparo</h2>
+                <h2 className="text-lg font-bold mb-4" style={{ color: '#81059e' }}>Editar Reparo</h2>
 
                 <div className="space-y-4">
                   <div>
@@ -279,7 +279,7 @@ export default function ListRepairs() {
 
                 <div className="mt-4 flex justify-end space-x-4">
                   <button onClick={() => setIsEditing(false)} className="bg-gray-400 text-white px-4 py-2 rounded-lg">Cancelar</button>
-                  <button onClick={handleUpdate} className="bg-[#932A83] text-white px-4 py-2 rounded-lg">Salvar</button>
+                  <button onClick={handleUpdate} className="bg-[#81059e] text-white px-4 py-2 rounded-lg">Salvar</button>
                 </div>
               </div>
             )}

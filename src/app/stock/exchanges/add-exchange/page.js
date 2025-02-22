@@ -2,7 +2,7 @@
 import React, { Suspense, useState, useEffect } from 'react';
 import Layout from '@/components/Layout';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { collection, getDocs } from "firebase/firestore"; 
+import { collection, getDocs } from "firebase/firestore";
 import { firestore } from '../../../../lib/firebaseConfig';
 
 export function AddExchange() {
@@ -124,17 +124,17 @@ export function AddExchange() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
-  
+
     try {
       // Cria o objeto com os dados da troca
       const exchangeData = {
         ...formData,
         data: `${formData.data} ${formData.hora}`, // Combina data e hora
       };
-  
+
       // Serializa o objeto em uma query string para passar pela URL
       const queryString = encodeURIComponent(JSON.stringify(exchangeData));
-  
+
       // Redireciona para a página de confirmação com os dados
       router.push(`/stock/exchanges/add-exchange/confirm-exchange?formData=${queryString}`);
     } catch (error) {
@@ -147,9 +147,9 @@ export function AddExchange() {
     <Layout>
       <div className="p-6">
         <div className="flex justify-between items-center mb-4">
-          <h1 className="text-2xl font-bold" style={{ color: '#932A83' }}>REGISTRAR TROCA</h1>
+          <h1 className="text-2xl font-bold" style={{ color: '#81059e' }}>REGISTRAR TROCA</h1>
           <button
-            className="bg-[#932A83] text-white font-bold px-4 py-2 rounded-lg"
+            className="bg-[#81059e] text-white font-bold px-4 py-2 rounded-lg"
             onClick={handleClear}
           >
             LIMPAR
@@ -159,7 +159,7 @@ export function AddExchange() {
         <form onSubmit={handleSubmit} className="space-y-6 mt-6">
           {/* Nome do Cliente */}
           <div className="relative">
-            <label className="block text-sm font-bold" style={{ color: '#932A8387' }}>Nome do Cliente</label>
+            <label className="block text-sm font-bold" style={{ color: '#81059e87' }}>Nome do Cliente</label>
             <input
               type="text"
               name="nomeCliente"
@@ -187,7 +187,7 @@ export function AddExchange() {
           {/* Código do Produto e NCM */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-bold" style={{ color: '#932A8387' }}>Código do Produto</label>
+              <label className="block text-sm font-bold" style={{ color: '#81059e87' }}>Código do Produto</label>
               <input
                 type="text"
                 name="codigoProduto"
@@ -199,7 +199,7 @@ export function AddExchange() {
               />
             </div>
             <div>
-              <label className="block text-sm font-bold" style={{ color: '#932A8387' }}>NCM</label>
+              <label className="block text-sm font-bold" style={{ color: '#81059e87' }}>NCM</label>
               <input
                 type="text"
                 name="NCM"
@@ -214,7 +214,7 @@ export function AddExchange() {
           {/* SKU e Produto */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-bold" style={{ color: '#932A8387' }}>SKU</label>
+              <label className="block text-sm font-bold" style={{ color: '#81059e87' }}>SKU</label>
               <input
                 type="text"
                 name="SKU"
@@ -225,7 +225,7 @@ export function AddExchange() {
               />
             </div>
             <div>
-              <label className="block text-sm font-bold" style={{ color: '#932A8387' }}>Produto</label>
+              <label className="block text-sm font-bold" style={{ color: '#81059e87' }}>Produto</label>
               <input
                 type="text"
                 name="produto"
@@ -239,7 +239,7 @@ export function AddExchange() {
 
           {/* Descrição */}
           <div>
-            <label className="block text-sm font-bold" style={{ color: '#932A8387' }}>Descrição</label>
+            <label className="block text-sm font-bold" style={{ color: '#81059e87' }}>Descrição</label>
             <textarea
               name="descricao"
               value={formData.descricao}
@@ -253,7 +253,7 @@ export function AddExchange() {
           {/* Data, Hora e Loja */}
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-bold" style={{ color: '#932A8387' }}>Data</label>
+              <label className="block text-sm font-bold" style={{ color: '#81059e87' }}>Data</label>
               <input
                 type="date"
                 name="data"
@@ -264,7 +264,7 @@ export function AddExchange() {
             </div>
 
             <div>
-              <label className="block text-sm font-bold" style={{ color: '#932A8387' }}>Hora</label>
+              <label className="block text-sm font-bold" style={{ color: '#81059e87' }}>Hora</label>
               <input
                 type="time"
                 name="hora"
@@ -275,7 +275,7 @@ export function AddExchange() {
             </div>
 
             <div>
-              <label className="block text-sm font-bold" style={{ color: '#932A8387' }}>Loja</label>
+              <label className="block text-sm font-bold" style={{ color: '#81059e87' }}>Loja</label>
               <select
                 name="loja"
                 value={formData.loja}
@@ -290,7 +290,7 @@ export function AddExchange() {
 
           {/* Motivo */}
           <div>
-            <label className="block text-sm font-bold" style={{ color: '#932A8387' }}>Motivo</label>
+            <label className="block text-sm font-bold" style={{ color: '#81059e87' }}>Motivo</label>
             <select
               name="motivo"
               value={formData.motivo}
@@ -313,7 +313,7 @@ export function AddExchange() {
 
           {/* Status */}
           <div>
-            <label className="block text-sm font-bold" style={{ color: '#932A8387' }}>Status</label>
+            <label className="block text-sm font-bold" style={{ color: '#81059e87' }}>Status</label>
             <select
               name="status"
               value={formData.status}
@@ -336,7 +336,7 @@ export function AddExchange() {
             <button
               type="submit"
               className="px-6 py-3 rounded-lg font-bold"
-              style={{ backgroundColor: '#932A83', color: 'white' }}
+              style={{ backgroundColor: '#81059e', color: 'white' }}
               disabled={isLoading}
             >
               {isLoading ? 'Registrando...' : 'REGISTRAR TROCA'}

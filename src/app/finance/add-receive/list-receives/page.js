@@ -254,14 +254,14 @@ export default function CreditosPage() {
 
   return (
     <Layout>
-      <div className="min-h-screen p-4 bg-gray-100">
-        <div className="w-full max-w-5xl mx-auto bg-white shadow-md rounded-lg p-6">
-          <h2 className="text-lg font-bold text-[#932A83] mb-6">CREDIÁRIOS</h2>
+      <div className="min-h-screen p-2">
+        <div className="w-full max-w-5xl mx-auto rounded-lg">
+          <h2 className="text-3xl font-bold text-[#81059e] mb-6">RECEBIMENTOS PENDENTES</h2>
 
           <div className="mb-4">
             <Link href="/finance/add-receive">
-              <button className="bg-[#932A83] text-white px-4 py-2 rounded-md">
-                ADICIONAR CONTA A RECEBER
+              <button className="bg-[#81059e] text-white px-4 py-2 rounded-md">
+                ADICIONAR CONTA
               </button>
             </Link>
           </div>
@@ -274,8 +274,8 @@ export default function CreditosPage() {
 
           {/* Layout antigo: Tabela */}
           <div className="overflow-x-auto">
-            <table className="text-black min-w-full border">
-              <thead className="bg-gray-200">
+            <table className="text-black min-w-full  ">
+              <thead className="bg-gray-200 ">
                 <tr>
                   <th className="py-2 px-4 border">Cód</th>
                   <th className="py-2 px-4 border">Devedor</th>
@@ -294,8 +294,8 @@ export default function CreditosPage() {
 
                   const recebimentoDate = crediario.dataRecebimento
                     ? crediario.dataRecebimento
-                        .toDate()
-                        .toLocaleDateString("pt-BR")
+                      .toDate()
+                      .toLocaleDateString("pt-BR")
                     : null;
 
                   // Se não houver parcelas detalhadas, mostra só um row
@@ -317,8 +317,8 @@ export default function CreditosPage() {
                         <td className="py-2 px-4 border">
                           {crediario.valorParcela
                             ? `R$ ${parseFloat(crediario.valorParcela).toFixed(
-                                2
-                              )}`
+                              2
+                            )}`
                             : "N/D"}
                         </td>
                         <td className="py-2 px-4 border">{entradaDate}</td>
@@ -360,8 +360,8 @@ export default function CreditosPage() {
                           Parcela {parcela.numeroParcela} - Venc:{" "}
                           {parcela.dataVencimento
                             ? new Date(
-                                parcela.dataVencimento
-                              ).toLocaleDateString("pt-BR")
+                              parcela.dataVencimento
+                            ).toLocaleDateString("pt-BR")
                             : "Data inválida"}
                         </td>
                       </tr>
@@ -376,7 +376,7 @@ export default function CreditosPage() {
           {isModalOpen && selectedCrediario && (
             <div className="text-black fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
               <div className="bg-white p-4 sm:p-6 rounded-lg w-full max-w-md sm:max-w-lg shadow-lg">
-                <h3 className="text-lg font-bold mb-4 text-[#932A83]">
+                <h3 className="text-lg font-bold mb-4 text-[#81059e]">
                   {selectedParcela
                     ? `Parcela ${selectedParcela.numeroParcela}`
                     : "Detalhes do Credor"}
@@ -394,16 +394,16 @@ export default function CreditosPage() {
                   <strong>Entrada:</strong>{" "}
                   {selectedCrediario.data
                     ? selectedCrediario.data
-                        .toDate()
-                        .toLocaleDateString("pt-BR")
+                      .toDate()
+                      .toLocaleDateString("pt-BR")
                     : "Data não disponível"}
                 </p>
                 <p>
                   <strong>Recebimento:</strong>{" "}
                   {selectedCrediario.dataRecebimento
                     ? new Date(
-                        selectedCrediario.dataRecebimento.seconds * 1000
-                      ).toLocaleDateString("pt-BR")
+                      selectedCrediario.dataRecebimento.seconds * 1000
+                    ).toLocaleDateString("pt-BR")
                     : "Data não disponível"}
                 </p>
                 <p>
@@ -418,7 +418,7 @@ export default function CreditosPage() {
                 {selectedParcela ? (
                   <div className="mt-4">
                     <div className="mt-4">
-                      <label className="block text-[#932A83] font-bold">
+                      <label className="block text-[#81059e] font-bold">
                         Loja:
                       </label>
                       <select
@@ -432,7 +432,7 @@ export default function CreditosPage() {
                       </select>
                     </div>
                     <div className="mt-8">
-                      <label className="text-[#932A83] font-bold">
+                      <label className="text-[#81059e] font-bold">
                         Forma de Pagamento:
                       </label>
                       <select
@@ -455,7 +455,7 @@ export default function CreditosPage() {
                       </select>
                     </div>
 
-                    <h4 className="mt-4 text-md font-bold text-[#932A83]">
+                    <h4 className="mt-4 text-md font-bold text-[#81059e]">
                       Detalhes da Parcela:
                     </h4>
                     <p>
@@ -518,25 +518,25 @@ export default function CreditosPage() {
                 {Object.values(checkedParcelas).some(
                   (isChecked) => isChecked
                 ) && (
-                  <div className="flex justify-around mt-6">
-                    <button
-                      className="bg-[#932A83] text-white p-2 rounded-md flex items-center justify-center"
-                      onClick={handleQuitar}
-                    >
-                      Quitar
-                    </button>
-                  </div>
-                )}
+                    <div className="flex justify-around mt-6">
+                      <button
+                        className="bg-[#81059e] text-white p-2 rounded-md flex items-center justify-center"
+                        onClick={handleQuitar}
+                      >
+                        Quitar
+                      </button>
+                    </div>
+                  )}
 
                 <div className="flex justify-around mt-6">
                   <button
-                    className="bg-[#932A83] text-white p-2 rounded-md flex items-center justify-center"
+                    className="bg-[#81059e] text-white p-2 rounded-md flex items-center justify-center"
                     onClick={generatePDF}
                   >
                     <img src="/images/PDF.png" alt="PDF" className="h-6 w-6" />
                   </button>
                   <button
-                    className="bg-[#932A83] text-white p-2 rounded-md flex items-center justify-center"
+                    className="bg-[#81059e] text-white p-2 rounded-md flex items-center justify-center"
                     onClick={handlePrint}
                   >
                     <img

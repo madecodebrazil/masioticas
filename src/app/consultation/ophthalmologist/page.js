@@ -43,10 +43,10 @@ const RegistrarOftalmologista = () => {
       <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50">
         <div className="w-full max-w-4xl p-8 bg-white rounded-lg shadow-md">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-semibold text-[#932A83]">REGISTRO DE OFTALMOLOGISTA</h2>
+            <h2 className="text-2xl font-semibold text-[#81059e]">REGISTRO DE OFTALMOLOGISTA</h2>
             <button
               onClick={handleGoToList}
-              className="px-4 py-2 bg-[#932A83] text-white rounded hover:bg-[#820f76]"
+              className="px-4 py-2 bg-[#81059e] text-white rounded hover:bg-[#820f76]"
             >
               Lista de Oftalmologistas
             </button>
@@ -54,40 +54,40 @@ const RegistrarOftalmologista = () => {
 
           <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4">
             <div className="col-span-2">
-              <label className="block text-[#932A83]">Nome do Médico</label>
+              <label className="block text-[#81059e]">Nome do Médico</label>
               <input
                 type="text"
                 name="nomeMedico"
                 value={formData.nomeMedico}
                 onChange={handleInputChange}
-                className="w-full mt-1 px-3 py-2 border border-[#932A83] rounded text-black focus:outline-none focus:ring-2 focus:ring-[#932A83]"
+                className="w-full mt-1 px-3 py-2 border border-[#81059e] rounded text-black focus:outline-none focus:ring-2 focus:ring-[#81059e]"
               />
             </div>
 
             <div>
-              <label className="block text-[#932A83]">CRM</label>
+              <label className="block text-[#81059e]">CRM</label>
               <input
                 type="text"
                 name="crm"
                 value={formData.crm}
                 onChange={handleInputChange}
-                className="w-full mt-1 px-3 py-2 border border-[#932A83] rounded text-black focus:outline-none focus:ring-2 focus:ring-[#932A83]"
+                className="w-full mt-1 px-3 py-2 border border-[#81059e] rounded text-black focus:outline-none focus:ring-2 focus:ring-[#81059e]"
               />
             </div>
 
             <div>
-              <label className="block text-[#932A83]">Email</label>
+              <label className="block text-[#81059e]">Email</label>
               <input
                 type="email"
                 name="email"
                 value={formData.email}
                 onChange={handleInputChange}
-                className="w-full mt-1 px-3 py-2 border border-[#932A83] rounded text-black focus:outline-none focus:ring-2 focus:ring-[#932A83]"
+                className="w-full mt-1 px-3 py-2 border border-[#81059e] rounded text-black focus:outline-none focus:ring-2 focus:ring-[#81059e]"
               />
             </div>
 
             <div>
-              <label className="block text-[#932A83]">Gênero</label>
+              <label className="block text-[#81059e]">Gênero</label>
               <div className="flex space-x-4">
                 <label className="inline-flex items-center">
                   <input
@@ -96,7 +96,7 @@ const RegistrarOftalmologista = () => {
                     value="Masculino"
                     checked={formData.genero === 'Masculino'}
                     onChange={handleInputChange}
-                    className="form-radio h-5 w-5 text-[#932A83]"
+                    className="form-radio h-5 w-5 text-[#81059e]"
                   />
                   <span className="ml-2 text-black">Masculino</span>
                 </label>
@@ -107,7 +107,7 @@ const RegistrarOftalmologista = () => {
                     value="Feminino"
                     checked={formData.genero === 'Feminino'}
                     onChange={handleInputChange}
-                    className="form-radio h-5 w-5 text-[#932A83]"
+                    className="form-radio h-5 w-5 text-[#81059e]"
                   />
                   <span className="ml-2 text-black">Feminino</span>
                 </label>
@@ -115,42 +115,42 @@ const RegistrarOftalmologista = () => {
             </div>
 
             <div>
-              <label className="block text-[#932A83]">Telefone</label>
+              <label className="block text-[#81059e]">Telefone</label>
               <input
                 type="text"
                 name="telefone"
                 value={formData.telefone}
                 onChange={handleInputChange}
-                className="w-full mt-1 px-3 py-2 border border-[#932A83] rounded text-black focus:outline-none focus:ring-2 focus:ring-[#932A83]"
+                className="w-full mt-1 px-3 py-2 border border-[#81059e] rounded text-black focus:outline-none focus:ring-2 focus:ring-[#81059e]"
               />
             </div>
 
             <div>
-              <label className="block text-[#932A83]">Logradouro</label>
+              <label className="block text-[#81059e]">Logradouro</label>
               <input
                 type="text"
                 name="logradouro"
                 value={formData.logradouro}
                 onChange={handleInputChange}
-                className="w-full mt-1 px-3 py-2 border border-[#932A83] rounded text-black focus:outline-none focus:ring-2 focus:ring-[#932A83]"
+                className="w-full mt-1 px-3 py-2 border border-[#81059e] rounded text-black focus:outline-none focus:ring-2 focus:ring-[#81059e]"
               />
             </div>
 
             <div>
-              <label className="block text-[#932A83]">Bairro</label>
+              <label className="block text-[#81059e]">Bairro</label>
               <input
                 type="text"
                 name="bairro"
                 value={formData.bairro}
                 onChange={handleInputChange}
-                className="w-full mt-1 px-3 py-2 border border-[#932A83] rounded text-black focus:outline-none focus:ring-2 focus:ring-[#932A83]"
+                className="w-full mt-1 px-3 py-2 border border-[#81059e] rounded text-black focus:outline-none focus:ring-2 focus:ring-[#81059e]"
               />
             </div>
 
             <div className="col-span-2 flex justify-end mt-4">
               <button
                 type="submit"
-                className="px-6 py-2 bg-[#932A83] text-white rounded hover:bg-[#820f76]"
+                className="px-6 py-2 bg-[#81059e] text-white rounded hover:bg-[#820f76]"
               >
                 REGISTRAR
               </button>

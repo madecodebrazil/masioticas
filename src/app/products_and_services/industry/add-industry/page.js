@@ -1,7 +1,7 @@
 'use client';
 import { Suspense, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation'; // Importar useSearchParams
-import Layout from '@/components/Layout'; 
+import Layout from '@/components/Layout';
 import axios from 'axios';
 
 const AddFabricanteForm = () => {
@@ -109,13 +109,13 @@ const AddFabricanteForm = () => {
   return (
     <Layout>
       <div className="p-4">
-        <h1 className="text-2xl font-bold mb-4" style={{ color: '#932A8387' }}>
+        <h1 className="text-2xl font-bold mb-4" style={{ color: '#81059e87' }}>
           Registrar Fabricante
         </h1>
         <form className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
           {/* Restante dos inputs */}
           <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="razaoSocial" style={{ color: '#932A8387' }}>
+            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="razaoSocial" style={{ color: '#81059e87' }}>
               Razão Social
             </label>
             <input
@@ -131,7 +131,7 @@ const AddFabricanteForm = () => {
           </div>
 
           <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="nomeFantasia" style={{ color: '#932A8387' }}>
+            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="nomeFantasia" style={{ color: '#81059e87' }}>
               Nome Fantasia
             </label>
             <input
@@ -147,7 +147,7 @@ const AddFabricanteForm = () => {
           </div>
 
           <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="cnpj" style={{ color: '#932A8387' }}>
+            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="cnpj" style={{ color: '#81059e87' }}>
               CNPJ
             </label>
             <input
@@ -164,7 +164,7 @@ const AddFabricanteForm = () => {
           </div>
 
           <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="email" style={{ color: '#932A8387' }}>
+            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="email" style={{ color: '#81059e87' }}>
               Email
             </label>
             <input
@@ -182,7 +182,7 @@ const AddFabricanteForm = () => {
           {/* Campos na mesma linha: Telefone, CEP e Número */}
           <div className="flex space-x-4 mb-4">
             <div className="w-1/3">
-              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="telefone" style={{ color: '#932A8387' }}>
+              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="telefone" style={{ color: '#81059e87' }}>
                 Telefone
               </label>
               <input
@@ -198,7 +198,7 @@ const AddFabricanteForm = () => {
             </div>
 
             <div className="w-1/3">
-              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="cep" style={{ color: '#932A8387' }}>
+              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="cep" style={{ color: '#81059e87' }}>
                 CEP
               </label>
               <input
@@ -214,7 +214,7 @@ const AddFabricanteForm = () => {
             </div>
 
             <div className="w-1/3">
-              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="numero" style={{ color: '#932A8387' }}>
+              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="numero" style={{ color: '#81059e87' }}>
                 Número
               </label>
               <input
@@ -231,7 +231,7 @@ const AddFabricanteForm = () => {
           </div>
 
           <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="logradouro" style={{ color: '#932A8387' }}>
+            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="logradouro" style={{ color: '#81059e87' }}>
               Logradouro
             </label>
             <input
@@ -247,7 +247,7 @@ const AddFabricanteForm = () => {
           </div>
 
           <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="estado" style={{ color: '#932A8387' }}>
+            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="estado" style={{ color: '#81059e87' }}>
               Estado
             </label>
             <input
@@ -263,7 +263,7 @@ const AddFabricanteForm = () => {
           </div>
 
           <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="cidade" style={{ color: '#932A8387' }}>
+            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="cidade" style={{ color: '#81059e87' }}>
               Cidade
             </label>
             <input
@@ -282,7 +282,7 @@ const AddFabricanteForm = () => {
             <button
               type="button"
               onClick={handleConfirm}
-              className="bg-[#932A8387] text-white font-bold py-2 px-4 rounded"
+              className="bg-[#81059e87] text-white font-bold py-2 px-4 rounded"
             >
               Confirmar
             </button>

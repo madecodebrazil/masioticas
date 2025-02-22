@@ -108,24 +108,24 @@ export function AddSupplierPage() {
       const suppliersRef = collection(firestore, "suppliers");
       const q = query(suppliersRef, where("cnpj", "==", cleanedCNPJ));
       const querySnapshot = await getDocs(q);
-  
+
       return !querySnapshot.empty; // Retorna true se já existir, false caso contrário
     } catch (error) {
       console.error("Erro ao verificar duplicidade do CNPJ:", error);
       return false;
     }
   };
-  
+
   // Exemplo de uso na função handleSubmit
   const handleSubmit = async (e) => {
     e.preventDefault();
-  
+
     const isDuplicate = await checkDuplicateCNPJ(formData.cnpj);
     if (isDuplicate) {
       alert("Este CNPJ já está registrado para outro fornecedor.");
       return; // Impede o envio caso o CNPJ já exista
     }
-  
+
     // Continuação do envio dos dados caso não haja duplicata
     console.log("Enviando dados do fornecedor:", formData);
     // Lógica para envio de dados
@@ -133,21 +133,21 @@ export function AddSupplierPage() {
 
   return (
     <Layout>
-      <div className="flex flex-col items-center justify-start py-8 px-4 sm:px-6 lg:px-8">
-        <div className="relative w-full bg-white rounded-lg shadow-lg p-6 max-w-4xl">
+      <div>
+        <div className="w-full p-2 ">
           <div className="flex flex-col items-start space-y-4">
             <h2
               className="text-2xl font-extrabold"
-              style={{ color: "#932A8387" }}
+              style={{ color: "#81059e87" }}
             >
               REGISTRAR FORNECEDOR
             </h2>
             <button
-        onClick={handleNavigateToAddSupplier}
-        className="px-6 py-3 bg-[#932A83] text-white font-bold rounded hover:bg-[#820f76] transition"
-      >
-        Lista de Fornecedores
-      </button>
+              onClick={handleNavigateToAddSupplier}
+              className="px-6 py-3 bg-[#81059e] text-white font-bold rounded hover:bg-[#820f76] transition"
+            >
+              Lista de Fornecedores
+            </button>
             <button
               className="px-4 py-2 bg-gray-500 text-white rounded-lg self-start"
               onClick={() =>
@@ -176,7 +176,7 @@ export function AddSupplierPage() {
               <div>
                 <label
                   className="block text-sm font-bold"
-                  style={{ color: "#932A8387" }}
+                  style={{ color: "#81059e87" }}
                 >
                   Razão Social
                 </label>
@@ -189,11 +189,11 @@ export function AddSupplierPage() {
                   className="w-full px-3 py-2 border rounded-md text-black"
                 />
               </div>
-              
+
               <div>
                 <label
                   className="block text-sm font-bold"
-                  style={{ color: "#932A8387" }}
+                  style={{ color: "#81059e87" }}
                 >
                   Representante
                 </label>
@@ -210,7 +210,7 @@ export function AddSupplierPage() {
               <div>
                 <label
                   className="block text-sm font-bold"
-                  style={{ color: "#932A8387" }}
+                  style={{ color: "#81059e87" }}
                 >
                   Nome Fantasia
                 </label>
@@ -227,7 +227,7 @@ export function AddSupplierPage() {
               <div>
                 <label
                   className="block text-sm font-bold"
-                  style={{ color: "#932A8387" }}
+                  style={{ color: "#81059e87" }}
                 >
                   CNPJ
                 </label>
@@ -244,7 +244,7 @@ export function AddSupplierPage() {
               <div>
                 <label
                   className="block text-sm font-bold"
-                  style={{ color: "#932A8387" }}
+                  style={{ color: "#81059e87" }}
                 >
                   Email
                 </label>
@@ -261,7 +261,7 @@ export function AddSupplierPage() {
               <div>
                 <label
                   className="block text-sm font-bold"
-                  style={{ color: "#932A8387" }}
+                  style={{ color: "#81059e87" }}
                 >
                   Telefone
                 </label>
@@ -278,7 +278,7 @@ export function AddSupplierPage() {
               <div>
                 <label
                   className="block text-sm font-bold"
-                  style={{ color: "#932A8387" }}
+                  style={{ color: "#81059e87" }}
                 >
                   Celular
                 </label>
@@ -295,7 +295,7 @@ export function AddSupplierPage() {
               <div>
                 <label
                   className="block text-sm font-bold"
-                  style={{ color: "#932A8387" }}
+                  style={{ color: "#81059e87" }}
                 >
                   CEP
                 </label>
@@ -312,7 +312,7 @@ export function AddSupplierPage() {
               <div>
                 <label
                   className="block text-sm font-bold"
-                  style={{ color: "#932A8387" }}
+                  style={{ color: "#81059e87" }}
                 >
                   Número
                 </label>
@@ -329,7 +329,7 @@ export function AddSupplierPage() {
               <div>
                 <label
                   className="block text-sm font-bold"
-                  style={{ color: "#932A8387" }}
+                  style={{ color: "#81059e87" }}
                 >
                   Logradouro
                 </label>
@@ -346,7 +346,7 @@ export function AddSupplierPage() {
               <div>
                 <label
                   className="block text-sm font-bold"
-                  style={{ color: "#932A8387" }}
+                  style={{ color: "#81059e87" }}
                 >
                   Cidade
                 </label>
@@ -363,7 +363,7 @@ export function AddSupplierPage() {
               <div>
                 <label
                   className="block text-sm font-bold"
-                  style={{ color: "#932A8387" }}
+                  style={{ color: "#81059e87" }}
                 >
                   Estado
                 </label>
@@ -382,7 +382,7 @@ export function AddSupplierPage() {
               <button
                 type="submit"
                 className="px-6 py-2 font-bold rounded-md text-white"
-                style={{ backgroundColor: "#932A83" }}
+                style={{ backgroundColor: "#81059e" }}
               >
                 REGISTRAR FORNECEDOR
               </button>

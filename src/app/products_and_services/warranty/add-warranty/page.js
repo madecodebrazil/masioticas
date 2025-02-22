@@ -7,7 +7,7 @@ import 'react-datepicker/dist/react-datepicker.css';
 import { collection, getDocs } from "firebase/firestore";
 import { firestore } from '../../../../lib/firebaseConfig'; // Certifique-se que o firebaseConfig está correto
 
-export  function RegistrarGarantia() {
+export function RegistrarGarantia() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -80,7 +80,7 @@ export  function RegistrarGarantia() {
           suggestions.push({
             id: consumerDoc.id,  // Captura o ID do consumidor
             cpf: consumerData.cpf, // Captura o CPF
-            ...consumerData 
+            ...consumerData
           });
         }
       }
@@ -113,8 +113,8 @@ export  function RegistrarGarantia() {
       <div className="container mx-auto p-6 bg-white rounded-lg shadow">
         {/* Cabeçalho */}
         <div className="flex items-center justify-between pb-4">
-          <div className="text-lg font-bold text-[#932A83]">REGISTRAR GARANTIA</div>
-          <button className="bg-[#932A83] text-white px-4 py-2 rounded-md hover:bg-[#781e6a]" onClick={() => setFormData({})}>
+          <div className="text-lg font-bold text-[#81059e]">REGISTRAR GARANTIA</div>
+          <button className="bg-[#81059e] text-white px-4 py-2 rounded-md hover:bg-[#781e6a]" onClick={() => setFormData({})}>
             LIMPAR
           </button>
         </div>
@@ -122,14 +122,14 @@ export  function RegistrarGarantia() {
         {/* Formulário */}
         <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
           <div className="md:col-span-2">
-            <label className="block text-[#932A83]">Nome do Cliente</label>
+            <label className="block text-[#81059e]">Nome do Cliente</label>
             <input
               type="text"
               name="nomeCliente"
               value={formData.nomeCliente}
               onChange={handleInputChange}
               placeholder="Nome do cliente"
-              className="w-full p-2 border border-[#932A83] rounded-md text-black"
+              className="w-full p-2 border border-[#81059e] rounded-md text-black"
             />
 
             {/* Mostrar sugestões de usuários */}
@@ -149,72 +149,72 @@ export  function RegistrarGarantia() {
           </div>
 
           <div>
-            <label className="block text-[#932A83]">Código do Produto</label>
+            <label className="block text-[#81059e]">Código do Produto</label>
             <input
               type="text"
               name="codigoProduto"
               value={formData.codigoProduto}
               onChange={handleInputChange}
-              className="w-full p-2 border border-[#932A83] rounded-md text-black"
+              className="w-full p-2 border border-[#81059e] rounded-md text-black"
             />
           </div>
 
           <div>
-            <label className="block text-[#932A83]">NCM</label>
+            <label className="block text-[#81059e]">NCM</label>
             <input
               type="text"
               name="ncm"
               value={formData.ncm}
               onChange={handleInputChange}
-              className="w-full p-2 border border-[#932A83] rounded-md text-black"
+              className="w-full p-2 border border-[#81059e] rounded-md text-black"
             />
           </div>
 
           <div>
-            <label className="block text-[#932A83]">SKU</label>
+            <label className="block text-[#81059e]">SKU</label>
             <input
               type="text"
               name="sku"
               value={formData.sku}
               onChange={handleInputChange}
-              className="w-full p-2 border border-[#932A83] rounded-md text-black"
+              className="w-full p-2 border border-[#81059e] rounded-md text-black"
             />
           </div>
 
           <div>
-            <label className="block text-[#932A83]">Produto</label>
+            <label className="block text-[#81059e]">Produto</label>
             <input
               type="text"
               name="produto"
               value={formData.produto}
               onChange={handleInputChange}
-              className="w-full p-2 border border-[#932A83] rounded-md text-black"
+              className="w-full p-2 border border-[#81059e] rounded-md text-black"
             />
           </div>
 
           <div className="md:col-span-2">
-            <label className="block text-[#932A83]">Descrição</label>
+            <label className="block text-[#81059e]">Descrição</label>
             <textarea
               name="descricao"
               value={formData.descricao}
               onChange={handleInputChange}
-              className="w-full p-2 border border-[#932A83] rounded-md text-black"
+              className="w-full p-2 border border-[#81059e] rounded-md text-black"
             />
           </div>
 
           {/* Data e Hora utilizando DatePicker */}
           <div>
-            <label className="block text-[#932A83]">Data</label>
+            <label className="block text-[#81059e]">Data</label>
             <DatePicker
               selected={formData.dataGarantia}
               onChange={(date) => setFormData((prev) => ({ ...prev, dataGarantia: date }))}
               dateFormat="dd/MM/yyyy"
-              className="w-full p-2 border border-[#932A83] rounded-md text-black"
+              className="w-full p-2 border border-[#81059e] rounded-md text-black"
             />
           </div>
 
           <div>
-            <label className="block text-[#932A83]">Hora</label>
+            <label className="block text-[#81059e]">Hora</label>
             <DatePicker
               selected={formData.horaGarantia}
               onChange={(date) => setFormData((prev) => ({ ...prev, horaGarantia: date }))}
@@ -223,18 +223,18 @@ export  function RegistrarGarantia() {
               timeIntervals={15}
               timeCaption="Hora"
               dateFormat="HH:mm"
-              className="w-full p-2 border border-[#932A83] rounded-md text-black"
+              className="w-full p-2 border border-[#81059e] rounded-md text-black"
             />
           </div>
 
           {/* Seletor de Loja */}
           <div>
-            <label className="block text-[#932A83]">Loja</label>
+            <label className="block text-[#81059e]">Loja</label>
             <select
               name="loja"
               value={formData.loja}
               onChange={handleInputChange}
-              className="w-full p-2 border border-[#932A83] rounded-md text-black"
+              className="w-full p-2 border border-[#81059e] rounded-md text-black"
             >
               <option value="Óticas Popular 1">Óticas Popular 1</option>
               <option value="Óticas Popular 2">Óticas Popular 2</option>
@@ -243,12 +243,12 @@ export  function RegistrarGarantia() {
 
           {/* Data de Vencimento usando DatePicker */}
           <div>
-            <label className="block text-[#932A83]">Data de Vencimento</label>
+            <label className="block text-[#81059e]">Data de Vencimento</label>
             <DatePicker
               selected={formData.dataVencimento}
               onChange={(date) => setFormData((prev) => ({ ...prev, dataVencimento: date }))}
               dateFormat="dd/MM/yyyy"
-              className="w-full p-2 border border-[#932A83] rounded-md text-black"
+              className="w-full p-2 border border-[#81059e] rounded-md text-black"
               placeholderText="Selecione a Data de Vencimento"
             />
           </div>
@@ -258,7 +258,7 @@ export  function RegistrarGarantia() {
         <div className="flex justify-center mt-6">
           <button
             onClick={handleRegister}
-            className="bg-[#932A83] text-white px-6 py-3 rounded-md hover:bg-[#781e6a]"
+            className="bg-[#81059e] text-white px-6 py-3 rounded-md hover:bg-[#781e6a]"
           >
             REGISTRAR GARANTIA
           </button>

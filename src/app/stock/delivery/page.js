@@ -136,9 +136,9 @@ export default function CriarEntrega() {
 
   return (
     <Layout>
-      <div className="flex flex-col items-center justify-center py-8 px-4 sm:px-6 lg:px-8">
-        <div className="relative max-w-4xl w-full space-y-8 bg-white rounded-lg shadow-lg p-6">
-          
+      <div>
+        <div className="w-full p-2">
+
           {/* Botão Limpar dentro do conteúdo principal no canto superior direito */}
           <button
             type="button"
@@ -149,7 +149,7 @@ export default function CriarEntrega() {
           </button>
 
           {/* Centralizar o título */}
-          <h2 className="text-center text-2xl font-extrabold" style={{ color: '#932A83' }}>CRIAR ENTREGA</h2>
+          <h2 className="text-center text-2xl font-extrabold" style={{ color: '#81059e' }}>CRIAR ENTREGA</h2>
 
           <form onSubmit={handleSubmit}>
             <div className="grid grid-cols-3 gap-4">
@@ -157,7 +157,7 @@ export default function CriarEntrega() {
                 <label
                   htmlFor="data"
                   className="block text-sm font-medium"
-                  style={{ color: '#932A8387' }}
+                  style={{ color: '#81059e87' }}
                 >
                   Data
                 </label>
@@ -167,14 +167,14 @@ export default function CriarEntrega() {
                   value={data}
                   onChange={(e) => setData(e.target.value)}
                   className="mt-1 block w-full h-10 rounded-md border shadow-sm focus:border-purple-500 focus:ring focus:ring-purple-500 sm:text-sm text-black"
-                  style={{ borderColor: '#932A83' }}
+                  style={{ borderColor: '#81059e' }}
                 />
               </div>
               <div className="col-span-1">
                 <label
                   htmlFor="hora"
                   className="block text-sm font-medium"
-                  style={{ color: '#932A8387' }}
+                  style={{ color: '#81059e87' }}
                 >
                   Hora
                 </label>
@@ -184,14 +184,14 @@ export default function CriarEntrega() {
                   value={hora}
                   onChange={(e) => setHora(e.target.value)}
                   className="mt-1 block w-full h-10 rounded-md border shadow-sm focus:border-purple-500 focus:ring focus:ring-purple-500 sm:text-sm text-black"
-                  style={{ borderColor: '#932A83' }}
+                  style={{ borderColor: '#81059e' }}
                 />
               </div>
               <div className="col-span-1">
                 <label
                   htmlFor="loja"
                   className="block text-sm font-medium"
-                  style={{ color: '#932A8387' }}
+                  style={{ color: '#81059e87' }}
                 >
                   Loja
                 </label>
@@ -200,7 +200,7 @@ export default function CriarEntrega() {
                   value={loja}
                   onChange={(e) => setLoja(e.target.value)}
                   className="mt-1 block w-full h-10 rounded-md border bg-gray-100 shadow-sm focus:border-purple-500 focus:ring focus:ring-purple-500 sm:text-sm text-black"
-                  style={{ borderColor: '#932A83' }}
+                  style={{ borderColor: '#81059e' }}
                 >
                   <option value="loja1">Ótica Popular 1</option>
                   <option value="loja2">Ótica Popular 2</option>
@@ -213,7 +213,7 @@ export default function CriarEntrega() {
               <label
                 htmlFor="cliente"
                 className="block text-sm font-medium"
-                style={{ color: '#932A8387' }}
+                style={{ color: '#81059e87' }}
               >
                 Cliente
               </label>
@@ -226,7 +226,7 @@ export default function CriarEntrega() {
                   buscarClientes(e.target.value); // Buscar clientes ao digitar
                 }}
                 className="mt-1 block w-full h-10 rounded-md border shadow-sm focus:border-purple-500 focus:ring focus:ring-purple-500 sm:text-sm text-black"
-                style={{ borderColor: '#932A83' }}
+                style={{ borderColor: '#81059e' }}
               />
               {mostrarSugestoes && clientesSugestoes.length > 0 && (
                 <ul className="absolute z-10 w-full bg-white border border-gray-300 rounded-md mt-1 max-h-40 overflow-y-auto shadow-lg">
@@ -248,7 +248,7 @@ export default function CriarEntrega() {
               <label
                 htmlFor="cpf"
                 className="block text-sm font-medium"
-                style={{ color: '#932A8387' }}
+                style={{ color: '#81059e87' }}
               >
                 CPF
               </label>
@@ -258,7 +258,7 @@ export default function CriarEntrega() {
                 value={cpf}
                 readOnly
                 className="mt-1 block w-full h-10 rounded-md border shadow-sm bg-gray-100 sm:text-sm text-black"
-                style={{ borderColor: '#932A83' }}
+                style={{ borderColor: '#81059e' }}
               />
             </div>
 
@@ -267,7 +267,7 @@ export default function CriarEntrega() {
                 <label
                   htmlFor="referencia"
                   className="block text-sm font-medium"
-                  style={{ color: '#932A8387' }}
+                  style={{ color: '#81059e87' }}
                 >
                   Referência
                 </label>
@@ -277,14 +277,14 @@ export default function CriarEntrega() {
                   value={referencia}
                   onChange={(e) => setReferencia(e.target.value)}
                   className="mt-1 block w-full h-10 rounded-md border shadow-sm focus:border-purple-500 focus:ring focus:ring-purple-500 sm:text-sm text-black"
-                  style={{ borderColor: '#932A83' }}
+                  style={{ borderColor: '#81059e' }}
                 />
               </div>
               <div>
                 <label
                   htmlFor="lente"
                   className="block text-sm font-medium"
-                  style={{ color: '#932A8387' }}
+                  style={{ color: '#81059e87' }}
                 >
                   Lente
                 </label>
@@ -294,7 +294,7 @@ export default function CriarEntrega() {
                   value={lente}
                   onChange={(e) => setLente(e.target.value)}
                   className="mt-1 block w-full h-10 rounded-md border shadow-sm focus:border-purple-500 focus:ring focus:ring-purple-500 sm:text-sm text-black"
-                  style={{ borderColor: '#932A83' }}
+                  style={{ borderColor: '#81059e' }}
                 />
               </div>
             </div>
@@ -304,7 +304,7 @@ export default function CriarEntrega() {
               <label
                 htmlFor="armacao"
                 className="block text-sm font-medium"
-                style={{ color: '#932A8387' }}
+                style={{ color: '#81059e87' }}
               >
                 Armação
               </label>
@@ -314,7 +314,7 @@ export default function CriarEntrega() {
                 value={armacao}
                 onChange={(e) => setArmacao(e.target.value)}
                 className="mt-1 block w-full h-10 rounded-md border shadow-sm focus:border-purple-500 focus:ring focus:ring-purple-500 sm:text-sm text-black"
-                style={{ borderColor: '#932A83' }}
+                style={{ borderColor: '#81059e' }}
               />
             </div>
 
@@ -322,7 +322,7 @@ export default function CriarEntrega() {
               <label
                 htmlFor="solar"
                 className="block text-sm font-medium"
-                style={{ color: '#932A8387' }}
+                style={{ color: '#81059e87' }}
               >
                 Solar
               </label>
@@ -332,7 +332,7 @@ export default function CriarEntrega() {
                 value={solar}
                 onChange={(e) => setSolar(e.target.value)}
                 className="mt-1 block w-full h-10 rounded-md border shadow-sm focus:border-purple-500 focus:ring focus:ring-purple-500 sm:text-sm text-black"
-                style={{ borderColor: '#932A83' }}
+                style={{ borderColor: '#81059e' }}
               />
             </div>
 
@@ -341,7 +341,7 @@ export default function CriarEntrega() {
                 <label
                   htmlFor="status"
                   className="block text-sm font-medium"
-                  style={{ color: '#932A8387' }}
+                  style={{ color: '#81059e87' }}
                 >
                   Status
                 </label>
@@ -364,7 +364,7 @@ export default function CriarEntrega() {
             <div className="flex justify-center">
               <button
                 type="submit"
-                className="mt-4 px-4 py-2 bg-[#932A83] text-white font-medium rounded-md shadow-sm hover:bg-purple-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
+                className="mt-4 px-4 py-2 bg-[#81059e] text-white font-medium rounded-md shadow-sm hover:bg-purple-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
               >
                 Salvar
               </button>

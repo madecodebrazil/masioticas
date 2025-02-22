@@ -1,8 +1,8 @@
 "use client";
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation'; // Importando o hook useRouter
-import { collection, setDoc, doc, getDocs, query, where } from 'firebase/firestore'; 
-import { firestore } from '../../../lib/firebaseConfig'; 
+import { collection, setDoc, doc, getDocs, query, where } from 'firebase/firestore';
+import { firestore } from '../../../lib/firebaseConfig';
 import Layout from '@/components/Layout';
 
 const CardPaymentForm = () => {
@@ -15,7 +15,7 @@ const CardPaymentForm = () => {
     cvv: '',
     installments: '',
     cpf: '',
-    cardBrand: '', 
+    cardBrand: '',
   });
 
   const [suggestions, setSuggestions] = useState([]);
@@ -41,8 +41,8 @@ const CardPaymentForm = () => {
 
       const filteredConsumers = consumersSnapshot.docs
         .map(doc => ({ id: doc.id, ...doc.data() }))
-        .filter(consumer => 
-          consumer.nome && 
+        .filter(consumer =>
+          consumer.nome &&
           consumer.nome.toLowerCase().startsWith(searchTerm.toLowerCase())
         );
 
@@ -76,12 +76,12 @@ const CardPaymentForm = () => {
   };
 
   const handleExpirationInput = (e) => {
-    let value = e.target.value.replace(/\D/g, ''); 
+    let value = e.target.value.replace(/\D/g, '');
     if (value.length > 2) {
       value = value.slice(0, 2) + '/' + value.slice(2);
     }
     if (value.length > 7) {
-      value = value.slice(0, 7); 
+      value = value.slice(0, 7);
     }
     setCardData({ ...cardData, expiration: value });
   };
@@ -107,7 +107,7 @@ const CardPaymentForm = () => {
         cvv: cardData.cvv,
         installments: cardData.installments,
         cpf: cardData.cpf,
-        cardBrand: cardData.cardBrand, 
+        cardBrand: cardData.cardBrand,
       });
       setErrorMessage('');
       alert('Cartão registrado com sucesso!');
@@ -123,24 +123,24 @@ const CardPaymentForm = () => {
   return (
     <Layout>
       <div className="flex justify-center items-center min-h-screen p-4">
-        <div className="bg-white shadow-lg rounded-lg p-6 w-full max-w-lg">
-          <h2 className="text-[#932A83] text-2xl font-bold mb-6 text-center">Lançar no Cartão</h2>
+        <div className=" w-full max-w-5xl mx-auto rounded-lg">
+          <h2 className="text-2xl font-bold text-[#81059e] mb-8">Lançar no Cartão</h2>
 
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit} className="max-w-7xl mx-auto bg-white">
             {/* Seletor de Bandeira */}
             <div className="mb-6">
-              <label className="block text-[#932A8387] mb-2">Emissor</label>
+              <label className="block font-semibold text-[#81059e87] mb-2">Emissor</label>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                 {['VISA', 'MASTERCARD', 'AMEX', 'ELO', 'HIPERCARD', 'DINNER CLUB', 'DISCOVER'].map((brand) => (
                   <button
                     type="button"
                     key={brand}
                     onClick={() => handleBrandSelect(brand)}
-                    className={`border border-[#932A8387] py-2 md:py-4 rounded transition-colors duration-300 
-                    ${cardData.cardBrand === brand 
-                      ? 'bg-[#932A83] text-white' 
-                      : 'bg-white text-[#932A8387] hover:bg-[#e0b1d2] hover:text-white'
-                    }`}
+                    className={`border-2 border-[#81059e87] py-2 md:py-4 rounded transition-colors duration-300 
+                    ${cardData.cardBrand === brand
+                        ? 'bg-[#81059e] text-white'
+                        : 'bg-white text-[#81059e87] hover:bg-[#e0b1d2] hover:text-white'
+                      }`}
                   >
                     {brand}
                   </button>
@@ -150,24 +150,24 @@ const CardPaymentForm = () => {
 
             {/* Nome do Titular */}
             <div className="mb-6 relative" ref={suggestionRef}>
-              <label className="block text-[#932A8387] mb-2">Nome do Titular</label>
+              <label className="block text-[#81059e87] mb-2">Nome do Titular</label>
               <input
                 type="text"
                 name="cardHolder"
-                className="w-full p-2 border border-[#932A8387] rounded text-black"
+                className="w-full p-2 border-2 border-[#81059e87] rounded text-black"
                 placeholder="Nome do Titular"
                 value={cardData.cardHolder}
                 onChange={handleInputChange}
-                onFocus={() => setShowSuggestions(true)} 
+                onFocus={() => setShowSuggestions(true)}
                 required
               />
               {/* Sugestões de consumidores */}
               {showSuggestions && suggestions.length > 0 && (
-                <ul className="absolute z-50 bg-white border border-[#932A8387] mt-1 w-full rounded shadow-lg max-h-60 overflow-y-auto">
+                <ul className="absolute z-50 bg-white border border-[#81059e87] mt-1 w-full rounded shadow-lg max-h-60 overflow-y-auto">
                   {suggestions.map((consumer) => (
                     <li
                       key={consumer.id}
-                      className="p-2 cursor-pointer hover:bg-[#932A83] hover:text-white text-black"
+                      className="p-2 cursor-pointer hover:bg-[#81059e] hover:text-white text-black"
                       onClick={() => handleSuggestionClick(consumer)}
                     >
                       {consumer.nome} - {consumer.cpf}
@@ -180,11 +180,11 @@ const CardPaymentForm = () => {
             {/* Dados do Cartão */}
             <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-[#932A8387] mb-2">Número do Cartão</label>
+                <label className="block text-[#81059e87] mb-2">Número do Cartão</label>
                 <input
                   type="text"
                   name="cardNumber"
-                  className="w-full p-2 border border-[#932A8387] rounded text-black"
+                  className="w-full p-2 border-2 border-[#81059e87] rounded text-black"
                   placeholder="Número do Cartão"
                   value={cardData.cardNumber}
                   onChange={handleInputChange}
@@ -192,14 +192,14 @@ const CardPaymentForm = () => {
                 />
               </div>
               <div>
-                <label className="block text-[#932A8387] mb-2">Validade</label>
+                <label className="block text-[#81059e87] mb-2">Validade</label>
                 <input
                   type="text"
                   name="expiration"
-                  className="w-full p-2 border border-[#932A8387] rounded text-black"
+                  className="w-full p-2 border-2 border-[#81059e87] rounded text-black"
                   placeholder="MM/AAAA"
                   value={cardData.expiration}
-                  onChange={handleExpirationInput} 
+                  onChange={handleExpirationInput}
                   required
                 />
               </div>
@@ -207,11 +207,11 @@ const CardPaymentForm = () => {
 
             <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-[#932A8387] mb-2">Código de Autenticação</label>
+                <label className="block text-[#81059e87] mb-2">Código de Autenticação</label>
                 <input
                   type="text"
                   name="cvv"
-                  className="w-full p-2 border border-[#932A8387] rounded text-black"
+                  className="w-full p-2 border-2 border-[#81059e87] rounded text-black"
                   placeholder="CVV"
                   value={cardData.cvv}
                   onChange={handleInputChange}
@@ -219,11 +219,11 @@ const CardPaymentForm = () => {
                 />
               </div>
               <div>
-                <label className="block text-[#932A8387] mb-2">Qtd de Parcelas</label>
+                <label className="block text-[#81059e87] mb-2">Qtd de Parcelas</label>
                 <input
                   type="text"
                   name="installments"
-                  className="w-full p-2 border border-[#932A8387] rounded text-black"
+                  className="w-full p-2 border-2 border-[#81059e87] rounded text-black"
                   placeholder="Parcelas"
                   value={cardData.installments}
                   onChange={handleInputChange}
@@ -233,11 +233,11 @@ const CardPaymentForm = () => {
 
             {/* CPF do Cliente */}
             <div className="mb-6">
-              <label className="block text-[#932A8387] mb-2">CPF do Cliente</label>
+              <label className="block text-[#81059e87] mb-2">CPF do Cliente</label>
               <input
                 type="text"
                 name="cpf"
-                className="w-full p-2 border border-[#932A8387] rounded text-black"
+                className="w-full p-2 border-2 border-[#81059e87] rounded text-black"
                 placeholder="CPF"
                 value={cardData.cpf}
                 onChange={handleInputChange}
@@ -252,13 +252,13 @@ const CardPaymentForm = () => {
 
             {/* Botões */}
             <div className="flex justify-between">
-              <button className="bg-[#932A83] text-white py-2 px-4 rounded">
+              <button className="bg-[#81059e] text-white py-2 px-4 rounded">
                 Registrar
               </button>
               <button
                 type="button"
                 onClick={handleDisplayCards}
-                className="bg-[#932A83] text-white py-2 px-4 rounded"
+                className="bg-[#81059e] text-white py-2 px-4 rounded"
               >
                 Reg. de Cartões
               </button>

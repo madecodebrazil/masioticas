@@ -166,7 +166,7 @@ const ListConsultation = () => {
     <Layout>
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="w-full max-w-6xl p-4 md:p-8 bg-white rounded-lg shadow-md">
-          <h2 className="text-xl md:text-2xl font-semibold text-[#932A83] mb-6 text-center md:text-left">
+          <h2 className="text-xl md:text-2xl font-semibold text-[#81059e] mb-6 text-center md:text-left">
             CONSULTAS REGISTRADAS
           </h2>
 
@@ -182,13 +182,13 @@ const ListConsultation = () => {
             <div className="flex space-x-4">
               <button
                 onClick={handleAddClick}
-                className="bg-[#932A83] text-white px-6 py-2 rounded-lg w-full md:w-auto"
+                className="bg-[#81059e] text-white px-6 py-2 rounded-lg w-full md:w-auto"
               >
                 ADICIONAR
               </button>
               <button
                 onClick={() => setIsRemoving(!isRemoving)}
-                className="bg-[#932A83] text-white px-6 py-2 rounded-lg w-full md:w-auto"
+                className="bg-[#81059e] text-white px-6 py-2 rounded-lg w-full md:w-auto"
               >
                 {isRemoving ? "CANCELAR" : "REMOVER"}
               </button>
@@ -202,32 +202,32 @@ const ListConsultation = () => {
               <table className="min-w-full bg-white border">
                 <thead className="border-b bg-gray-100">
                   <tr>
-                    <th className="text-left px-4 py-2 text-[#932A83]">CPF</th>
-                    <th className="text-left px-4 py-2 text-[#932A83]">
+                    <th className="text-left px-4 py-2 text-[#81059e]">CPF</th>
+                    <th className="text-left px-4 py-2 text-[#81059e]">
                       Paciente
                     </th>
-                    <th className="text-left px-4 py-2 text-[#932A83]">RG</th>
-                    <th className="text-left px-4 py-2 text-[#932A83]">
+                    <th className="text-left px-4 py-2 text-[#81059e]">RG</th>
+                    <th className="text-left px-4 py-2 text-[#81059e]">
                       Logradouro
                     </th>
-                    <th className="text-left px-4 py-2 text-[#932A83]">
+                    <th className="text-left px-4 py-2 text-[#81059e]">
                       Bairro
                     </th>
-                    <th className="text-left px-4 py-2 text-[#932A83]">Nº</th>
-                    <th className="text-left px-4 py-2 text-[#932A83]">
+                    <th className="text-left px-4 py-2 text-[#81059e]">Nº</th>
+                    <th className="text-left px-4 py-2 text-[#81059e]">
                       Ametropia
                     </th>
-                    <th className="text-left px-4 py-2 text-[#932A83]">Data</th>
-                    <th className="text-left px-4 py-2 text-[#932A83]">Hora</th>
-                    <th className="text-left px-4 py-2 text-[#932A83]">
+                    <th className="text-left px-4 py-2 text-[#81059e]">Data</th>
+                    <th className="text-left px-4 py-2 text-[#81059e]">Hora</th>
+                    <th className="text-left px-4 py-2 text-[#81059e]">
                       Clínica
                     </th>
-                    <th className="text-left px-4 py-2 text-[#932A83]">
+                    <th className="text-left px-4 py-2 text-[#81059e]">
                       Valor
                     </th>{" "}
                     {/* Nova coluna para Valor da Consulta */}
                     {isRemoving && (
-                      <th className="text-left px-4 py-2 text-[#932A83]">
+                      <th className="text-left px-4 py-2 text-[#81059e]">
                         Ação
                       </th>
                     )}
@@ -322,7 +322,7 @@ const ListConsultation = () => {
               <div className="space-y-4">
                 <h2
                   className="text-lg font-bold mb-4"
-                  style={{ color: "#932A83" }}
+                  style={{ color: "#81059e" }}
                 >
                   Detalhes da Consulta
                 </h2>
@@ -376,21 +376,21 @@ const ListConsultation = () => {
               <div className="mt-8 flex justify-center space-x-4">
                 <button
                   onClick={() => generatePDF(selectedConsultation)}
-                  className="flex items-center px-6 py-3 bg-[#932A83] text-white font-bold rounded-lg hover:bg-green-700 transition"
+                  className="flex items-center px-6 py-3 bg-[#81059e] text-white font-bold rounded-lg hover:bg-green-700 transition"
                 >
                   <FaFilePdf className="mr-2" /> PDF
                 </button>
 
                 <button
                   onClick={handlePrint}
-                  className="flex items-center px-6 py-3 bg-[#932A83] text-white font-bold rounded-lg hover:bg-blue-700 transition"
+                  className="flex items-center px-6 py-3 bg-[#81059e] text-white font-bold rounded-lg hover:bg-blue-700 transition"
                 >
                   <FaPrint className="mr-2" /> Imprimir
                 </button>
 
                 <button
                   onClick={() => handleEdit(selectedConsultation)}
-                  className="flex items-center px-6 py-3 bg-[#932A83] text-white font-bold rounded-lg hover:bg-purple-600 transition"
+                  className="flex items-center px-6 py-3 bg-[#81059e] text-white font-bold rounded-lg hover:bg-purple-600 transition"
                 >
                   <FaEdit className="mr-2" /> Editar
                 </button>
@@ -412,13 +412,13 @@ const ListConsultation = () => {
 
               <h2
                 className="text-lg font-bold mb-4"
-                style={{ color: "#932A83" }}
+                style={{ color: "#81059e" }}
               >
                 Editar Consulta
               </h2>
 
               <div className="space-y-4">
-                <label className="text-[#932A8387] block">
+                <label className="text-[#81059e87] block">
                   Nome do Paciente
                 </label>
                 <input
@@ -428,7 +428,7 @@ const ListConsultation = () => {
                   onChange={handleInputChange}
                   className="w-full px-4 py-2 border border-gray-300 rounded text-black"
                 />
-                <label className="text-[#932A8387] block">CPF</label>
+                <label className="text-[#81059e87] block">CPF</label>
                 <input
                   type="text"
                   name="cpf"
@@ -436,7 +436,7 @@ const ListConsultation = () => {
                   onChange={handleInputChange}
                   className="w-full px-4 py-2 border border-gray-300 rounded text-black"
                 />
-                <label className="block text-[#932A8387] ">RG</label>
+                <label className="block text-[#81059e87] ">RG</label>
                 <input
                   type="text"
                   name="rg"
@@ -444,7 +444,7 @@ const ListConsultation = () => {
                   onChange={handleInputChange}
                   className="w-full px-4 py-2 border border-gray-300 rounded text-black"
                 />
-                <label className="block text-[#932A8387]">Logradouro</label>
+                <label className="block text-[#81059e87]">Logradouro</label>
                 <input
                   type="text"
                   name="logradouro"
@@ -452,7 +452,7 @@ const ListConsultation = () => {
                   onChange={handleInputChange}
                   className="w-full px-4 py-2 border border-gray-300 rounded text-black"
                 />
-                <label className="block text-[#932A8387]">Bairro</label>
+                <label className="block text-[#81059e87]">Bairro</label>
                 <input
                   type="text"
                   name="bairro"
@@ -460,7 +460,7 @@ const ListConsultation = () => {
                   onChange={handleInputChange}
                   className="w-full px-4 py-2 border border-gray-300 rounded text-black"
                 />
-                <label className="block text-[#932A8387]">Nº</label>
+                <label className="block text-[#81059e87]">Nº</label>
                 <input
                   type="text"
                   name="numeroCasa"
@@ -468,7 +468,7 @@ const ListConsultation = () => {
                   onChange={handleInputChange}
                   className="w-full px-4 py-2 border border-gray-300 rounded text-black"
                 />
-                <label className="block text-[#932A8387]">Ametropia</label>
+                <label className="block text-[#81059e87]">Ametropia</label>
                 <input
                   type="text"
                   name="ametropia"
@@ -476,7 +476,7 @@ const ListConsultation = () => {
                   onChange={handleInputChange}
                   className="w-full px-4 py-2 border border-gray-300 rounded text-black"
                 />
-                <label className="block text-[#932A8387]">Data</label>
+                <label className="block text-[#81059e87]">Data</label>
                 <input
                   type="date"
                   name="data"
@@ -484,7 +484,7 @@ const ListConsultation = () => {
                   onChange={handleInputChange}
                   className="w-full px-4 py-2 border border-gray-300 rounded text-black"
                 />
-                <label className="block text-[#932A8387]">Hora</label>
+                <label className="block text-[#81059e87]">Hora</label>
                 <input
                   type="time"
                   name="hora"
@@ -492,7 +492,7 @@ const ListConsultation = () => {
                   onChange={handleInputChange}
                   className="w-full px-4 py-2 border border-gray-300 rounded text-black"
                 />
-                <label className="block text-[#932A8387]">Clínica</label>
+                <label className="block text-[#81059e87]">Clínica</label>
                 <input
                   type="text"
                   name="clinica"
@@ -502,7 +502,7 @@ const ListConsultation = () => {
                 />
 
                 {/* Dropdown para editar status */}
-                <label className="block text-[#932A8387]">Status</label>
+                <label className="block text-[#81059e87]">Status</label>
                 <select
                   name="status"
                   value={formData.status || "agendada"}
@@ -524,7 +524,7 @@ const ListConsultation = () => {
                 </button>
                 <button
                   onClick={handleUpdate}
-                  className="bg-[#932A83] text-white px-4 py-2 rounded"
+                  className="bg-[#81059e] text-white px-4 py-2 rounded"
                 >
                   Salvar
                 </button>

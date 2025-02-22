@@ -192,39 +192,50 @@ export default function Home() {
     useEffect(() => {
         const fetchUserData = async (uid) => {
             try {
-                // Verifica em qual loja o usuário está
+                // Primeiro, buscar na coleção colaboradores
+                const colaboradorRef = doc(firestore, `colaboradores/${uid}`);
+                const colaboradorSnap = await getDoc(colaboradorRef);
+    
+                if (colaboradorSnap.exists()) {
+                    const userData = colaboradorSnap.data();
+                    setUserData(userData);
+                    // Chama contarVendasDoUsuario aqui após ter os dados do usuário
+                    await contarVendasDoUsuario(uid);
+                    return;
+                }
+    
+                // Se não encontrar na coleção colaboradores, tentar nas lojas individuais
                 const docRefLoja1 = doc(firestore, `loja1/users/${uid}/dados`);
                 const docRefLoja2 = doc(firestore, `loja2/users/${uid}/dados`);
                 const docSnapLoja1 = await getDoc(docRefLoja1);
                 const docSnapLoja2 = await getDoc(docRefLoja2);
-
+    
                 if (docSnapLoja1.exists()) {
                     setUserData(docSnapLoja1.data());
                     await contarVendasDoUsuario(uid);
                 } else if (docSnapLoja2.exists()) {
                     setUserData(docSnapLoja2.data());
                     await contarVendasDoUsuario(uid);
-                } else {
-                    console.log('Nenhum documento encontrado para o UID:', uid);
-                    setLoadingVendas(false);
                 }
             } catch (error) {
                 console.error("Erro ao buscar dados do usuário:", error);
-                setLoadingVendas(false);
             }
         };
-
-        const unsubscribe = onAuthStateChanged(auth, async (user) => {
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
             if (user) {
                 setUser(user);
-                await fetchUserData(user.uid);
+                fetchUserData(user.uid);
             } else {
-                router.push('/login');
+                setUser(null);
+                setUserData(null);
+                setLoadingVendas(false); // Importante: definir como false quando não há usuário
             }
         });
+    
 
+        // Adicione antes do return
         return () => unsubscribe();
-    }, [router, contarVendasDoUsuario]);
+    }, [contarVendasDoUsuario]); 
 
     const toggleSidebar = () => {
         if (!loadingOS && !loadingVendas && userData) {
@@ -233,14 +244,16 @@ export default function Home() {
     };
 
     const items = [
-        { label: <>Finanças</>, img: '/images/homepage/Coins.png', href: '/finance' },
+        { label: <>Financeiro</>, img: '/images/homepage/Coins.png', href: '/finance' },
+        { label: <>Vendas</>, img: '/images/homepage/Product.png', href: '/commercial/sales' },
         { label: <>Estoque</>, img: '/images/homepage/Boxes.png', href: '/stock' },
-        { label: <>Produtos Serviços</>, img: '/images/homepage/Product.png', href: '/products_and_services' },
-        { label: <>Consulta</>, img: '/images/homepage/Stethoscope.png', href: '/consultation' },
+        { label: <>Serviços</>, img: '/images/homepage/Product.png', href: '/products_and_services' },
+        { label: <>Cadastros</>, img: '/images/homepage/Task.png', href: '/register' },
+        { label: <>Consultas</>, img: '/images/homepage/Stethoscope.png', href: '/consultation' },
         { label: <>Clientes</>, img: '/images/homepage/User.png', href: 'register/consumers' },
         { label: <>Comercial</>, img: '/images/homepage/Shopping.png', href: '/commercial' },
         { label: <>Cobranças</>, img: '/images/homepage/Receipt_Dollar.png', href: '/billing' },
-        { label: <>Cadastro</>, img: '/images/homepage/Task.png', href: '/register' },
+
     ];
 
     const userPhotoURL = userData?.imageUrl || '/images/default-avatar.png';
@@ -254,7 +267,11 @@ export default function Home() {
 
             {/* Sidebar fixa para desktop */}
             <aside className="hidden md:block md:w-[300px] lg:w-[350px] bg-[#81059e] text-white p-4 pl-10 shadow-xl rounded-tr-xl rounded-br-lg fixed h-screen overflow-y-auto">
-                <SidebarHomepage userPhotoURL={userPhotoURL} userData={userData} currentPage="dashboard" />
+                <SidebarHomepage
+                    userPhotoURL={userPhotoURL}
+                    userData={userData}
+                    currentPage="dashboard"
+                />
             </aside>
 
             {/* Conteúdo principal */}

@@ -104,21 +104,21 @@ const ProdutosRegistrados = () => {
       alert("Por favor, insira um CPF válido.");
       return;
     }
-  
+
     const isCpfValid = await checkCpfInConsumers();
     if (!isCpfValid) return;
-  
+
     try {
       const cartRef = doc(firestore, "cart", cpf); // Documento no Firestore baseado no CPF
       const cartSnap = await getDoc(cartRef);
-  
+
       if (cartSnap.exists()) {
         // Atualizar o carrinho existente
         const existingCart = cartSnap.data();
-  
+
         // Verifica se o produto já está no carrinho
         const productIndex = existingCart.items.findIndex(item => item.id === product.id);
-  
+
         if (productIndex > -1) {
           // Produto já está no carrinho, incrementa a quantidade
           existingCart.items[productIndex].quantidade += 1;
@@ -127,7 +127,7 @@ const ProdutosRegistrados = () => {
           product.quantidade = 1;
           existingCart.items.push(product);
         }
-  
+
         await updateDoc(cartRef, { items: existingCart.items });
       } else {
         // Criar novo carrinho para o CPF
@@ -137,7 +137,7 @@ const ProdutosRegistrados = () => {
           items: [product],
         });
       }
-  
+
       // Atualiza o estado local
       setCartItems((prevItems) => {
         const itemIndex = prevItems.findIndex(item => item.id === product.id);
@@ -151,7 +151,7 @@ const ProdutosRegistrados = () => {
           return [...prevItems, { ...product, quantidade: 1 }];
         }
       });
-  
+
       alert("Produto adicionado ao carrinho!");
     } catch (error) {
       console.error("Erro ao adicionar produto ao carrinho: ", error);
@@ -237,7 +237,7 @@ const ProdutosRegistrados = () => {
                 type="number"
                 value={discountPercentage}
                 onChange={(e) => setDiscountPercentage(Number(e.target.value))}
-                className="border-2 border-[#932A83] px-4 py-2 rounded-lg w-full text-black"
+                className="border-2 border-[#81059e] px-4 py-2 rounded-lg w-full text-black"
                 min="0"
                 max="100"
               />

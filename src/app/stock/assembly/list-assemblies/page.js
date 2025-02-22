@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import Layout from '@/components/Layout';
 import { useRouter } from 'next/navigation';
-import { collection, getDocs, deleteDoc, doc } from "firebase/firestore"; 
+import { collection, getDocs, deleteDoc, doc } from "firebase/firestore";
 import { firestore } from '../../../../lib/firebaseConfig';
 import { FaTrash } from 'react-icons/fa'; // Importa o ícone de lixeira
 
@@ -22,7 +22,7 @@ export default function ListAssemblies() {
       console.log("Fetching assemblies..."); // Log para indicar que a busca está começando
       const loja1Snapshot = await getDocs(collection(firestore, 'montagens', 'loja1', 'dados'));
       const loja2Snapshot = await getDocs(collection(firestore, 'montagens', 'loja2', 'dados'));
-      
+
       const assembliesData = [];
 
       // Percorre cada loja e suas montagens
@@ -64,25 +64,25 @@ export default function ListAssemblies() {
       'Óticas Popular 1': 'loja1',
       'Óticas Popular 2': 'loja2'
     };
-  
+
     // Obtém o ID correto da loja
     const lojaId = lojaIdMap[lojaNome];
-  
+
     if (!lojaId) {
       console.error('Loja não encontrada no mapeamento:', lojaNome);
       return;
     }
-  
+
     console.log(`Deleting assembly with ID: ${id} from store: ${lojaId}`); // Log para verificação dos IDs
     if (window.confirm("Você tem certeza que deseja remover esta montagem?")) {
       try {
         const docRef = doc(firestore, 'montagens', lojaId, 'dados', id); // Usando o ID correto da loja
         console.log(`Document reference to delete: ${docRef.path}`); // Verifica o caminho do documento
-  
+
         // Remove o documento usando o ID correto
         await deleteDoc(docRef);
         console.log(`Successfully deleted assembly with ID: ${id}`); // Log de sucesso
-        
+
         // Atualiza o estado local removendo o item deletado
         setAssemblies((prevAssemblies) => prevAssemblies.filter(assembly => assembly.id !== id));
       } catch (error) {
@@ -90,7 +90,7 @@ export default function ListAssemblies() {
       }
     }
   };
-  
+
   if (isLoading) {
     return <div>Carregando dados...</div>;
   }
@@ -99,9 +99,9 @@ export default function ListAssemblies() {
     <Layout>
       <div className="p-6">
         <div className="flex justify-between items-center mb-4">
-          <h1 className="text-2xl font-bold" style={{ color: '#932A83' }}>LISTA DE MONTAGENS</h1>
+          <h1 className="text-2xl font-bold" style={{ color: '#81059e' }}>LISTA DE MONTAGENS</h1>
           <button
-            className="bg-[#932A83] text-white font-bold px-4 py-2 rounded-lg"
+            className="bg-[#81059e] text-white font-bold px-4 py-2 rounded-lg"
             onClick={() => router.push('/stock/assembly')}
           >
             ADICIONAR MONTAGEM

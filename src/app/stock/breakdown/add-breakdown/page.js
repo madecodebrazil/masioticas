@@ -8,7 +8,7 @@ import { firestore } from '../../../../lib/firebaseConfig';
 export function AddBreakdown() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  
+
   // Obtém os dados da URL e os converte para um objeto JavaScript
   const formDataFromQuery = searchParams.get('formData') ? JSON.parse(decodeURIComponent(searchParams.get('formData'))) : {};
 
@@ -96,7 +96,7 @@ export function AddBreakdown() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true); // Ativa o estado de carregamento
-  
+
     try {
       const queryString = encodeURIComponent(JSON.stringify(formData));
       // Redireciona para a página de confirmação com os dados do formulário na URL
@@ -111,12 +111,12 @@ export function AddBreakdown() {
   return (
     <Layout>
       <div className="p-6">
-        <h1 className="text-2xl font-bold" style={{ color: '#932A83' }}>REGISTRAR AVARIA</h1>
+        <h1 className="text-2xl font-bold" style={{ color: '#81059e' }}>REGISTRAR AVARIA</h1>
 
         <form onSubmit={handleSubmit} className="space-y-6 mt-6">
           {/* Nome do Produto */}
           <div className="relative">
-            <label className="block text-sm font-bold" style={{ color: '#932A8387' }}>Nome do Produto</label>
+            <label className="block text-sm font-bold" style={{ color: '#81059e87' }}>Nome do Produto</label>
             <input
               type="text"
               name="nomeProduto"
@@ -145,7 +145,7 @@ export function AddBreakdown() {
           {/* Código do Produto, NCM, sku, Produto */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-bold" style={{ color: '#932A8387' }}>Código do Produto</label>
+              <label className="block text-sm font-bold" style={{ color: '#81059e87' }}>Código do Produto</label>
               <input
                 type="text"
                 name="codigo"
@@ -158,7 +158,7 @@ export function AddBreakdown() {
             </div>
 
             <div>
-              <label className="block text-sm font-bold" style={{ color: '#932A8387' }}>NCM</label>
+              <label className="block text-sm font-bold" style={{ color: '#81059e87' }}>NCM</label>
               <input
                 type="text"
                 name="NCM"
@@ -170,7 +170,7 @@ export function AddBreakdown() {
             </div>
 
             <div>
-              <label className="block text-sm font-bold" style={{ color: '#932A8387' }}>SKU</label>
+              <label className="block text-sm font-bold" style={{ color: '#81059e87' }}>SKU</label>
               <input
                 type="text"
                 name="sku"
@@ -182,7 +182,7 @@ export function AddBreakdown() {
             </div>
 
             <div>
-              <label className="block text-sm font-bold" style={{ color: '#932A8387' }}>Produto</label>
+              <label className="block text-sm font-bold" style={{ color: '#81059e87' }}>Produto</label>
               <input
                 type="text"
                 name="produto"
@@ -196,7 +196,7 @@ export function AddBreakdown() {
 
           {/* Descrição */}
           <div>
-            <label className="block text-sm font-bold" style={{ color: '#932A8387' }}>Descrição</label>
+            <label className="block text-sm font-bold" style={{ color: '#81059e87' }}>Descrição</label>
             <textarea
               name="descricao"
               value={formData.descricao}
@@ -210,7 +210,7 @@ export function AddBreakdown() {
           {/* Data, Hora, Loja */}
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-bold" style={{ color: '#932A8387' }}>Data</label>
+              <label className="block text-sm font-bold" style={{ color: '#81059e87' }}>Data</label>
               <input
                 type="date"
                 name="data"
@@ -221,7 +221,7 @@ export function AddBreakdown() {
             </div>
 
             <div>
-              <label className="block text-sm font-bold" style={{ color: '#932A8387' }}>Hora</label>
+              <label className="block text-sm font-bold" style={{ color: '#81059e87' }}>Hora</label>
               <input
                 type="time"
                 name="hora"
@@ -232,7 +232,7 @@ export function AddBreakdown() {
             </div>
 
             <div>
-              <label className="block text-sm font-bold" style={{ color: '#932A8387' }}>Loja</label>
+              <label className="block text-sm font-bold" style={{ color: '#81059e87' }}>Loja</label>
               <input
                 type="text"
                 name="loja"
@@ -246,19 +246,18 @@ export function AddBreakdown() {
 
           {/* Tipo de Avaria */}
           <div>
-            <label className="block text-sm font-bold" style={{ color: '#932A8387' }}>Tipo de Avaria</label>
+            <label className="block text-sm font-bold" style={{ color: '#81059e87' }}>Tipo de Avaria</label>
             <div className="flex space-x-4">
               {['Desbotando', 'Descascando', 'Fissuras', 'Oxidado'].map((tipo) => (
                 <button
                   key={tipo}
                   type="button"
                   onClick={() => setFormData({ ...formData, tipoAvaria: tipo })}
-                  className={`px-4 py-2 border rounded-lg ${
-                    formData.tipoAvaria === tipo
-                      ? 'bg-[#932A83] text-white'
-                      : 'border-[#932A83] text-black'
-                  }`}
-                  style={{ backgroundColor: formData.tipoAvaria === tipo ? '#932A83' : 'transparent' }}
+                  className={`px-4 py-2 border rounded-lg ${formData.tipoAvaria === tipo
+                      ? 'bg-[#81059e] text-white'
+                      : 'border-[#81059e] text-black'
+                    }`}
+                  style={{ backgroundColor: formData.tipoAvaria === tipo ? '#81059e' : 'transparent' }}
                 >
                   {tipo}
                 </button>
@@ -271,7 +270,7 @@ export function AddBreakdown() {
             <button
               type="submit"
               className="px-6 py-3 rounded-lg font-bold"
-              style={{ backgroundColor: '#932A83', color: 'white' }}
+              style={{ backgroundColor: '#81059e', color: 'white' }}
               disabled={isLoading}
             >
               {isLoading ? 'Registrando...' : 'REGISTRAR AVARIA'}

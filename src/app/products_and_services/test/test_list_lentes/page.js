@@ -42,7 +42,7 @@ const LentesRegistradas = () => {
   const confirmRemove = (lente) => {
     setLenteToRemove(lente);
   };
-  
+
   // Função para agrupar lentes por título e loja
   const groupLentes = () => {
     const groupedLentes = lentes.reduce((acc, lente) => {
@@ -143,16 +143,15 @@ const LentesRegistradas = () => {
           />
           <div className="flex space-x-4">
             <button
-              className="bg-[#932A83] text-white font-bold py-2 px-6 rounded-lg w-full sm:w-auto"
+              className="bg-[#81059e] text-white font-bold py-2 px-6 rounded-lg w-full sm:w-auto"
               onClick={() => router.push('/products_and_services/lenses/add.lente')}
             >
               ADICIONAR
             </button>
 
             <button
-              className={`${
-                isRemoving ? 'bg-yellow-500' : 'bg-red-600'
-              } text-white font-bold py-2 px-6 rounded-lg w-full sm:w-auto`}
+              className={`${isRemoving ? 'bg-yellow-500' : 'bg-red-600'
+                } text-white font-bold py-2 px-6 rounded-lg w-full sm:w-auto`}
               onClick={() => setIsRemoving(!isRemoving)}
             >
               {isRemoving ? 'CANCELAR REMOÇÃO' : 'REMOVER'}

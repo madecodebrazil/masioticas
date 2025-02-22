@@ -51,10 +51,10 @@ export default function FornecedoresPage() {
 
   return (
     <Layout>
-      <div className="bg-[#F0F4FD] w-full flex flex-col items-center justify-start pt-4 px-2 sm:px-4 lg:px-8">
-        <div className="relative w-full bg-[#F0F4FD] rounded-lg  p-4 sm:p-6 max-w-7xl">
+      <div className="w-full">
+        <div className="w-full">
           <div className="flex justify-between items-center">
-            <h2 className="text-lg sm:text-2xl font-light" style={{ color: "#932A83" }}>FORNECEDORES</h2>
+            <h2 className="text-lg sm:text-2xl font-light" style={{ color: "#81059e" }}>FORNECEDORES</h2>
             <button
               className="px-3 sm:px-4 py-2 bg-purple-700 text-white rounded-lg text-sm sm:text-base"
               onClick={handleAddSupplier} // Adicionando a função para navegação

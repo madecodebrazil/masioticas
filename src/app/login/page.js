@@ -94,14 +94,14 @@ export default function Login() {
                 <div dir="rtl" className="w-1/2 h-full relative flex justify-end bg-[#81059e]">
                     <div className='flex items-start'>
                         <img src="/images/logomasi_branca.png " alt="Logo" className="h-20 p-4" /></div>
-                    <img src="/images/hero_mulher.png" alt="Estático" className="w-3/4 h-auto absolute transform -translate-x-1/2 -translate-y-1/2 top-1/2 left-1/2" />
+                    <img src="/images/hero-login.png" alt="Estático" className="w-full h-auto absolute transform -translate-x-1/2 -translate-y-1/2 top-1/2 left-1/2" />
                 </div>
             )}
 
             {/* Div da direita com o formulário de login */}
             <div className={`box ${isMobile ? 'w-full' : 'w-1/2'} flex flex-col justify-center items-center relative z-10 bg-[#81059e]`}>
 
-                <div className='flex bg-white w-[610px] items-center justify-center h-[400px] md:h-[500px] rounded-2xl'>
+                <div className='flex bg-white  w-[610px] items-center justify-center h-[400px] md:h-[500px] rounded-2xl'>
 
                     <div className="box-it w-full max-w-xs">
                         <h2 className="text-center text-[#81059e] text-5xl font-semibold mb-6">Entrar</h2>

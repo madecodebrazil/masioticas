@@ -55,7 +55,7 @@ export default function AvariasRegistradas() {
   const handleDelete = async (id, tipo) => {
     try {
       let collectionPath = '';
-      
+
       // Define o caminho da coleção com base no tipo de avaria
       if (tipo === 'Armação') {
         collectionPath = 'avarias/armacoes_avariadas/items';
@@ -96,10 +96,10 @@ export default function AvariasRegistradas() {
     <Layout>
       <div className="p-6">
         <div className="flex justify-between items-center mb-4">
-          <h1 className="text-2xl font-bold" style={{ color: '#932A83' }}>AVARIAS REGISTRADAS</h1>
+          <h1 className="text-2xl font-bold" style={{ color: '#81059e' }}>AVARIAS REGISTRADAS</h1>
           <button
             className="text-white font-bold px-4 py-2 rounded-lg"
-            style={{ backgroundColor: '#932A83' }} // Mudança da cor para #932A83
+            style={{ backgroundColor: '#81059e' }} // Mudança da cor para #81059e
             onClick={() => router.push('/stock/breakdown/add-breakdown')}
           >
             ADICIONAR
@@ -115,9 +115,9 @@ export default function AvariasRegistradas() {
             value={searchTerm}
             onChange={handleSearch}
           />
-          <button 
+          <button
             className="text-white px-4 py-2 rounded-lg flex items-center"
-            style={{ backgroundColor: '#932A83' }} // Mudança da cor para #932A83
+            style={{ backgroundColor: '#81059e' }} // Mudança da cor para #81059e
             onClick={() => setShowFilter(!showFilter)}
           >
             <FaFilter className="mr-2" /> {/* Ícone de funil */}
@@ -200,7 +200,7 @@ export default function AvariasRegistradas() {
                     <td className="px-4 py-2 text-black">{avaria.data}</td>
                     <td className="px-4 py-2 text-black">{avaria.loja}</td>
                     <td className="px-4 py-2 text-black">
-                      <button 
+                      <button
                         className="text-red-600 hover:text-red-800"
                         onClick={() => handleDelete(avaria.id, avaria.tipo)}
                       >

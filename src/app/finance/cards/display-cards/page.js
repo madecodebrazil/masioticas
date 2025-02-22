@@ -1,8 +1,8 @@
 "use client";
 import React, { useState, useEffect } from 'react';
-import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore'; 
+import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation'; // Importa o hook useRouter
-import { firestore } from '../../../../lib/firebaseConfig'; 
+import { firestore } from '../../../../lib/firebaseConfig';
 import Layout from '@/components/Layout';
 
 export default function DisplayCardsPage() {
@@ -49,39 +49,39 @@ export default function DisplayCardsPage() {
   };
 
   const filteredCards = cards.filter(card =>
-    card.cardHolder.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    card.cardHolder.toLowerCase().includes(searchTerm.toLowerCase()) ||
     card.cardNumber.includes(searchTerm)
   );
 
   return (
     <Layout>
       <div className="flex justify-center items-start min-h-screen p-4 sm:p-8">
-        <div className="bg-[#F0F4FD] shadow-lg rounded-lg p-4 sm:p-8 w-full md:w-3/4 lg:w-2/3">
-          <h2 className="text-[#932A83] text-2xl font-bold mb-4 sm:mb-6 text-center">Lançamentos Registrados</h2>
+        <div className=" w-full max-w-5xl mx-auto rounded-lg">
+          <h2 className="text-2xl font-bold text-[#81059e] mb-8">Lançamentos Registrados</h2>
 
           <div className="flex flex-col sm:flex-row justify-between mb-6">
-            <input 
-              type="text" 
-              placeholder="Busque por código ou título" 
-              className="border p-2 w-full sm:max-w-xs rounded mb-4 sm:mb-0 sm:mr-4" 
+            <input
+              type="text"
+              placeholder="Busque por código ou título"
+              className="border p-2 w-full sm:max-w-xs rounded mb-4 sm:mb-0 sm:mr-4"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
             <div className="flex space-x-4 justify-end">
-              <button 
-                className="bg-[#932A83] text-white py-2 px-4 rounded"
-                onClick={() => router.push('/finance/cards')} 
+              <button
+                className="bg-[#81059e] text-white py-2 px-4 rounded"
+                onClick={() => router.push('/finance/cards')}
               >
                 ADICIONAR
               </button>
-              <button 
-                className="bg-[#932A83] text-white py-2 px-4 rounded"
-                onClick={() => setDeletingMode(!deletingMode)} 
+              <button
+                className="bg-[#81059e] text-white py-2 px-4 rounded"
+                onClick={() => setDeletingMode(!deletingMode)}
               >
                 {deletingMode ? 'CANCELAR' : 'DELETAR'}
               </button>
               {deletingMode && (
-                <button 
+                <button
                   className="bg-red-500 text-white py-2 px-4 rounded"
                   onClick={handleDeleteSelectedCards}
                 >
@@ -94,7 +94,7 @@ export default function DisplayCardsPage() {
           <div className="overflow-x-auto">
             <table className="w-full border-collapse">
               <thead>
-                <tr className="bg-[#932A83] text-white">
+                <tr className="bg-[#81059e] text-white">
                   {deletingMode && <th className="border p-2">Selecionar</th>}
                   <th className="border p-2">Nº do Cartão</th>
                   <th className="border p-2">Titular</th>
@@ -105,11 +105,11 @@ export default function DisplayCardsPage() {
               <tbody>
                 {filteredCards.length > 0 ? (
                   filteredCards.map((card) => (
-                    <tr key={card.id} className="text-center text-[#8D8D8D]"> 
+                    <tr key={card.id} className="text-center text-[#8D8D8D]">
                       {deletingMode && (
                         <td className="border p-2">
-                          <input 
-                            type="checkbox" 
+                          <input
+                            type="checkbox"
                             checked={selectedCards.includes(card.id)}
                             onChange={() => handleSelectCard(card.id)}
                           />

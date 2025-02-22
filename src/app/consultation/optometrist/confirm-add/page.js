@@ -1,6 +1,6 @@
 'use client';
 import React, { Suspense, useState } from 'react';
-import {useRouter, useSearchParams } from 'next/navigation'; // Para pegar parâmetros da URL e redirecionar
+import { useRouter, useSearchParams } from 'next/navigation'; // Para pegar parâmetros da URL e redirecionar
 import Layout from '@/components/Layout'; // Seu layout instanciado
 import { getFirestore, doc, setDoc } from 'firebase/firestore';
 import { app } from '@/lib/firebaseConfig'; // Certifique-se de que o Firebase está corretamente inicializado
@@ -57,44 +57,44 @@ const ConfirmOptometrist = () => {
     <Layout>
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="w-full max-w-lg p-8 bg-white rounded-lg shadow-md">
-          <h2 className="text-2xl font-semibold text-[#932A83] mb-6">
+          <h2 className="text-2xl font-semibold text-[#81059e] mb-6">
             CONFIRMAR REGISTRO
           </h2>
 
           <div className="space-y-4">
             <div>
-              <span className="font-bold text-[#932A83]">Nome do Optometrista</span>
+              <span className="font-bold text-[#81059e]">Nome do Optometrista</span>
               <p className="text-black">{formData.nomeOptometrista}</p>
             </div>
             <div>
-              <span className="font-bold text-[#932A83]">Registro</span>
+              <span className="font-bold text-[#81059e]">Registro</span>
               <p className="text-black">{formData.registroOptometrista}</p>
             </div>
             <div>
-              <span className="font-bold text-[#932A83]">Gênero</span>
+              <span className="font-bold text-[#81059e]">Gênero</span>
               <p className="text-black">{formData.genero}</p>
             </div>
             <div>
-              <span className="font-bold text-[#932A83]">Email</span>
+              <span className="font-bold text-[#81059e]">Email</span>
               <p className="text-black">{formData.email}</p>
             </div>
             <div>
-              <span className="font-bold text-[#932A83]">Telefone</span>
+              <span className="font-bold text-[#81059e]">Telefone</span>
               <p className="text-black">{formData.telefone}</p>
             </div>
             <div>
-              <span className="font-bold text-[#932A83]">Logradouro</span>
+              <span className="font-bold text-[#81059e]">Logradouro</span>
               <p className="text-black">{formData.logradouro}</p>
             </div>
             <div>
-              <span className="font-bold text-[#932A83]">Bairro</span>
+              <span className="font-bold text-[#81059e]">Bairro</span>
               <p className="text-black">{formData.bairro}</p>
             </div>
           </div>
 
           <div className="mt-6 flex space-x-4">
             <button
-              className="flex-1 px-4 py-2 bg-[#932A83] text-white rounded hover:bg-[#820f76] flex items-center justify-center"
+              className="flex-1 px-4 py-2 bg-[#81059e] text-white rounded hover:bg-[#820f76] flex items-center justify-center"
               onClick={handleEdit}
               disabled={isLoading} // Desabilita o botão enquanto carrega
             >
@@ -102,7 +102,7 @@ const ConfirmOptometrist = () => {
               EDITAR
             </button>
             <button
-              className="flex-1 px-4 py-2 bg-[#932A83] text-white rounded hover:bg-[#820f76] flex items-center justify-center"
+              className="flex-1 px-4 py-2 bg-[#81059e] text-white rounded hover:bg-[#820f76] flex items-center justify-center"
               onClick={handleConfirm}
               disabled={isLoading} // Desabilita o botão enquanto carrega
             >
@@ -134,7 +134,7 @@ const ConfirmOptometrist = () => {
 export default function Page() {
   return (
     <Suspense fallback={<div>Carregando...</div>}>
-      <ConfirmOptometrist/>
+      <ConfirmOptometrist />
     </Suspense>
   );
 }

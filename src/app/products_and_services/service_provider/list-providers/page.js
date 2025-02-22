@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import Layout from '@/components/Layout';
 import { useRouter } from 'next/navigation';
-import { collection, getDocs, doc, updateDoc } from "firebase/firestore"; 
+import { collection, getDocs, doc, updateDoc } from "firebase/firestore";
 import { firestore } from '../../../../lib/firebaseConfig';
 import { FaFilePdf, FaPrint, FaEdit } from 'react-icons/fa'; // Importa os ícones
 import jsPDF from 'jspdf'; // Para gerar o PDF
@@ -118,9 +118,9 @@ export default function ListProviders() {
     <Layout>
       <div className="p-6">
         <div className="flex justify-between items-center mb-4">
-          <h1 className="text-2xl font-bold" style={{ color: '#932A83' }}>LISTA DE PRESTADORES</h1>
+          <h1 className="text-2xl font-bold" style={{ color: '#81059e' }}>LISTA DE PRESTADORES</h1>
           <button
-            className="bg-[#932A83] text-white font-bold px-4 py-2 rounded-lg"
+            className="bg-[#81059e] text-white font-bold px-4 py-2 rounded-lg"
             onClick={() => router.push('/products_and_services/service_provider')}
           >
             ADICIONAR PRESTADOR
@@ -180,9 +180,9 @@ export default function ListProviders() {
             {!isEditing ? (
               <div>
                 <div className="text-center">
-                  <h2 className="text-lg font-bold mb-4" style={{ color: '#932A83' }}>{selectedProvider.name}</h2>
+                  <h2 className="text-lg font-bold mb-4" style={{ color: '#81059e' }}>{selectedProvider.name}</h2>
                 </div>
-                
+
                 <div className="space-y-4 text-black">
                   <p><span className="font-semibold">Nome:</span> {selectedProvider.name}</p>
                   <p><span className="font-semibold">Apelido:</span> {selectedProvider.apelido}</p>
@@ -194,7 +194,7 @@ export default function ListProviders() {
                 <div className="mt-8 flex justify-center space-x-4">
                   <button
                     onClick={() => generatePDF(selectedProvider)}
-                    className="flex items-center px-6 py-3 bg-[#932A83] text-white font-bold rounded-lg hover:bg-green-700 transition"
+                    className="flex items-center px-6 py-3 bg-[#81059e] text-white font-bold rounded-lg hover:bg-green-700 transition"
                   >
                     <FaFilePdf className="mr-2" />
                     PDF
@@ -202,7 +202,7 @@ export default function ListProviders() {
 
                   <button
                     onClick={handlePrint}
-                    className="flex items-center px-6 py-3 bg-[#932A83] text-white font-bold rounded-lg hover:bg-blue-700 transition"
+                    className="flex items-center px-6 py-3 bg-[#81059e] text-white font-bold rounded-lg hover:bg-blue-700 transition"
                   >
                     <FaPrint className="mr-2" />
                     Imprimir
@@ -210,7 +210,7 @@ export default function ListProviders() {
 
                   <button
                     onClick={handleEdit}
-                    className="flex items-center px-6 py-3 bg-[#932A83] text-white font-bold rounded-lg hover:bg-purple-600 transition"
+                    className="flex items-center px-6 py-3 bg-[#81059e] text-white font-bold rounded-lg hover:bg-purple-600 transition"
                   >
                     <FaEdit className="mr-2" />
                     Editar
@@ -219,7 +219,7 @@ export default function ListProviders() {
               </div>
             ) : (
               <div>
-                <h2 className="text-lg font-bold mb-4" style={{ color: '#932A83' }}>Editar Prestador</h2>
+                <h2 className="text-lg font-bold mb-4" style={{ color: '#81059e' }}>Editar Prestador</h2>
 
                 <div className="space-y-4">
                   <div>
@@ -276,7 +276,7 @@ export default function ListProviders() {
 
                 <div className="mt-4 flex justify-end space-x-4">
                   <button onClick={() => setIsEditing(false)} className="bg-gray-400 text-white px-4 py-2 rounded-lg">Cancelar</button>
-                  <button onClick={handleUpdate} className="bg-[#932A83] text-white px-4 py-2 rounded-lg">Salvar</button>
+                  <button onClick={handleUpdate} className="bg-[#81059e] text-white px-4 py-2 rounded-lg">Salvar</button>
                 </div>
               </div>
             )}

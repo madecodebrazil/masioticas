@@ -5,7 +5,7 @@ import { collection, getDocs } from "firebase/firestore"; // Firestore para busc
 import { firestore } from '../../../lib/firebaseConfig'; // Configuração do Firebase
 import Layout from '@/components/Layout';
 
-export  function NewOrderForm() {
+export function NewOrderForm() {
   const router = useRouter();
   const searchParams = useSearchParams(); // Captura dos parâmetros da URL
   const [formData, setFormData] = useState({
@@ -108,53 +108,53 @@ export  function NewOrderForm() {
     <Layout>
       <form onSubmit={handleSubmit}>
         <div className="max-w-3xl mx-auto bg-white shadow-md rounded-lg p-6">
-          <h2 className="text-2xl text-center text-[#932A83] mb-6">NOVA ORDEM DE SERVIÇO</h2>
+          <h2 className="text-2xl text-center text-[#81059e] mb-6">NOVA ORDEM DE SERVIÇO</h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Data */}
             <div>
-              <label className="block text-[#932A83] font-bold mb-1">Data</label>
-              <input 
-                type="text" 
+              <label className="block text-[#81059e] font-bold mb-1">Data</label>
+              <input
+                type="text"
                 name="data"
                 value={formData.data}
-                className="w-full px-3 py-2 border border-[#932A83] rounded-md focus:outline-none focus:ring focus:border-[#932A83] text-black"
-                disabled 
+                className="w-full px-3 py-2 border border-[#81059e] rounded-md focus:outline-none focus:ring focus:border-[#81059e] text-black"
+                disabled
               />
             </div>
-            
+
             {/* Hora */}
             <div>
-              <label className="block text-[#932A83] font-bold mb-1">Hora</label>
-              <input 
-                type="text" 
+              <label className="block text-[#81059e] font-bold mb-1">Hora</label>
+              <input
+                type="text"
                 name="hora"
                 value={formData.hora}
-                className="w-full px-3 py-2 border border-[#932A83] rounded-md focus:outline-none focus:ring focus:border-[#932A83] text-black"
-                disabled 
+                className="w-full px-3 py-2 border border-[#81059e] rounded-md focus:outline-none focus:ring focus:border-[#81059e] text-black"
+                disabled
               />
             </div>
 
             {/* Loja */}
             <div>
-              <label className="block text-[#932A83] font-bold mb-1">Loja</label>
-              <input 
-                type="text" 
+              <label className="block text-[#81059e] font-bold mb-1">Loja</label>
+              <input
+                type="text"
                 name="loja"
                 value={formData.loja}
-                className="w-full px-3 py-2 border border-[#932A83] rounded-md focus:outline-none focus:ring focus:border-[#932A83] text-black"
-                disabled 
+                className="w-full px-3 py-2 border border-[#81059e] rounded-md focus:outline-none focus:ring focus:border-[#81059e] text-black"
+                disabled
               />
             </div>
 
             {/* Cliente */}
             <div className="col-span-2">
-              <label className="block text-[#932A83] font-bold mb-1">Cliente</label>
-              <input 
-                type="text" 
+              <label className="block text-[#81059e] font-bold mb-1">Cliente</label>
+              <input
+                type="text"
                 name="cliente"
                 placeholder="Buscar cliente da ordem de serviço"
-                className="w-full px-3 py-2 border border-[#932A83] rounded-md focus:outline-none focus:ring focus:border-[#932A83] text-black"
+                className="w-full px-3 py-2 border border-[#81059e] rounded-md focus:outline-none focus:ring focus:border-[#81059e] text-black"
                 onChange={handleChange}
                 value={formData.cliente}
               />
@@ -175,23 +175,23 @@ export  function NewOrderForm() {
 
             {/* CPF */}
             <div>
-              <label className="block text-[#932A83] font-bold mb-1">CPF</label>
-              <input 
-                type="text" 
+              <label className="block text-[#81059e] font-bold mb-1">CPF</label>
+              <input
+                type="text"
                 name="cpf"
                 value={formData.cpf}
-                className="w-full px-3 py-2 border border-[#932A83] rounded-md focus:outline-none focus:ring focus:border-[#932A83] text-black"
-                disabled 
+                className="w-full px-3 py-2 border border-[#81059e] rounded-md focus:outline-none focus:ring focus:border-[#81059e] text-black"
+                disabled
               />
             </div>
 
             {/* Distribuidor */}
             <div className="col-span-2">
-              <label className="block text-[#932A83] font-bold mb-1">Distribuidor</label>
+              <label className="block text-[#81059e] font-bold mb-1">Distribuidor</label>
               <select
                 name="distribuidor"
                 value={formData.distribuidor}
-                className="w-full px-3 py-2 border border-[#932A83] rounded-md focus:outline-none focus:ring focus:border-[#932A83] text-black"
+                className="w-full px-3 py-2 border border-[#81059e] rounded-md focus:outline-none focus:ring focus:border-[#81059e] text-black"
                 onChange={handleChange}
               >
                 <option value="">Selecione o distribuidor</option>
@@ -202,47 +202,47 @@ export  function NewOrderForm() {
 
             {/* Lentes */}
             <div>
-              <label className="block text-[#932A83] font-bold mb-1">Lentes</label>
-              <input 
-                type="text" 
+              <label className="block text-[#81059e] font-bold mb-1">Lentes</label>
+              <input
+                type="text"
                 name="lentes"
                 value={formData.lentes}
-                className="w-full px-3 py-2 border border-[#932A83] rounded-md focus:outline-none focus:ring focus:border-[#932A83] text-black"
+                className="w-full px-3 py-2 border border-[#81059e] rounded-md focus:outline-none focus:ring focus:border-[#81059e] text-black"
                 onChange={handleChange}
               />
             </div>
 
             {/* Quantidade */}
             <div>
-              <label className="block text-[#932A83] font-bold mb-1">Quantidade</label>
-              <input 
-                type="number" 
+              <label className="block text-[#81059e] font-bold mb-1">Quantidade</label>
+              <input
+                type="number"
                 name="quantidade"
                 value={formData.quantidade}
-                className="w-full px-3 py-2 border border-[#932A83] rounded-md focus:outline-none focus:ring focus:border-[#932A83] text-black"
+                className="w-full px-3 py-2 border border-[#81059e] rounded-md focus:outline-none focus:ring focus:border-[#81059e] text-black"
                 onChange={handleChange}
               />
             </div>
 
             {/* Valor */}
             <div>
-              <label className="block text-[#932A83] font-bold mb-1">Valor R$</label>
-              <input 
-                type="number" 
+              <label className="block text-[#81059e] font-bold mb-1">Valor R$</label>
+              <input
+                type="number"
                 name="valor"
                 value={formData.valor}
-                className="w-full px-3 py-2 border border-[#932A83] rounded-md focus:outline-none focus:ring focus:border-[#932A83] text-black"
+                className="w-full px-3 py-2 border border-[#81059e] rounded-md focus:outline-none focus:ring focus:border-[#81059e] text-black"
                 onChange={handleChange}
               />
             </div>
 
             {/* Status */}
             <div className="col-span-2">
-              <label className="block text-[#932A83] font-bold mb-1">Status</label>
+              <label className="block text-[#81059e] font-bold mb-1">Status</label>
               <select
                 name="status"
                 value={formData.status}
-                className="w-full px-3 py-2 border border-[#932A83] rounded-md focus:outline-none focus:ring focus:border-[#932A83] text-black"
+                className="w-full px-3 py-2 border border-[#81059e] rounded-md focus:outline-none focus:ring focus:border-[#81059e] text-black"
                 onChange={handleChange}
               >
                 <option value="">Selecione o status</option>
@@ -256,9 +256,9 @@ export  function NewOrderForm() {
           </div>
 
           <div className="mt-6 text-center">
-            <button 
-              type="submit" 
-              className="bg-[#932A83] text-white px-6 py-2 rounded-md hover:bg-[#932A83]/90"
+            <button
+              type="submit"
+              className="bg-[#81059e] text-white px-6 py-2 rounded-md hover:bg-[#81059e]/90"
             >
               Salvar
             </button>

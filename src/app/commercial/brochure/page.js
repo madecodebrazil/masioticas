@@ -127,7 +127,7 @@ const Catalogo = () => {
   const [cpf, setCpf] = useState("");
   const [os, setOs] = useState('');
   const [clientName, setClientName] = useState('');
-  
+
   const [selectedValues, setSelectedValues] = useState({
     esfericoOde: "",
     esfericoOpara: "",
@@ -139,7 +139,7 @@ const Catalogo = () => {
     cilindroOepara: "",
     adicaoDe: "",
     adicaoPara: "",
-    
+
     // Campos para desconto no modal do produto
     localDiscount: 0,
     discountType: "R$",
@@ -223,7 +223,7 @@ const Catalogo = () => {
               return {
                 ...item,
                 currentStock,
-                valorOriginal: item.valor, 
+                valorOriginal: item.valor,
               };
             } else {
               return {
@@ -532,9 +532,9 @@ const Catalogo = () => {
                 alt={product.produto}
                 className="w-full h-48 object-cover rounded-md"
               />
-             <h2 className="text-center font-bold mt-4 text-[#932A83] text-md uppercase">
-  {product.produto}
-</h2>
+              <h2 className="text-center font-bold mt-4 text-[#81059e] text-md uppercase">
+                {product.produto}
+              </h2>
 
               <p className="font-bold text-black text-sm text-center">
                 R$ {product.valor}
@@ -545,7 +545,7 @@ const Catalogo = () => {
 
         {/* Modal do produto selecionado */}
         {selectedProduct && (
-          
+
           <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 overflow-y-auto">
             <div className="bg-white p-4 sm:p-6 rounded-lg shadow-lg w-11/12 max-w-4xl relative overflow-y-auto max-h-[90vh]">
               <div className="flex flex-col sm:flex-row justify-center items-center">
@@ -559,24 +559,24 @@ const Catalogo = () => {
                     {selectedProduct.produto} - {selectedProduct.categoria}
                   </h2>
                   <div className="mb-4">
-  <label className="block font-semibold text-gray-700 mb-1">O.S.</label>
-  <input
-    type="text"
-    className="border border-gray-300 px-2 py-1 rounded w-full text-black"
-    value={os}
-    onChange={(e) => setOs(e.target.value)}
-  />
-</div>
+                    <label className="block font-semibold text-gray-700 mb-1">O.S.</label>
+                    <input
+                      type="text"
+                      className="border border-gray-300 px-2 py-1 rounded w-full text-black"
+                      value={os}
+                      onChange={(e) => setOs(e.target.value)}
+                    />
+                  </div>
 
-<div className="mb-4">
-  <label className="block font-semibold text-gray-700 mb-1">Nome do Cliente</label>
-  <input
-    type="text"
-    className="border border-gray-300 px-2 py-1 rounded w-full text-black"
-    value={clientName}
-    onChange={(e) => setClientName(e.target.value)}
-  />
-</div>
+                  <div className="mb-4">
+                    <label className="block font-semibold text-gray-700 mb-1">Nome do Cliente</label>
+                    <input
+                      type="text"
+                      className="border border-gray-300 px-2 py-1 rounded w-full text-black"
+                      value={clientName}
+                      onChange={(e) => setClientName(e.target.value)}
+                    />
+                  </div>
 
                   {/* Descrição do produto */}
                   {selectedProduct.marca && (
@@ -736,7 +736,7 @@ const Catalogo = () => {
                   <input
                     type="text"
                     placeholder="Digite o CPF"
-                    className="border-2 border-[#932A83] px-4 py-2 rounded-lg w-full text-black mb-4"
+                    className="border-2 border-[#81059e] px-4 py-2 rounded-lg w-full text-black mb-4"
                     value={cpf}
                     onChange={(e) => setCpf(e.target.value)}
                   />
@@ -832,9 +832,8 @@ const Catalogo = () => {
 
             <Link
               href={`/commercial/sales/new_sale?cpf=${cpf}&valor=${valorTotalVenda.toFixed(2)}`}
-              className={`bg-purple-700 text-white px-4 py-2 rounded-lg w-full mt-4 text-center block ${
-                cartItems.length === 0 ? "opacity-50 pointer-events-none" : ""
-              }`}
+              className={`bg-purple-700 text-white px-4 py-2 rounded-lg w-full mt-4 text-center block ${cartItems.length === 0 ? "opacity-50 pointer-events-none" : ""
+                }`}
             >
               Finalizar Venda
             </Link>

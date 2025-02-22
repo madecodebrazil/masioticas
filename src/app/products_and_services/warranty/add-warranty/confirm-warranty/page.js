@@ -67,50 +67,50 @@ export function ConfirmarRegistro() {
     <Layout>
       <div className="container mx-auto p-6 bg-white rounded-lg shadow min-h-screen flex justify-center items-center">
         <div className="bg-white w-full sm:w-[90%] md:w-[70%] lg:w-[50%] p-8 rounded-xl shadow-md border border-gray-300">
-          <h1 className="text-[#932A83] text-2xl font-bold mb-8 text-center">
+          <h1 className="text-[#81059e] text-2xl font-bold mb-8 text-center">
             Confirmar Registro
           </h1>
 
           {/* Exibição dos dados formatada */}
           <div className="space-y-6">
             <div className="flex flex-col">
-              <span className="text-[#932A83] font-semibold">Nome do Cliente:</span>
+              <span className="text-[#81059e] font-semibold">Nome do Cliente:</span>
               <p className="text-black">{formData.nomeCliente}</p>
             </div>
             <div className="flex flex-col">
-              <span className="text-[#932A83] font-semibold">Código do Produto:</span>
+              <span className="text-[#81059e] font-semibold">Código do Produto:</span>
               <p className="text-black">{formData.codigoProduto}</p>
             </div>
             <div className="flex flex-col">
-              <span className="text-[#932A83] font-semibold">NCM:</span>
+              <span className="text-[#81059e] font-semibold">NCM:</span>
               <p className="text-black">{formData.ncm}</p>
             </div>
             <div className="flex flex-col">
-              <span className="text-[#932A83] font-semibold">SKU:</span>
+              <span className="text-[#81059e] font-semibold">SKU:</span>
               <p className="text-black">{formData.sku}</p>
             </div>
             <div className="flex flex-col">
-              <span className="text-[#932A83] font-semibold">Produto:</span>
+              <span className="text-[#81059e] font-semibold">Produto:</span>
               <p className="text-black">{formData.produto}</p>
             </div>
             <div className="flex flex-col">
-              <span className="text-[#932A83] font-semibold">Descrição:</span>
+              <span className="text-[#81059e] font-semibold">Descrição:</span>
               <p className="text-black">{formData.descricao}</p>
             </div>
             <div className="flex flex-col">
-              <span className="text-[#932A83] font-semibold">Data da Garantia:</span>
+              <span className="text-[#81059e] font-semibold">Data da Garantia:</span>
               <p className="text-black">{formatDate(formData.dataGarantia)}</p>
             </div>
             <div className="flex flex-col">
-              <span className="text-[#932A83] font-semibold">Hora da Garantia:</span>
+              <span className="text-[#81059e] font-semibold">Hora da Garantia:</span>
               <p className="text-black">{formatTime(formData.horaGarantia)}</p>
             </div>
             <div className="flex flex-col">
-              <span className="text-[#932A83] font-semibold">Loja:</span>
+              <span className="text-[#81059e] font-semibold">Loja:</span>
               <p className="text-black">{formData.loja}</p>
             </div>
             <div className="flex flex-col">
-              <span className="text-[#932A83] font-semibold">Data de Vencimento:</span>
+              <span className="text-[#81059e] font-semibold">Data de Vencimento:</span>
               <p className="text-black">{formatDate(formData.dataVencimento)}</p>
             </div>
           </div>
@@ -119,13 +119,13 @@ export function ConfirmarRegistro() {
           <div className="flex justify-between gap-4 mt-8">
             <button
               onClick={handleEdit}
-              className="w-full sm:w-1/2 bg-[#932A83] text-white py-2 rounded-md hover:bg-[#781e6a] font-bold"
+              className="w-full sm:w-1/2 bg-[#81059e] text-white py-2 rounded-md hover:bg-[#781e6a] font-bold"
             >
               EDITAR
             </button>
             <button
               onClick={handleConfirm}
-              className="w-full sm:w-1/2 bg-[#932A83] text-white py-2 rounded-md hover:bg-[#781e6a] font-bold flex items-center justify-center"
+              className="w-full sm:w-1/2 bg-[#81059e] text-white py-2 rounded-md hover:bg-[#781e6a] font-bold flex items-center justify-center"
               disabled={isLoading}
             >
               {isLoading ? (

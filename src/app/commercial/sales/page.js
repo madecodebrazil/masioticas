@@ -117,16 +117,16 @@ export default function SalesListPage() {
 
   return (
     <Layout>
-      <div className="min-h-screen bg-gray-100 p-4 sm:p-6">
-        <div className="bg-white shadow-md rounded-lg p-4 sm:p-6">
+      <div className="min-h-screen">
+        <div className="bg-white w-full p-2">
           <div className="flex flex-col sm:flex-row justify-between items-center mb-4">
-            <h1 className="text-lg sm:text-2xl font-bold text-[#932A83]">
+            <h1 className="text-lg sm:text-2xl font-bold text-[#81059e]">
               Vendas
             </h1>
 
             <div className="flex w-full justify-around space-x-2 sm:space-x-4 mt-2 sm:mt-0">
               <Link href="/commercial/sales/new_sale">
-                <button className="bg-[#932A83] text-white w-full sm:w-auto px-3 py-1 sm:px-4 sm:py-2 rounded-full flex items-center justify-center space-x-1 sm:space-x-2 text-sm sm:text-base">
+                <button className="bg-[#81059e] text-white w-full sm:w-auto px-3 py-1 sm:px-4 sm:py-2 rounded-full flex items-center justify-center space-x-1 sm:space-x-2 text-sm sm:text-base">
                   <span>Nova Venda</span>
                   <svg
                     className="w-4 h-4 sm:w-5 sm:h-5"
@@ -146,7 +146,7 @@ export default function SalesListPage() {
               </Link>
 
               <Link href="/commercial/sales/new_estimate">
-                <button className="bg-[#932A83] text-white w-full sm:w-auto px-3 py-1 sm:px-4 sm:py-2 rounded-full flex items-center justify-center space-x-1 sm:space-x-2 text-sm sm:text-base">
+                <button className="bg-[#81059e] text-white w-full sm:w-auto px-3 py-1 sm:px-4 sm:py-2 rounded-full flex items-center justify-center space-x-1 sm:space-x-2 text-sm sm:text-base">
                   <span>Novo Orçamento</span>
                   <svg
                     className="w-4 h-4 sm:w-5 sm:h-5"
@@ -170,7 +170,7 @@ export default function SalesListPage() {
           {/* Ícone de filtro */}
           <div className="flex justify-end items-center mb-6">
             <button
-              className="bg-[#932A83] text-white px-3 py-2 rounded-full"
+              className="bg-[#81059e] text-white px-3 py-2 rounded-full"
               onClick={() => setShowFilters(!showFilters)}
             >
               <i className="fa fa-filter" aria-hidden="true">
@@ -183,31 +183,28 @@ export default function SalesListPage() {
           {showFilters && (
             <div className="flex flex-col space-y-2 mb-6">
               <button
-                className={`px-4 py-2 rounded-full ${
-                  filter === "all"
-                    ? "bg-[#932A83] text-white"
+                className={`px-4 py-2 rounded-full ${filter === "all"
+                    ? "bg-[#81059e] text-white"
                     : "bg-gray-200 text-black"
-                }`}
+                  }`}
                 onClick={() => setFilter("all")}
               >
                 Todos
               </button>
               <button
-                className={`px-4 py-2 rounded-full ${
-                  filter === "vendas"
-                    ? "bg-[#932A83] text-white"
+                className={`px-4 py-2 rounded-full ${filter === "vendas"
+                    ? "bg-[#81059e] text-white"
                     : "bg-gray-200 text-black"
-                }`}
+                  }`}
                 onClick={() => setFilter("vendas")}
               >
                 Vendas
               </button>
               <button
-                className={`px-4 py-2 rounded-full ${
-                  filter === "orcamentos"
-                    ? "bg-[#932A83] text-white"
+                className={`px-4 py-2 rounded-full ${filter === "orcamentos"
+                    ? "bg-[#81059e] text-white"
                     : "bg-gray-200 text-black"
-                }`}
+                  }`}
                 onClick={() => setFilter("orcamentos")}
               >
                 Orçamentos
@@ -229,7 +226,7 @@ export default function SalesListPage() {
                       className="bg-gray-50 rounded-lg p-4 shadow-md flex flex-col justify-between"
                     >
                       <div>
-                        <h3 className="text-lg font-bold text-[#932A83]">
+                        <h3 className="text-lg font-bold text-[#81059e]">
                           {sale.nome}
                         </h3>
                         <p className="text-sm text-gray-600">
@@ -246,7 +243,7 @@ export default function SalesListPage() {
                         </p>
                       </div>
                       <div className="mt-4">
-                        <p className="text-xl font-bold text-[#932A83]">
+                        <p className="text-xl font-bold text-[#81059e]">
                           {formatCurrency(sale.valorFinal)}
                         </p>
                         <p className="text-sm text-gray-600">{`${sale.parcelas} Parcelas`}</p>
@@ -254,7 +251,7 @@ export default function SalesListPage() {
 
                       <div className="flex justify-between items-center mt-4">
                         <button
-                          className="text-[#932A83] flex items-center space-x-2"
+                          className="text-[#81059e] flex items-center space-x-2"
                           onClick={() => handleShowDetails(sale)}
                         >
                           <svg
@@ -287,7 +284,7 @@ export default function SalesListPage() {
       {showModal && selectedSale && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
           <div className="bg-white p-6 rounded-lg shadow-lg max-w-lg w-full sm:w-11/12">
-            <h2 className="text-xl font-bold text-[#932A83] mb-4">
+            <h2 className="text-xl font-bold text-[#81059e] mb-4">
               Detalhes da Venda
             </h2>
 
@@ -342,7 +339,7 @@ export default function SalesListPage() {
                   href={pdfUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="bg-[#932A83] text-white px-4 py-2 rounded-md"
+                  className="bg-[#81059e] text-white px-4 py-2 rounded-md"
                 >
                   Baixar PDF
                 </a>
@@ -366,7 +363,7 @@ export default function SalesListPage() {
             <div className="mt-6 text-right">
               <button
                 onClick={handleCloseModal}
-                className="bg-[#932A83] text-white px-4 py-2 rounded-md"
+                className="bg-[#81059e] text-white px-4 py-2 rounded-md"
               >
                 Fechar
               </button>

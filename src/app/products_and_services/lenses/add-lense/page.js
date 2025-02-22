@@ -25,17 +25,17 @@ export function FormularioLentes() {
     searchParams.forEach((value, key) => {
       params[key] = value;
     });
-  
+
     const cloneId = searchParams.get("cloneId");
     const loja = searchParams.get("loja");
-  
+
     if (cloneId && loja) {
       // Estamos clonando
       fetchCloneData(cloneId, loja);
     } else if (params.formData) {
       // Estamos editando
       const formDataFromQuery = JSON.parse(decodeURIComponent(params.formData));
-  
+
       // Converte os campos numéricos de volta para números
       const numericFields = [
         "custo",
@@ -52,15 +52,15 @@ export function FormularioLentes() {
         "montagemDe",
         "montagemPara",
       ];
-  
+
       const convertedFormData = { ...formDataFromQuery };
-  
+
       numericFields.forEach((field) => {
         convertedFormData[field] = Number(formDataFromQuery[field]) || 0;
       });
-  
+
       setFormData(convertedFormData);
-  
+
       if (convertedFormData.codigo) {
         fetchProductImage(convertedFormData.codigo);
       }
@@ -69,7 +69,7 @@ export function FormularioLentes() {
       const currentDate = new Date();
       const formattedDate = currentDate.toISOString().split("T")[0];
       const formattedTime = currentDate.toTimeString().split(" ")[0].slice(0, 5);
-  
+
       setFormData((prevData) => ({
         ...prevData,
         data: formattedDate,
@@ -83,10 +83,10 @@ export function FormularioLentes() {
         loja === "loja1" ? "loja1_lentes" : "loja2_lentes";
       const docRef = doc(firestore, collectionName, cloneId);
       const docSnap = await getDoc(docRef);
-  
+
       if (docSnap.exists()) {
         const data = docSnap.data();
-  
+
         // Remover campos que não devem ser clonados
         const {
           id,
@@ -96,7 +96,7 @@ export function FormularioLentes() {
           lojas,
           ...clonedData
         } = data;
-  
+
         // Atualizar data e hora para os valores atuais
         const currentDate = new Date();
         const formattedDate = currentDate.toISOString().split("T")[0];
@@ -104,7 +104,7 @@ export function FormularioLentes() {
           .toTimeString()
           .split(" ")[0]
           .slice(0, 5);
-  
+
         setFormData((prevData) => ({
           ...prevData,
           ...clonedData,
@@ -112,7 +112,7 @@ export function FormularioLentes() {
           hora: formattedTime,
           imagem: null, // Resetar a imagem para forçar o upload de uma nova
         }));
-  
+
         // Atualizar o estado 'selectedLojas' com base em 'lojas'
         if (data.lojas && Array.isArray(data.lojas)) {
           setSelectedLojas(data.lojas);
@@ -134,7 +134,7 @@ export function FormularioLentes() {
   const [ncmList, setNCMs] = useState([]);
   const [formData, setFormData] = useState({
     sku: "",
-    unidade:"",
+    unidade: "",
     codigoBarras: "",
     codigoFabricante: "",
     codigo: "",
@@ -880,12 +880,11 @@ export function FormularioLentes() {
                 key={tecnologia.id}
                 type="button"
                 onClick={() => handleToggle("tecnologia", tecnologia.name)}
-                className={`px-4 py-2 rounded-lg border-2 ${
-                  Array.isArray(formData.tecnologia) &&
-                  formData.tecnologia.includes(tecnologia.name) // Verifique se é um array
-                    ? "bg-[#932A83] text-white border-[#932A83]"
-                    : "bg-transparent text-[#932A83] border-[#932A83]"
-                }`}
+                className={`px-4 py-2 rounded-lg border-2 ${Array.isArray(formData.tecnologia) &&
+                    formData.tecnologia.includes(tecnologia.name) // Verifique se é um array
+                    ? "bg-[#81059e] text-white border-[#81059e]"
+                    : "bg-transparent text-[#81059e] border-[#81059e]"
+                  }`}
               >
                 {tecnologia.name}
               </button>
@@ -922,12 +921,11 @@ export function FormularioLentes() {
                 key={tipo.id}
                 type="button"
                 onClick={() => handleToggle("tipo", tipo.name)}
-                className={`px-4 py-2 rounded-lg border-2 ${
-                  Array.isArray(formData.tipo) &&
-                  formData.tipo.includes(tipo.name)
-                    ? "bg-[#932A83] text-white border-[#932A83]"
-                    : "bg-transparent text-[#932A83] border-[#932A83]"
-                }`}
+                className={`px-4 py-2 rounded-lg border-2 ${Array.isArray(formData.tipo) &&
+                    formData.tipo.includes(tipo.name)
+                    ? "bg-[#81059e] text-white border-[#81059e]"
+                    : "bg-transparent text-[#81059e] border-[#81059e]"
+                  }`}
               >
                 {tipo.name}
               </button>
@@ -937,7 +935,7 @@ export function FormularioLentes() {
 
         {/* Tipo de tratamento (multiselect estilizado, com fetch de Firestore) */}
         <div className="space-y-4">
-          <label className="text-lg font-semibold text-[#932A83]">
+          <label className="text-lg font-semibold text-[#81059e]">
             Tratamento:
           </label>
           <div className="flex flex-wrap gap-2">
@@ -948,12 +946,11 @@ export function FormularioLentes() {
                 onClick={() =>
                   handleToggle("tipoTratamento", tipoTratamento.name)
                 }
-                className={`px-4 py-2 rounded-lg border-2 ${
-                  Array.isArray(formData.tipoTratamento) &&
-                  formData.tipoTratamento.includes(tipoTratamento.name) // Verifique se é um array
-                    ? "bg-[#932A83] text-white border-[#932A83]"
-                    : "bg-transparent text-[#932A83] border-[#932A83]"
-                }`}
+                className={`px-4 py-2 rounded-lg border-2 ${Array.isArray(formData.tipoTratamento) &&
+                    formData.tipoTratamento.includes(tipoTratamento.name) // Verifique se é um array
+                    ? "bg-[#81059e] text-white border-[#81059e]"
+                    : "bg-transparent text-[#81059e] border-[#81059e]"
+                  }`}
               >
                 {tipoTratamento.name}
               </button>
@@ -1184,12 +1181,11 @@ export function FormularioLentes() {
                 key={corredor}
                 type="button"
                 onClick={() => handleMultiSelect("corredor", corredor)}
-                className={`px-4 py-2 rounded-lg border-2 ${
-                  Array.isArray(formData.corredor) &&
-                  formData.corredor.includes(corredor)
-                    ? "bg-[#932A83] text-white border-[#932A83]"
-                    : "bg-transparent text-[#932A83] border-[#932A83]"
-                }`}
+                className={`px-4 py-2 rounded-lg border-2 ${Array.isArray(formData.corredor) &&
+                    formData.corredor.includes(corredor)
+                    ? "bg-[#81059e] text-white border-[#81059e]"
+                    : "bg-transparent text-[#81059e] border-[#81059e]"
+                  }`}
               >
                 {corredor}
               </button>
@@ -1558,9 +1554,8 @@ export function FormularioLentes() {
         {/* Botão de enviar */}
         <button
           onClick={handleSubmit}
-          className={`bg-purple-700 text-white font-bold px-8 py-3 rounded-lg shadow ${
-            isLoading || !formData.imagem ? "opacity-50 cursor-not-allowed" : ""
-          }`}
+          className={`bg-purple-700 text-white font-bold px-8 py-3 rounded-lg shadow ${isLoading || !formData.imagem ? "opacity-50 cursor-not-allowed" : ""
+            }`}
           disabled={isLoading || !formData.imagem}
         >
           {isLoading ? "Enviando..." : "CONFIRMAR"}

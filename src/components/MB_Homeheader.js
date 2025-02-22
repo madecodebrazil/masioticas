@@ -60,7 +60,7 @@ export default function MobileNavSidebar({ userPhotoURL, userData }) {
         <>
             <div className="flex items-center justify-between w-full p-4 bg-[#81059e] lg:hidden z-30">
                 <button className="text-white w-8" onClick={toggleMenu}>
-                <FontAwesomeIcon icon={faBars} className="text-3xl hover:bg-purple-500 p-2 hover:rounded-lg" />
+                    <FontAwesomeIcon icon={faBars} className="text-3xl hover:bg-purple-500 p-2 hover:rounded-lg" />
                 </button>
 
                 <div className="absolute left-1/2 transform -translate-x-1/2">
@@ -131,13 +131,15 @@ export default function MobileNavSidebar({ userPhotoURL, userData }) {
                                 {userData?.name}
                             </h2>
                             {userData?.level_perm === 'user' && (
+                                // Substitua por:
                                 <h3 className="text-white-600 text-lg font-semibold">
-                                    Vendedor(a)
+                                    {userData?.profession || 'Cargo não definido'}
                                 </h3>
                             )}
                             {userData?.level_perm === 'dev' && (
+                                // Substitua por:
                                 <h3 className="text-white-600 text-lg font-semibold">
-                                    Desenvolvedor(a)
+                                    {userData?.profession || 'Cargo não definido'}
                                 </h3>
                             )}
                         </div>

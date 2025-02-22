@@ -58,56 +58,56 @@ const ConfirmarRegistro = ({ searchParams }) => {
   return (
     <Layout>
       <div className="p-4">
-        <h1 className="text-2xl font-bold mb-4" style={{ color: '#932A8387' }}>
+        <h1 className="text-2xl font-bold mb-4" style={{ color: '#81059e87' }}>
           Confirmar Registro
         </h1>
         <div className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
-          <p className="text-black mb-2"><strong style={{ color: '#932A8387' }}>Razão Social</strong><br />{razaoSocial}</p>
-          <p className="text-black mb-2"><strong style={{ color: '#932A8387' }}>CNPJ</strong><br />{cnpj}</p>
-          <p className="text-black mb-2"><strong style={{ color: '#932A8387' }}>Nome Fantasia</strong><br />{nomeFantasia}</p>
-          <p className="text-black mb-2"><strong style={{ color: '#932A8387' }}>Email</strong><br />{email}</p>
+          <p className="text-black mb-2"><strong style={{ color: '#81059e87' }}>Razão Social</strong><br />{razaoSocial}</p>
+          <p className="text-black mb-2"><strong style={{ color: '#81059e87' }}>CNPJ</strong><br />{cnpj}</p>
+          <p className="text-black mb-2"><strong style={{ color: '#81059e87' }}>Nome Fantasia</strong><br />{nomeFantasia}</p>
+          <p className="text-black mb-2"><strong style={{ color: '#81059e87' }}>Email</strong><br />{email}</p>
 
           {/* Ajustar os campos Telefone, CEP e Número em uma única linha */}
           <div className="flex mb-2">
             <p className="flex-1 text-black">
-              <strong style={{ color: '#932A8387' }}>Telefone</strong><br />
+              <strong style={{ color: '#81059e87' }}>Telefone</strong><br />
               {telefone}
             </p>
             <p className="flex-1 text-black">
-              <strong style={{ color: '#932A8387' }}>CEP</strong><br />
+              <strong style={{ color: '#81059e87' }}>CEP</strong><br />
               {cep}
             </p>
             <p className="flex-1 text-black">
-              <strong style={{ color: '#932A8387' }}>Número</strong><br />
+              <strong style={{ color: '#81059e87' }}>Número</strong><br />
               {numero}
             </p>
           </div>
 
           <div className="flex mb-2">
             <p className="flex-1 text-black">
-              <strong style={{ color: '#932A8387' }}>Logradouro</strong><br />
+              <strong style={{ color: '#81059e87' }}>Logradouro</strong><br />
               {logradouro}
             </p>
             <p className="flex-1 text-black">
-              <strong style={{ color: '#932A8387' }}>Cidade</strong><br />
+              <strong style={{ color: '#81059e87' }}>Cidade</strong><br />
               {cidade}
             </p>
           </div>
 
-          <p className="text-black mb-2"><strong style={{ color: '#932A8387' }}>Estado</strong><br />{estado}</p>
+          <p className="text-black mb-2"><strong style={{ color: '#81059e87' }}>Estado</strong><br />{estado}</p>
 
           <div className="flex items-center justify-between mt-8">
             <button
               type="button"
               onClick={handleEdit}
-              className="bg-[#932A8387] text-white font-bold py-2 px-4 rounded flex items-center"
+              className="bg-[#81059e87] text-white font-bold py-2 px-4 rounded flex items-center"
             >
               <Image src="/images/edit.png" alt="Editar" width={20} height={20} className="mr-2" /> Editar
             </button>
             <button
               type="button"
               onClick={handleConfirm}
-              className="bg-[#932A8387] text-white font-bold py-2 px-4 rounded flex items-center"
+              className="bg-[#81059e87] text-white font-bold py-2 px-4 rounded flex items-center"
               disabled={isSubmitting} // Desabilitar o botão enquanto está enviando
             >
               <Image src="/images/check.png" alt="Confirmar" width={20} height={20} className="mr-2" /> {isSubmitting ? 'Enviando...' : 'Confirmar'}

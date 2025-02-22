@@ -1,7 +1,8 @@
+// components/CarrouselPromo.js
+"use client";
 import React, { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faChevronLeft, faChevronRight } from '@fortawesome/free-solid-svg-icons';
-
 
 const SimpleCarousel = () => {
   const images = [
@@ -27,9 +28,9 @@ const SimpleCarousel = () => {
   }, []);
 
   return (
-    <div className="relative max-w-6xl mx-auto overflow-hidden">
+    <div className="relative max-w-6xl mx-auto overflow-hidden z-0">
       <div 
-        className="flex transition-transform duration-500"
+        className="flex transition-transform duration-500 relative"
         style={{
           transform: `translateX(-${currentIndex * 50}%)`
         }}
@@ -47,13 +48,13 @@ const SimpleCarousel = () => {
 
       <button
         onClick={prevSlide}
-        className="absolute left-4 top-1/2 -translate-y-1/2 bg-purple-400/70 text-white p-3 rounded-full hover:bg-purple-600/70 transition-colors"
+        className="absolute left-4 top-1/2 -translate-y-1/2 bg-purple-400/70 text-white p-3 rounded-full hover:bg-purple-600/70 transition-colors z-10"
       >
         <FontAwesomeIcon icon={faChevronLeft} />
       </button>
       <button
         onClick={nextSlide}
-        className="absolute right-4 top-1/2 -translate-y-1/2 bg-purple-400/70 text-white p-3 rounded-full hover:hover:bg-purple-600/70  transition-colors"
+        className="absolute right-4 top-1/2 -translate-y-1/2 bg-purple-400/70 text-white p-3 rounded-full hover:hover:bg-purple-600/70 transition-colors z-10"
       >
         <FontAwesomeIcon icon={faChevronRight} />
       </button>

@@ -97,14 +97,14 @@ export default function ListOSPage() {
   return (
     <Layout>
       <div className="p-6">
-        <h1 className="text-2xl font-bold mb-4" style={{ color: "#932A83" }}>
+        <h1 className="text-2xl font-bold mb-4" style={{ color: "#81059e" }}>
           Minhas Ordens de Serviço
         </h1>
 
         {/* Tornando a tabela responsiva no mobile */}
         <div className="overflow-x-auto">
           <table className="min-w-full bg-white border border-gray-300 rounded-lg shadow-md">
-            <thead className="bg-[#932A83] text-white">
+            <thead className="bg-[#81059e] text-white">
               <tr>
                 <th className="py-2 px-4">Loja</th>
                 <th className="py-2 px-4">Cliente</th>

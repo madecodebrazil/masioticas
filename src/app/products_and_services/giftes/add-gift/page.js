@@ -7,7 +7,7 @@ import 'react-datepicker/dist/react-datepicker.css';
 import { collection, getDocs } from "firebase/firestore";
 import { firestore } from '../../../../lib/firebaseConfig'; // Certifique-se que o firebaseConfig está correto
 
-export  function RegistrarBrinde() {
+export function RegistrarBrinde() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -94,8 +94,8 @@ export  function RegistrarBrinde() {
       <div className="container mx-auto p-6 bg-white rounded-lg shadow">
         {/* Cabeçalho */}
         <div className="flex items-center justify-between pb-4">
-          <div className="text-lg font-bold text-[#932A83]">REGISTRAR BRINDE</div>
-          <button className="bg-[#932A83] text-white px-4 py-2 rounded-md hover:bg-[#781e6a]" onClick={() => setFormData({})}>
+          <div className="text-lg font-bold text-[#81059e]">REGISTRAR BRINDE</div>
+          <button className="bg-[#81059e] text-white px-4 py-2 rounded-md hover:bg-[#781e6a]" onClick={() => setFormData({})}>
             LIMPAR
           </button>
         </div>
@@ -103,14 +103,14 @@ export  function RegistrarBrinde() {
         {/* Formulário */}
         <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
           <div className="md:col-span-2">
-            <label className="block text-[#932A83]">Nome do Cliente</label>
+            <label className="block text-[#81059e]">Nome do Cliente</label>
             <input
               type="text"
               name="nomeCliente"
               value={formData.nomeCliente}
               onChange={handleInputChange}
               placeholder="Nome do cliente"
-              className="w-full p-2 border border-[#932A83] rounded-md text-black"
+              className="w-full p-2 border border-[#81059e] rounded-md text-black"
             />
 
             {/* Mostrar sugestões de usuários */}
@@ -130,50 +130,50 @@ export  function RegistrarBrinde() {
           </div>
 
           <div>
-            <label className="block text-[#932A83]">SKU</label>
+            <label className="block text-[#81059e]">SKU</label>
             <input
               type="text"
               name="sku"
               value={formData.sku}
               onChange={handleInputChange}
-              className="w-full p-2 border border-[#932A83] rounded-md text-black"
+              className="w-full p-2 border border-[#81059e] rounded-md text-black"
             />
           </div>
 
           <div>
-            <label className="block text-[#932A83]">Produto Comprado</label>
+            <label className="block text-[#81059e]">Produto Comprado</label>
             <input
               type="text"
               name="produtoComprado"
               value={formData.produtoComprado}
               onChange={handleInputChange}
-              className="w-full p-2 border border-[#932A83] rounded-md text-black"
+              className="w-full p-2 border border-[#81059e] rounded-md text-black"
             />
           </div>
 
           <div className="md:col-span-2">
-            <label className="block text-[#932A83]">Descrição do Brinde</label>
+            <label className="block text-[#81059e]">Descrição do Brinde</label>
             <textarea
               name="descricaoBrinde"
               value={formData.descricaoBrinde}
               onChange={handleInputChange}
-              className="w-full p-2 border border-[#932A83] rounded-md text-black"
+              className="w-full p-2 border border-[#81059e] rounded-md text-black"
             />
           </div>
 
           {/* Data e Hora utilizando DatePicker */}
           <div>
-            <label className="block text-[#932A83]">Data</label>
+            <label className="block text-[#81059e]">Data</label>
             <DatePicker
               selected={formData.dataBrinde}
               onChange={(date) => setFormData((prev) => ({ ...prev, dataBrinde: date }))}
               dateFormat="dd/MM/yyyy"
-              className="w-full p-2 border border-[#932A83] rounded-md text-black"
+              className="w-full p-2 border border-[#81059e] rounded-md text-black"
             />
           </div>
 
           <div>
-            <label className="block text-[#932A83]">Hora</label>
+            <label className="block text-[#81059e]">Hora</label>
             <DatePicker
               selected={formData.horaBrinde}
               onChange={(date) => setFormData((prev) => ({ ...prev, horaBrinde: date }))}
@@ -182,18 +182,18 @@ export  function RegistrarBrinde() {
               timeIntervals={15}
               timeCaption="Hora"
               dateFormat="HH:mm"
-              className="w-full p-2 border border-[#932A83] rounded-md text-black"
+              className="w-full p-2 border border-[#81059e] rounded-md text-black"
             />
           </div>
 
           {/* Seletor de Loja */}
           <div>
-            <label className="block text-[#932A83]">Loja</label>
+            <label className="block text-[#81059e]">Loja</label>
             <select
               name="loja"
               value={formData.loja}
               onChange={handleInputChange}
-              className="w-full p-2 border border-[#932A83] rounded-md text-black"
+              className="w-full p-2 border border-[#81059e] rounded-md text-black"
             >
               <option value="Óticas Popular 1">Óticas Popular 1</option>
               <option value="Óticas Popular 2">Óticas Popular 2</option>
@@ -205,7 +205,7 @@ export  function RegistrarBrinde() {
         <div className="flex justify-center mt-6">
           <button
             onClick={handleRegister}
-            className="bg-[#932A83] text-white px-6 py-3 rounded-md hover:bg-[#781e6a]"
+            className="bg-[#81059e] text-white px-6 py-3 rounded-md hover:bg-[#781e6a]"
           >
             REGISTRAR BRINDE
           </button>

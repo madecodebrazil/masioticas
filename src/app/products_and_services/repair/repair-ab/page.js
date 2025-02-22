@@ -63,25 +63,25 @@ export default function ManageRepairs() {
   return (
     <Layout>
       <div className="p-6">
-        <h1 className="text-2xl font-bold" style={{ color: "#932A83" }}>
+        <h1 className="text-2xl font-bold" style={{ color: "#81059e" }}>
           Gerenciar Tipos de Reparo e Prestadores
         </h1>
 
         {/* Seção de Tipos de Reparo */}
         <div className="mt-6">
-          <h2 className="text-lg font-bold" style={{ color: "#932A8387" }}>Tipos de Reparo</h2>
+          <h2 className="text-lg font-bold" style={{ color: "#81059e87" }}>Tipos de Reparo</h2>
           <div className="flex flex-wrap gap-2 mt-2">
             {repairTypes.map((type) => (
               <button
                 key={type.id}
-                className="px-4 py-2 border rounded-lg border-[#932A83] text-black hover:bg-[#932A83] hover:text-white"
+                className="px-4 py-2 border rounded-lg border-[#81059e] text-black hover:bg-[#81059e] hover:text-white"
               >
                 {type.name}
               </button>
             ))}
             <button
               onClick={() => addNewItem("reparo_tipos")} // Adiciona diretamente um tipo de reparo
-              className="px-4 py-2 bg-[#932A83] text-white font-bold rounded-lg"
+              className="px-4 py-2 bg-[#81059e] text-white font-bold rounded-lg"
               disabled={isLoading}
             >
               {isLoading ? "..." : "+"}
@@ -91,19 +91,19 @@ export default function ManageRepairs() {
 
         {/* Seção de Prestadores */}
         <div className="mt-6">
-          <h2 className="text-lg font-bold" style={{ color: "#932A8387" }}>Prestadores</h2>
+          <h2 className="text-lg font-bold" style={{ color: "#81059e87" }}>Prestadores</h2>
           <div className="flex flex-wrap gap-2 mt-2">
             {prestadores.map((prestador) => (
               <button
                 key={prestador.id}
-                className="px-4 py-2 border rounded-lg border-[#932A83] text-black hover:bg-[#932A83] hover:text-white"
+                className="px-4 py-2 border rounded-lg border-[#81059e] text-black hover:bg-[#81059e] hover:text-white"
               >
                 {prestador.name}
               </button>
             ))}
             <button
               onClick={() => addNewItem("reparo_prestador")} // Agora redireciona para outra página
-              className="px-4 py-2 bg-[#932A83] text-white font-bold rounded-lg"
+              className="px-4 py-2 bg-[#81059e] text-white font-bold rounded-lg"
               disabled={isLoading}
             >
               {isLoading ? "..." : "+"}

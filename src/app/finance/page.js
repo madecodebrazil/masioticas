@@ -1,54 +1,22 @@
 "use client";
 
-import Link from 'next/link'; // Importando Link do Next.js para navegação
-import Sidebar from '@/components/Sidebar'; // Importando o MobileNavSidebar para navegação mobile
-import Image from 'next/image'; // Importando Image para a foto de perfil do usuário
+import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
-import React, { useEffect, useState } from 'react';
-import { auth, firestore } from '../../lib/firebaseConfig'; // Importe a instância do Firebase e Firestore
-import { doc, getDoc } from 'firebase/firestore';
-import { motion } from 'framer-motion'; // Importando o motion para animações
-import MobileNavSidebar from '@/components/MB_NavSidebar';
+import Image from 'next/image';
+import Sidebar from '@/components/Sidebar';
 import BottomMobileNav from '@/components/MB_BottomNav';
+import Layout from '@/components/Layout';
+import ContasPagarModal from '@/components/ContasPagarModal';
+import { motion } from 'framer-motion';
+import { useState } from 'react';
 
 export default function FinancesPage() {
-    const [userData, setUserData] = useState(null);
-    const [loading, setLoading] = useState(true); // Estado de carregamento
+    const { userData, loading, hasAccessToLoja } = useAuth();
+    const [isContasPagarOpen, setIsContasPagarOpen] = useState(false);
     const router = useRouter();
 
-    // Função para buscar os dados do usuário logado no Firestore
-    const fetchUserData = async (uid) => {
-        try {
-            const docRef = doc(firestore, `loja1/users/${uid}/dados`);
-            const docSnap = await getDoc(docRef);
+    // Não precisamos mais do fetchUserData pois o hook useAuth já faz isso
 
-            if (docSnap.exists()) {
-                setUserData(docSnap.data());
-            } else {
-                console.log('Nenhum documento encontrado para o UID:', uid);
-            }
-        } catch (error) {
-            console.error("Erro ao buscar os dados do usuário:", error);
-        } finally {
-            setLoading(false); // Conclui o carregamento
-        }
-    };
-
-    useEffect(() => {
-        // Verifica se o usuário está autenticado
-        const unsubscribe = auth.onAuthStateChanged((user) => {
-            if (user) {
-                // Busca os dados do Firestore usando o UID do usuário logado
-                fetchUserData(user.uid);
-            } else {
-                router.push('/login'); // Redireciona para a página de login se não estiver logado
-            }
-        });
-
-        return () => unsubscribe();
-    }, [router]);
-
-    // Verifique o carregamento
     if (loading) {
         return (
             <div className="flex justify-center items-center h-screen">
@@ -57,7 +25,6 @@ export default function FinancesPage() {
         );
     }
 
-    // Se os dados do usuário não forem encontrados
     if (!userData) {
         return (
             <div className="flex justify-center items-center h-screen">
@@ -66,93 +33,104 @@ export default function FinancesPage() {
         );
     }
 
-    // Definindo a URL da foto do usuário. Se não houver imagem, será usado um avatar padrão.
-    const userPhotoURL = userData?.imageUrl || '/default-avatar.png';
-
-    // Defina os ícones e rótulos dos products_and_services
     const productsItems = [
-        { icon: '/images/financeiro/pagar.png', label: 'Pagar', route: '/finance/add-pay' },
-        { icon: '/images/financeiro/receber.png', label: 'Receber', route: '/finance/add-receive/list-receives' },
-        { icon: '/images/financeiro/caixa.png', label: 'Caixa', route: '/finance/cashier_day' },
-        { icon: '/images/financeiro/vendas.png', label: 'Vendas', route: '/commercial/sales' },
-        { icon: '/images/financeiro/cartoes.png', label: 'Cartões', route: '/finance/cards/display-cards' },
-        { icon: '/images/estoque/Graph.png', label: 'Fluxo de caixa', route: '/finance/cashflow' },
+        {
+            icon: '/images/financeiro/pagar.png',
+            label: 'Contas a Pagar',
+            route: '/finance/add-pay'
+        },
+        {
+            icon: '/images/financeiro/receber.png',
+            label: 'Contas a Receber',
+            route: '/finance/add-receive'
+        },
+        {
+            icon: '/images/financeiro/caixa.png',
+            label: 'Controle de Caixa',
+            route: '/finance/cashier_day'
+        },
+        {
+            icon: '/images/estoque/Graph.png',
+            label: 'Fluxo de caixa',
+            route: '/finance/cashflow'
+        },
+        {
+            icon: '/images/financeiro/cartoes.png',
+            label: 'Cartões',
+            route: '/finance/cards/display-cards'
+        },
+        {
+            icon: '/images/financeiro/cartoes.png',
+            label: 'Cheques',
+            route: '/finance/cards/display-cards'
+        },
+        {
+            icon: '/images/financeiro/vendas.png',
+            label: 'Vendas',
+            route: '/commercial/sales'
+        },
     ];
 
     return (
-        <div className="relative min-h-screen bg-[#932A83]">
-            <div className="flex flex-col lg:flex-row relative min-h-screen">
-                {/* Sidebar para telas grandes */}
-                <div className="hidden lg:block w-64 z-10">
+        <Layout>
+            <div>
+                <div>
                     <Sidebar />
-                </div>
-
-                {/* Mobile Sidebar para telas pequenas */}
-                <MobileNavSidebar
-                    userPhotoURL={userPhotoURL}
-                    userData={userData}
-                    handleLogout={() => router.push('/login')}
-                />
-
-                {/* Foto do Usuário em telas grandes */}
-                <div className="absolute top-4 right-4 z-30 hidden lg:block">
-                    <Image
-                        src={userPhotoURL}
-                        alt="User Avatar"
-                        width={80}
-                        height={80}
-                        className="rounded-full object-cover border-2 border-white shadow-md"
-                    />
-                </div>
-
-                {/* Conteúdo principal */}
-                <main className="bg-white rounded-[25px] p-4 lg:p-6 w-full max-w-6xl mx-auto relative z-20 min-h-[400px] mt-8 mb-8">
-                    <div className="w-full">
-                        {/* Cards de Produtos */}
-                        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 mb-20">
-                            {productsItems.map((item, index) => (
-                                <Link key={index} href={item.route}>
-                                    <motion.div
-                                        className="relative flex justify-center items-center text-white w-full h-[100px] sm:h-[120px] rounded-xl transition-transform transform hover:scale-110 hover:shadow-2xl hover:brightness-110 cursor-pointer px-6 overflow-hidden"
-                                        style={{
-                                            background: `linear-gradient(to right, #932A83, #B7328C)`,
-                                            boxShadow: '0px 10px 25px rgba(0, 0, 0, 0.5)',
-                                        }}
-                                        initial={{ opacity: 0, scale: 0.9 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        transition={{ duration: 0.5, delay: index * 0.1 }}
+                    <main>
+                        <div className="w-full">
+                            <div className="grid items-center grid-cols-2 gap-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-2">
+                                {productsItems.map((item, index) => (
+                                    <div
+                                        key={index}
+                                        onClick={() => item.action ? item.action() : router.push(item.route)}
+                                        className="cursor-pointer"
                                     >
-                                        <div
-                                            className="absolute inset-0 opacity-10 pointer-events-none"
+                                        <motion.div
+                                            className="relative flex justify-center items-center text-white w-full h-[100px] sm:h-[90px] rounded-md transition-transform transform hover:scale-110 hover:shadow-2xl hover:brightness-110 cursor-pointer px-6 overflow-hidden"
                                             style={{
-                                                backgroundImage: `url('/images/fundo.png')`,
-                                                backgroundSize: 'cover',
-                                                backgroundRepeat: 'no-repeat',
-                                                backgroundPosition: 'center',
+                                                background: 'linear-gradient(to right, #9a5fc7, #9a5fc7)',
+                                                boxShadow: '0px 10px 20px rgba(0, 0, 0, 0.5)',
                                             }}
-                                        ></div>
-                                        <div className="relative z-10 flex flex-row justify-start items-center w-full h-full">
-                                            <Image
-                                                src={item.icon}
-                                                alt={item.label}
-                                                width={50}
-                                                height={50}
-                                                className="object-contain mr-2"
+                                            initial={{ opacity: 0, scale: 0.9 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            transition={{ duration: 0.5, delay: index * 0.1 }}
+                                        >
+                                            <div
+                                                className="absolute inset-0 opacity-10 pointer-events-none"
+                                                style={{
+                                                    backgroundImage: 'url("/images/fundo.png")',
+                                                    backgroundSize: 'cover',
+                                                    backgroundRepeat: 'no-repeat',
+                                                    backgroundPosition: 'center',
+                                                }}
                                             />
-                                            <span className="font-bold text-sm sm:text-base lg:text-lg flex-grow text-left">
-                                                {item.label}
-                                            </span>
-                                        </div>
-                                    </motion.div>
-                                </Link>
-                            ))}
+                                            <div className="relative z-10 flex flex-row justify-start items-center w-full h-full">
+                                                <Image
+                                                    src={item.icon}
+                                                    alt={item.label}
+                                                    width={50}
+                                                    height={50}
+                                                    className="object-contain mr-2"
+                                                />
+                                                <span className="font-semibold text-sm sm:text-base lg:text-lg flex-grow text-left">
+                                                    {item.label}
+                                                </span>
+                                            </div>
+                                        </motion.div>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
-                    </div>
-                </main>
-            </div>
+                    </main>
+                </div>
 
-            {/* Bottom Navigation para telas pequenas */}
-            <BottomMobileNav />
-        </div>
+                <BottomMobileNav />
+
+                <ContasPagarModal
+                    isOpen={isContasPagarOpen}
+                    onClose={() => setIsContasPagarOpen(false)}
+                />
+            </div>
+        </Layout>
     );
 }

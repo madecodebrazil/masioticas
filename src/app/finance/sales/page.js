@@ -3,8 +3,8 @@ import { useState, useEffect } from 'react';
 import Layout from '@/components/Layout';
 import { collection, query, where, getDocs, doc, getDoc, addDoc, deleteDoc, Timestamp } from 'firebase/firestore';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL, listAll } from 'firebase/storage';
-import { firestore } from '../../../lib/firebaseConfig'; 
-import { useRouter } from 'next/navigation'; 
+import { firestore } from '../../../lib/firebaseConfig';
+import { useRouter } from 'next/navigation';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { format } from 'date-fns';
@@ -163,13 +163,13 @@ export default function NovaVenda() {
     doc.text(`Total: R$ ${totalValue.toFixed(2)}`, 10, 50);
     doc.text(`Desconto: R$ ${discount.toFixed(2)} (${discountType})`, 10, 60);
     doc.text(`Valor Final: R$ ${finalValue.toFixed(2)}`, 10, 70);
-  
+
     doc.autoTable({
       head: [['Produto', 'Valor']],
       body: cartItems.map((item) => [item.produto, `R$ ${item.valor}`]),
       startY: 80,
     });
-    
+
     const pdfBlob = doc.output('blob');
     await uploadPDFToFirebase(pdfBlob, searchTerm);
   };
@@ -223,17 +223,17 @@ export default function NovaVenda() {
 
   const handleSubmit = async () => {
     setLoading(true);
-  
+
     try {
       const now = new Date();
       let vendaDate = now;
-  
+
       if (now.getHours() >= 18) {
         vendaDate.setDate(vendaDate.getDate() + 1);
       }
-  
+
       const saleTimestamp = Timestamp.fromDate(vendaDate); // Mudando para timestamp
-  
+
       const saleData = {
         cliente: selectedClient.nome,
         cpf: searchTerm,
@@ -248,10 +248,10 @@ export default function NovaVenda() {
         lojas: cartItems.map((item) => item.lojas).flat(),
         itens: cartItems
       };
-  
+
       const saleRef = await addDoc(collection(firestore, 'vendas'), saleData);
       const saleId = saleRef.id;
-  
+
       // Registra a entrada (se houver) no cashflow
       if (downPayment > 0) {
         const entradaCashflowData = {
@@ -265,11 +265,11 @@ export default function NovaVenda() {
           descricao: `Entrada no Crediário para o cliente ${selectedClient.nome}`,
           lojas: cartItems.map((item) => item.lojas).flat(),
         };
-  
+
         // Registra a entrada no cashflow
         await addDoc(collection(firestore, 'cashflow'), entradaCashflowData);
       }
-  
+
       // Se não houver entrada, ou para registrar o valor total não quitado
       const totalCashflowData = {
         vendaId: saleId,
@@ -284,10 +284,10 @@ export default function NovaVenda() {
           : `Venda no Crediário para o cliente ${selectedClient.nome}, ainda não quitado`,
         lojas: cartItems.map((item) => item.lojas).flat(),
       };
-  
+
       // Registra o valor total não quitado no cashflow
       await addDoc(collection(firestore, 'cashflow'), totalCashflowData);
-  
+
       // Adiciona o crediário com as parcelas se a forma de pagamento for Crediário
       if (paymentMethod === 'Crediário') {
         const crediarioData = {
@@ -297,12 +297,12 @@ export default function NovaVenda() {
         };
         await addDoc(collection(firestore, 'crediarios'), crediarioData);
       }
-  
+
       const cartRef = doc(firestore, 'cart', searchTerm);
       await deleteDoc(cartRef);
-  
+
       await generatePDF();
-  
+
       setLoading(false);
       alert('Venda registrada com sucesso!');
       router.push('/homepage');
@@ -312,7 +312,7 @@ export default function NovaVenda() {
       alert('Erro ao registrar a venda. Tente novamente.');
     }
   };
-  
+
 
   return (
     <Layout>
@@ -324,10 +324,10 @@ export default function NovaVenda() {
               placeholder="Buscar CPF"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="border border-[#932A83] p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-[#932A83] text-black"
+              className="border border-[#81059e] p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-[#81059e] text-black"
             />
             <button
-              className="bg-[#932A83] text-white p-2 rounded"
+              className="bg-[#81059e] text-white p-2 rounded"
               onClick={handleSearchCPF}
             >
               BUSCAR CPF
@@ -339,21 +339,21 @@ export default function NovaVenda() {
           {selectedClient && (
             <>
               <div className="mb-4">
-                <label className="block text-[#932A83]">Nome</label>
+                <label className="block text-[#81059e]">Nome</label>
                 <input
                   type="text"
                   value={selectedClient.nome}
-                  className="border border-[#932A83] p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-[#932A83] text-black"
+                  className="border border-[#81059e] p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-[#81059e] text-black"
                   readOnly
                 />
               </div>
 
               <div className="mb-4">
-                <label className="block text-[#932A83]">Telefone</label>
+                <label className="block text-[#81059e]">Telefone</label>
                 <input
                   type="text"
                   value={selectedClient.telefone}
-                  className="border border-[#932A83] p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-[#932A83] text-black"
+                  className="border border-[#81059e] p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-[#81059e] text-black"
                   readOnly
                 />
               </div>
@@ -361,19 +361,19 @@ export default function NovaVenda() {
           )}
 
           <div className="mb-4">
-            <label className="block text-[#932A83]">Data de entrada</label>
+            <label className="block text-[#81059e]">Data de entrada</label>
             <input
               type="date"
               value={currentDate}
-              className="border border-[#932A83] p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-[#932A83] text-black"
+              className="border border-[#81059e] p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-[#81059e] text-black"
               readOnly
             />
           </div>
 
           <div className="mb-4">
-            <label className="block text-[#932A83]">Forma de pagamento:</label>
+            <label className="block text-[#81059e]">Forma de pagamento:</label>
             <select
-              className="border border-[#932A83] p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-[#932A83] text-black"
+              className="border border-[#81059e] p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-[#81059e] text-black"
               value={paymentMethod}
               onChange={(e) => handlePaymentMethodChange(e.target.value)}
             >
@@ -387,9 +387,9 @@ export default function NovaVenda() {
           </div>
 
           <div className="mb-4">
-            <label className="block text-[#932A83]">Condição de pagamento:</label>
+            <label className="block text-[#81059e]">Condição de pagamento:</label>
             <select
-              className="border border-[#932A83] p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-[#932A83] text-black"
+              className="border border-[#81059e] p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-[#81059e] text-black"
               value={paymentCondition}
               onChange={(e) => setPaymentCondition(e.target.value)}
             >
@@ -403,10 +403,10 @@ export default function NovaVenda() {
 
           {showInstallments && (
             <div className="mb-4">
-              <label className="block text-[#932A83]">Número de Parcelas</label>
+              <label className="block text-[#81059e]">Número de Parcelas</label>
               <input
                 type="number"
-                className="border border-[#932A83] p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-[#932A83] text-black"
+                className="border border-[#81059e] p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-[#81059e] text-black"
                 value={installments}
                 onChange={(e) => handleInstallmentsChange(e.target.value)}
                 min="1"
@@ -416,45 +416,45 @@ export default function NovaVenda() {
 
           {showInstallments && (
             <div className="mb-4">
-              <label className="block text-[#932A83]">Valor de cada parcela</label>
+              <label className="block text-[#81059e]">Valor de cada parcela</label>
               <input
                 type="text"
                 value={`R$ ${installmentValue.toFixed(2)}`}
-                className="border border-[#932A83] p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-[#932A83] text-black"
+                className="border border-[#81059e] p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-[#81059e] text-black"
                 readOnly
               />
             </div>
           )}
 
           <div className="mb-4">
-            <label className="block text-[#932A83]">Entrada</label>
+            <label className="block text-[#81059e]">Entrada</label>
             <input
               type="number"
               value={downPayment}
               onChange={(e) => setDownPayment(e.target.value)}
-              className="border border-[#932A83] p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-[#932A83] text-black"
+              className="border border-[#81059e] p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-[#81059e] text-black"
             />
           </div>
 
           {paymentMethod === 'Crediário' && (
             <div className="mb-4">
-              <label className="block text-[#932A83]">Data de Recebimento</label>
+              <label className="block text-[#81059e]">Data de Recebimento</label>
               <DatePicker
                 selected={receivingDate}
                 onChange={(date) => setReceivingDate(date)}
                 dateFormat="dd/MM/yyyy"
-                className="border border-[#932A83] p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-[#932A83] text-black"
+                className="border border-[#81059e] p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-[#81059e] text-black"
                 placeholderText="Selecione a data de recebimento"
               />
             </div>
           )}
 
           <div className="mb-4">
-            <label className="block text-[#932A83]">Valor Final</label>
+            <label className="block text-[#81059e]">Valor Final</label>
             <input
               type="text"
               value={`R$ ${(finalValue - downPayment).toFixed(2)}`}
-              className="border border-[#932A83] p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-[#932A83] text-black"
+              className="border border-[#81059e] p-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-[#81059e] text-black"
               readOnly
             />
           </div>
@@ -465,7 +465,7 @@ export default function NovaVenda() {
             </div>
           ) : (
             <button
-              className="bg-[#932A83] text-white p-2 rounded w-full"
+              className="bg-[#81059e] text-white p-2 rounded w-full"
               onClick={handleSubmit}
             >
               CONFIRMAR VENDA

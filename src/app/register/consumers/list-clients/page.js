@@ -337,7 +337,7 @@ const ClientsTable = () => {
       <div className="container mx-auto p-4">
         <h1
           className="text-2xl font-bold mb-4 text-center md:text-left"
-          style={{ color: "#932A83" }}
+          style={{ color: "#81059e" }}
         >
           Clientes
         </h1>
@@ -418,28 +418,28 @@ const ClientsTable = () => {
           <table className="min-w-full bg-white border border-gray-200">
             <thead>
               <tr>
-                <th className="py-2 px-4 border-b" style={{ color: "#932A83" }}>
+                <th className="py-2 px-4 border-b" style={{ color: "#81059e" }}>
                   Nome
                 </th>
-                <th className="py-2 px-4 border-b" style={{ color: "#932A83" }}>
+                <th className="py-2 px-4 border-b" style={{ color: "#81059e" }}>
                   CPF
                 </th>
-                <th className="py-2 px-4 border-b" style={{ color: "#932A83" }}>
+                <th className="py-2 px-4 border-b" style={{ color: "#81059e" }}>
                   Telefones
                 </th>
-                <th className="py-2 px-4 border-b" style={{ color: "#932A83" }}>
+                <th className="py-2 px-4 border-b" style={{ color: "#81059e" }}>
                   Cidade
                 </th>
-                <th className="py-2 px-4 border-b" style={{ color: "#932A83" }}>
+                <th className="py-2 px-4 border-b" style={{ color: "#81059e" }}>
                   Bairro
                 </th>
-                <th className="py-2 px-4 border-b" style={{ color: "#932A83" }}>
+                <th className="py-2 px-4 border-b" style={{ color: "#81059e" }}>
                   Logradouro
                 </th>
-                <th className="py-2 px-4 border-b" style={{ color: "#932A83" }}>
+                <th className="py-2 px-4 border-b" style={{ color: "#81059e" }}>
                   Número
                 </th>
-                <th className="py-2 px-4 border-b" style={{ color: "#932A83" }}>
+                <th className="py-2 px-4 border-b" style={{ color: "#81059e" }}>
                   Ações
                 </th>
               </tr>
@@ -501,7 +501,7 @@ const ClientsTable = () => {
                     <div>
                       <h2
                         className="mt-16 text-xl font-bold mb-4 text-center"
-                        style={{ color: "#932A83" }}
+                        style={{ color: "#81059e" }}
                       >
                         Editar Cliente
                       </h2>
@@ -853,7 +853,7 @@ const ClientsTable = () => {
                     <div>
                       <h2
                         className="text-xl font-bold mb-4 text-center"
-                        style={{ color: "#932A83" }}
+                        style={{ color: "#81059e" }}
                       >
                         Dados do Cliente
                       </h2>

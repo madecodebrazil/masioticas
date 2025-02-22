@@ -3,12 +3,12 @@ import React, { Suspense, useEffect, useState } from 'react';
 import Layout from '@/components/Layout';
 import { firestore } from '@/lib/firebaseConfig';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { getDocs, collection } from "firebase/firestore"; 
+import { getDocs, collection } from "firebase/firestore";
 
 export function Repair() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  
+
   const [formData, setFormData] = useState({
     nomeCliente: '',
     codigoProduto: '',
@@ -136,7 +136,7 @@ export function Repair() {
   const handleSubmit = (e) => {
     e.preventDefault();
     setIsLoading(true);
-  
+
     try {
       const queryString = encodeURIComponent(JSON.stringify(formData));
       router.push(`/products_and_services/repair/confirm-repair?formData=${queryString}`);
@@ -151,8 +151,8 @@ export function Repair() {
       <div className="p-6">
         {/* Cabeçalho e Botão de Limpar */}
         <div className="flex justify-between items-center mb-4">
-          <h1 className="text-2xl font-bold text-center" style={{ color: '#932A83' }}>CRIAR REPARO</h1>
-          <button className="bg-[#932A83] text-white font-bold px-4 py-2 rounded-lg">
+          <h1 className="text-2xl font-bold text-center" style={{ color: '#81059e' }}>CRIAR REPARO</h1>
+          <button className="bg-[#81059e] text-white font-bold px-4 py-2 rounded-lg">
             LIMPAR
           </button>
           {/* Substituindo o botão por um ícone de configurações */}
@@ -169,7 +169,7 @@ export function Repair() {
           {/* Primeira linha: Data, Hora e Loja */}
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-bold" style={{ color: '#932A8387' }}>Data</label>
+              <label className="block text-sm font-bold" style={{ color: '#81059e87' }}>Data</label>
               <input
                 type="date"
                 name="data"
@@ -180,7 +180,7 @@ export function Repair() {
             </div>
 
             <div>
-              <label className="block text-sm font-bold" style={{ color: '#932A8387' }}>Hora</label>
+              <label className="block text-sm font-bold" style={{ color: '#81059e87' }}>Hora</label>
               <input
                 type="time"
                 name="hora"
@@ -191,7 +191,7 @@ export function Repair() {
             </div>
 
             <div>
-              <label className="block text-sm font-bold" style={{ color: '#932A8387' }}>Loja</label>
+              <label className="block text-sm font-bold" style={{ color: '#81059e87' }}>Loja</label>
               <select
                 name="loja"
                 value={formData.loja}
@@ -207,7 +207,7 @@ export function Repair() {
           {/* Segunda linha: Cliente e Produto */}
           <div className="grid grid-cols-2 gap-4">
             <div className="relative">
-              <label className="block text-sm font-bold" style={{ color: '#932A8387' }}>Cliente</label>
+              <label className="block text-sm font-bold" style={{ color: '#81059e87' }}>Cliente</label>
               <input
                 type="text"
                 name="nomeCliente"
@@ -232,7 +232,7 @@ export function Repair() {
               )}
             </div>
             <div>
-              <label className="block text-sm font-bold" style={{ color: '#932A8387' }}>Produto</label>
+              <label className="block text-sm font-bold" style={{ color: '#81059e87' }}>Produto</label>
               <input
                 type="text"
                 name="produto"
@@ -246,16 +246,15 @@ export function Repair() {
 
           {/* Terceira linha: Prestadores */}
           <div>
-            <label className="block text-sm font-bold" style={{ color: '#932A8387' }}>Prestadores</label>
+            <label className="block text-sm font-bold" style={{ color: '#81059e87' }}>Prestadores</label>
             <div className="flex flex-wrap gap-2">
               {prestadores.length > 0 ? (
                 prestadores.map((prestador) => (
                   <button
                     key={prestador.id}
                     type="button"
-                    className={`px-4 py-2 border rounded-lg ${
-                      formData.prestador === prestador.name ? 'bg-[#932A83] text-white' : 'border-[#932A83] text-black'
-                    }`}
+                    className={`px-4 py-2 border rounded-lg ${formData.prestador === prestador.name ? 'bg-[#81059e] text-white' : 'border-[#81059e] text-black'
+                      }`}
                     onClick={() => setFormData({ ...formData, prestador: prestador.name })} // Define o prestador selecionado
                   >
                     {prestador.name}
@@ -269,16 +268,15 @@ export function Repair() {
 
           {/* Quarta linha: Tipos de Montagem */}
           <div>
-            <label className="block text-sm font-bold" style={{ color: '#932A8387' }}>Tipo</label>
+            <label className="block text-sm font-bold" style={{ color: '#81059e87' }}>Tipo</label>
             <div className="flex flex-wrap gap-2">
               {tipoMontagem.length > 0 ? (
                 tipoMontagem.map((tipo, index) => (
                   <button
                     key={index}
                     type="button"
-                    className={`px-4 py-2 border rounded-lg ${
-                      formData.tipo === tipo ? 'bg-[#932A83] text-white' : 'border-[#932A83] text-black'
-                    }`}
+                    className={`px-4 py-2 border rounded-lg ${formData.tipo === tipo ? 'bg-[#81059e] text-white' : 'border-[#81059e] text-black'
+                      }`}
                     onClick={() => setFormData({ ...formData, tipo })} // Define o tipo selecionado
                   >
                     {tipo}
@@ -292,7 +290,7 @@ export function Repair() {
 
           {/* Valor */}
           <div>
-            <label className="block text-sm font-bold" style={{ color: '#932A8387' }}>Valor</label>
+            <label className="block text-sm font-bold" style={{ color: '#81059e87' }}>Valor</label>
             <input
               type="text"
               name="valor"
@@ -309,7 +307,7 @@ export function Repair() {
             <button
               type="submit"
               className="px-6 py-3 rounded-lg font-bold"
-              style={{ backgroundColor: '#932A83', color: 'white' }}
+              style={{ backgroundColor: '#81059e', color: 'white' }}
               disabled={isLoading}
             >
               {isLoading ? 'Registrando...' : 'ENVIAR REPARO'}

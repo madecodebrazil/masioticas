@@ -116,12 +116,12 @@ const RegisterProvider = () => {
           {/* Botão para redirecionar para PRESTADORES REGISTRADOS */}
           <button
             onClick={() => router.push('/products_and_services/service_provider/list-providers')}
-            className="bg-[#932A83] text-white font-bold px-4 py-2 rounded-lg"
+            className="bg-[#81059e] text-white font-bold px-4 py-2 rounded-lg"
           >
             PRESTADORES REGISTRADOS
           </button>
 
-          <h1 className="text-2xl font-bold text-center text-[#932A83] mb-4">REGISTRAR PRESTADOR</h1>
+          <h1 className="text-2xl font-bold text-center text-[#81059e] mb-4">REGISTRAR PRESTADOR</h1>
         </div>
 
         {/* Exibe notificações */}
@@ -133,112 +133,112 @@ const RegisterProvider = () => {
 
         <form className="space-y-4" onSubmit={handleSubmit}>
           <div>
-            <label className="block text-[#932A83]">Nome</label>
-            <input 
-              type="text" 
-              value={name} 
-              onChange={(e) => setNome(e.target.value)} 
-              className="border border-purple-300 p-2 w-full text-black" 
+            <label className="block text-[#81059e]">Nome</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setNome(e.target.value)}
+              className="border border-purple-300 p-2 w-full text-black"
             />
           </div>
           <div className="flex space-x-4">
             <div className="flex-1">
-              <label className="block text-[#932A83]">Apelido</label>
-              <input 
-                type="text" 
-                value={apelido} 
-                onChange={(e) => setApelido(e.target.value)} 
-                className="border border-purple-300 p-2 w-full text-black" 
+              <label className="block text-[#81059e]">Apelido</label>
+              <input
+                type="text"
+                value={apelido}
+                onChange={(e) => setApelido(e.target.value)}
+                className="border border-purple-300 p-2 w-full text-black"
               />
             </div>
             <div className="flex-1">
-              <label className="block text-[#932A83]">CPF</label>
-              <input 
-                type="text" 
-                value={cpf} 
-                onChange={handleCpfChange} 
-                className="border border-purple-300 p-2 w-full text-black" 
+              <label className="block text-[#81059e]">CPF</label>
+              <input
+                type="text"
+                value={cpf}
+                onChange={handleCpfChange}
+                className="border border-purple-300 p-2 w-full text-black"
                 placeholder="Digite apenas números"
               />
             </div>
           </div>
           <div>
-            <label className="block text-[#932A83]">E-mail</label>
-            <input 
-              type="email" 
-              value={email} 
-              onChange={(e) => setEmail(e.target.value)} 
-              className="border border-purple-300 p-2 w-full text-black" 
+            <label className="block text-[#81059e]">E-mail</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="border border-purple-300 p-2 w-full text-black"
             />
           </div>
           <div>
-            <label className="block text-[#932A83]">Telefone</label>
-            <input 
-              type="tel" 
-              value={telefone} 
-              onChange={(e) => setTelefone(e.target.value)} 
-              className="border border-purple-300 p-2 w-full text-black" 
+            <label className="block text-[#81059e]">Telefone</label>
+            <input
+              type="tel"
+              value={telefone}
+              onChange={(e) => setTelefone(e.target.value)}
+              className="border border-purple-300 p-2 w-full text-black"
             />
           </div>
-          <h2 className="text-lg font-semibold text-[#932A83]">Endereço</h2>
+          <h2 className="text-lg font-semibold text-[#81059e]">Endereço</h2>
           <div className="flex space-x-4">
             <div className="flex-1">
-              <label className="block text-[#932A83]">CEP</label>
-              <input 
-                type="text" 
-                value={cep} 
-                onChange={handleCepChange} 
-                className="border border-purple-300 p-2 w-full text-black" 
+              <label className="block text-[#81059e]">CEP</label>
+              <input
+                type="text"
+                value={cep}
+                onChange={handleCepChange}
+                className="border border-purple-300 p-2 w-full text-black"
               />
             </div>
             <div className="flex-1">
-              <label className="block text-[#932A83]">Número</label>
+              <label className="block text-[#81059e]">Número</label>
               <input type="text" className="border border-purple-300 p-2 w-full text-black" />
             </div>
           </div>
           <div>
-            <label className="block text-[#932A83]">Logradouro</label>
-            <input 
-              type="text" 
-              value={logradouro} 
-              onChange={(e) => setLogradouro(e.target.value)} 
-              className="border border-purple-300 p-2 w-full text-black" 
+            <label className="block text-[#81059e]">Logradouro</label>
+            <input
+              type="text"
+              value={logradouro}
+              onChange={(e) => setLogradouro(e.target.value)}
+              className="border border-purple-300 p-2 w-full text-black"
             />
           </div>
           <div className="flex space-x-4">
             <div className="flex-1">
-              <label className="block text-[#932A83]">Bairro</label>
-              <input 
-                type="text" 
-                value={bairro} 
-                onChange={(e) => setBairro(e.target.value)} 
-                className="border border-purple-300 p-2 w-full text-black" 
+              <label className="block text-[#81059e]">Bairro</label>
+              <input
+                type="text"
+                value={bairro}
+                onChange={(e) => setBairro(e.target.value)}
+                className="border border-purple-300 p-2 w-full text-black"
               />
             </div>
             <div className="flex-1">
-              <label className="block text-[#932A83]">Cidade</label>
-              <input 
-                type="text" 
-                value={cidade} 
-                onChange={(e) => setCidade(e.target.value)} 
-                className="border border-purple-300 p-2 w-full text-black" 
+              <label className="block text-[#81059e]">Cidade</label>
+              <input
+                type="text"
+                value={cidade}
+                onChange={(e) => setCidade(e.target.value)}
+                className="border border-purple-300 p-2 w-full text-black"
               />
             </div>
           </div>
           <div>
-            <label className="block text-[#932A83]">Complemento</label>
+            <label className="block text-[#81059e]">Complemento</label>
             <input type="text" className="border border-purple-300 p-2 w-full text-black" />
           </div>
           <div>
-            <label className="block text-[#932A83]">Estado</label>
-            <input 
-              type="text" 
-              value={estado} 
-              onChange={(e) => setEstado(e.target.value)} 
-              className="border border-purple-300 p-2 w-full text-black" 
+            <label className="block text-[#81059e]">Estado</label>
+            <input
+              type="text"
+              value={estado}
+              onChange={(e) => setEstado(e.target.value)}
+              className="border border-purple-300 p-2 w-full text-black"
             />
           </div>
-          <button type="submit" className="bg-[#932A83] text-white p-2 w-full ">Salvar</button>
+          <button type="submit" className="bg-[#81059e] text-white p-2 w-full ">Salvar</button>
         </form>
 
         {/* Exibe notificações */}

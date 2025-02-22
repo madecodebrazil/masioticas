@@ -14,7 +14,7 @@ export default function ControleCaixa() {
   // Função para obter o nome do mês atual
   const getMonthName = () => {
     const monthNames = [
-      'JANEIRO', 'FEVEREIRO', 'MARÇO', 'ABRIL', 'MAIO', 'JUNHO',
+      'JANEIRO', 'Fevereiro', 'MARÇO', 'ABRIL', 'MAIO', 'JUNHO',
       'JULHO', 'AGOSTO', 'SETEMBRO', 'OUTUBRO', 'NOVEMBRO', 'DEZEMBRO'
     ];
     const date = new Date();
@@ -79,13 +79,12 @@ export default function ControleCaixa() {
               router.push(`/finance/cashier_day/options?date=${formattedDateForURL}`);
             }
           }}
-          className={`flex items-center justify-center p-3 w-full h-full rounded-full font-bold transition-all duration-300 ease-in-out ${
-            selectedDate === day
-              ? 'bg-yellow-400 text-white border-yellow-400 shadow-lg'
+          className={`flex items-center justify-center p-3 w-full h-full rounded-full font-bold transition-all duration-300 ease-in-out ${selectedDate === day
+              ? 'bg-purple-500 text-white border-purple-500 shadow-lg'
               : index % 7 === 0
-              ? 'text-red-500'
-              : 'text-white hover:bg-yellow-300 hover:text-white'
-          }`}
+                ? 'text-red-500/70 text-xl font-normal'
+                : 'text-[#81059e]/70 text-xl font-normal hover:bg-purple-500 hover:text-white'
+            }`}
           style={{
             cursor: isFutureDate && !isNextDay ? 'not-allowed' : 'pointer', // Habilita o próximo dia após as 18h
           }}
@@ -99,26 +98,29 @@ export default function ControleCaixa() {
 
   return (
     <Layout>
-      <div className="p-8">
-      
+      <div className="p-2">
 
-        {/* Título e Mês atual */} 
+
+        {/* Título e Mês atual */}
         <div className="text-center mb-6">
-          <h2 className="text-2xl font-bold" style={{ color: '#932A83' }}>SELECIONE UMA DATA</h2>
-          <p className="text-lg font-bold" style={{ color: '#932A83' }}>{getMonthName()}</p>
+          <h2 className="text-4xl font-bold" style={{ color: '#81059e' }}>SELECIONE UMA DATA</h2>
+
         </div>
 
-        {/* Calendário */} 
-        <div className="bg-[#932A8380] p-6 rounded-lg shadow-lg">
-          <div className="grid grid-cols-7 gap-4 text-center text-lg font-bold">
+        {/* Calendário */}
+        <div className=" p-6 rounded-lg mb-20">
+          <div className='flex justify-start p-2  border-[#81059e]/70 mb-2'>
+            <p className="text-3xl" style={{ color: '#81059e', }}>{getMonthName()}</p>
+          </div>
+          <div className="grid grid-cols-7 gap-4 text-center text-lg font-bold border-b-2 pb-4">
             {['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB'].map((day, index) => (
-              <div key={index} className={`uppercase flex items-center justify-center h-10 ${index === 0 ? 'text-red-500' : 'text-white'}`}>
+              <div key={index} className={`uppercase flex items-center justify-center h-10 ${index === 0 ? 'text-white bg-red-400/30 opacity-85 rounded-full' : 'text-white bg-[#81059e]/30 rounded-full'}`}>
                 {day}
               </div>
             ))}
           </div>
 
-          {/* Dias do mês */} 
+          {/* Dias do mês */}
           <div className="grid grid-cols-7 gap-4 mt-4">
             {renderCalendarDays()}
           </div>

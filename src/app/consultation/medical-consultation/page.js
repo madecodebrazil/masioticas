@@ -178,32 +178,32 @@ const NovaConsulta = () => {
                     "/consultation/medical-consultation/list-consultation"
                   )
                 }
-                className="px-8 mr-2 py-2 bg-[#932A83] text-white rounded"
+                className="px-8 mr-2 py-2 bg-[#81059e] text-white rounded"
               >
                 LISTA DE CONSULTAS
               </button>
               <button
                 type="button"
                 onClick={handleClear}
-                className="px-8 mr-2 py-2 bg-[#932A83] text-white rounded"
+                className="px-8 mr-2 py-2 bg-[#81059e] text-white rounded"
               >
                 LIMPAR
               </button>
             </div>
-            <h2 className="text-xl md:text-2xl font-semibold text-[#932A83]">
+            <h2 className="text-xl md:text-2xl font-semibold text-[#81059e]">
               NOVA CONSULTA
             </h2>
           </div>
 
           <form onSubmit={handleSubmit} className="mt-6 grid grid-cols-2 gap-4">
             <div className="relative col-span-2">
-              <label className="block text-[#932A83]">Nome do Paciente</label>
+              <label className="block text-[#81059e]">Nome do Paciente</label>
               <input
                 type="text"
                 name="nomePaciente"
                 value={formData.nomePaciente}
                 onChange={handleInputChange}
-                className="w-full mt-1 px-3 py-2 border border-[#932A83] rounded text-black focus:outline-none focus:ring-2 focus:ring-[#932A83]"
+                className="w-full mt-1 px-3 py-2 border border-[#81059e] rounded text-black focus:outline-none focus:ring-2 focus:ring-[#81059e]"
               />
               {showNomeSuggestions && clientes.length > 0 && (
                 <div className="absolute z-10 bg-white border border-gray-300 rounded mt-2 w-full max-h-40 overflow-auto text-black">
@@ -221,13 +221,13 @@ const NovaConsulta = () => {
             </div>
 
             <div className="relative col-span-2">
-              <label className="block text-[#932A83]">CPF</label>
+              <label className="block text-[#81059e]">CPF</label>
               <input
                 type="text"
                 name="cpf"
                 value={formData.cpf}
                 onChange={handleInputChange}
-                className="w-full mt-1 px-3 py-2 border border-[#932A83] rounded text-black focus:outline-none focus:ring-2 focus:ring-[#932A83]"
+                className="w-full mt-1 px-3 py-2 border border-[#81059e] rounded text-black focus:outline-none focus:ring-2 focus:ring-[#81059e]"
               />
               {showCpfSuggestions && clientes.length > 0 && (
                 <div className="absolute z-10 bg-white border border-gray-300 rounded mt-2 w-full max-h-40 overflow-auto text-black">
@@ -245,67 +245,67 @@ const NovaConsulta = () => {
             </div>
 
             <div>
-              <label className="block text-[#932A83]">Logradouro</label>
+              <label className="block text-[#81059e]">Logradouro</label>
               <input
                 type="text"
                 name="logradouro"
                 value={formData.logradouro}
                 onChange={handleInputChange}
-                className="w-full mt-1 px-3 py-2 border border-[#932A83] rounded text-black focus:outline-none focus:ring-2 focus:ring-[#932A83]"
+                className="w-full mt-1 px-3 py-2 border border-[#81059e] rounded text-black focus:outline-none focus:ring-2 focus:ring-[#81059e]"
               />
             </div>
             <div className="col-span-2">
-              <label className="block text-[#932A83]">Valor da Consulta</label>
+              <label className="block text-[#81059e]">Valor da Consulta</label>
               <input
                 type="number"
                 name="valorConsulta"
                 value={formData.valorConsulta}
                 onChange={handleInputChange}
-                className="w-full mt-1 px-3 py-2 border border-[#932A83] rounded text-black focus:outline-none focus:ring-2 focus:ring-[#932A83]"
+                className="w-full mt-1 px-3 py-2 border border-[#81059e] rounded text-black focus:outline-none focus:ring-2 focus:ring-[#81059e]"
               />
             </div>
 
             <div>
-              <label className="block text-[#932A83]">RG</label>
+              <label className="block text-[#81059e]">RG</label>
               <input
                 type="text"
                 name="rg"
                 value={formData.rg}
                 onChange={handleInputChange}
-                className="w-full mt-1 px-3 py-2 border border-[#932A83] rounded text-black focus:outline-none focus:ring-2 focus:ring-[#932A83]"
+                className="w-full mt-1 px-3 py-2 border border-[#81059e] rounded text-black focus:outline-none focus:ring-2 focus:ring-[#81059e]"
               />
             </div>
 
             <div>
-              <label className="block text-[#932A83]">Bairro</label>
+              <label className="block text-[#81059e]">Bairro</label>
               <input
                 type="text"
                 name="bairro"
                 value={formData.bairro}
                 onChange={handleInputChange}
-                className="w-full mt-1 px-3 py-2 border border-[#932A83] rounded text-black focus:outline-none focus:ring-2 focus:ring-[#932A83]"
+                className="w-full mt-1 px-3 py-2 border border-[#81059e] rounded text-black focus:outline-none focus:ring-2 focus:ring-[#81059e]"
               />
             </div>
 
             <div>
-              <label className="block text-[#932A83]">Nº da Casa</label>
+              <label className="block text-[#81059e]">Nº da Casa</label>
               <input
                 type="text"
                 name="numeroCasa"
                 value={formData.numeroCasa}
                 onChange={handleInputChange}
-                className="w-full mt-1 px-3 py-2 border border-[#932A83] rounded text-black focus:outline-none focus:ring-2 focus:ring-[#932A83]"
+                className="w-full mt-1 px-3 py-2 border border-[#81059e] rounded text-black focus:outline-none focus:ring-2 focus:ring-[#81059e]"
               />
             </div>
 
             {/* Ametropia como Select */}
             <div>
-              <label className="block text-[#932A83]">Ametropia</label>
+              <label className="block text-[#81059e]">Ametropia</label>
               <select
                 name="ametropia"
                 value={formData.ametropia}
                 onChange={handleInputChange}
-                className="w-full mt-1 px-3 py-2 border border-[#932A83] rounded text-black focus:outline-none focus:ring-2 focus:ring-[#932A83]"
+                className="w-full mt-1 px-3 py-2 border border-[#81059e] rounded text-black focus:outline-none focus:ring-2 focus:ring-[#81059e]"
               >
                 <option value="Sim">Sim</option>
                 <option value="Não">Não</option>
@@ -313,35 +313,35 @@ const NovaConsulta = () => {
             </div>
 
             <div>
-              <label className="block text-[#932A83]">Data</label>
+              <label className="block text-[#81059e]">Data</label>
               <input
                 type="date"
                 name="data"
                 value={formData.data}
                 onChange={handleInputChange}
-                className="w-full mt-1 px-3 py-2 border border-[#932A83] rounded text-black focus:outline-none focus:ring-2 focus:ring-[#932A83]"
+                className="w-full mt-1 px-3 py-2 border border-[#81059e] rounded text-black focus:outline-none focus:ring-2 focus:ring-[#81059e]"
               />
             </div>
 
             <div>
-              <label className="block text-[#932A83]">Hora</label>
+              <label className="block text-[#81059e]">Hora</label>
               <input
                 type="time"
                 name="hora"
                 value={formData.hora}
                 onChange={handleInputChange}
-                className="w-full mt-1 px-3 py-2 border border-[#932A83] rounded text-black focus:outline-none focus:ring-2 focus:ring-[#932A83]"
+                className="w-full mt-1 px-3 py-2 border border-[#81059e] rounded text-black focus:outline-none focus:ring-2 focus:ring-[#81059e]"
               />
             </div>
 
             {/* Select para Loja */}
             <div>
-              <label className="block text-[#932A83]">Loja</label>
+              <label className="block text-[#81059e]">Loja</label>
               <select
                 name="loja"
                 value={formData.loja}
                 onChange={handleInputChange}
-                className="w-full mt-1 px-3 py-2 border border-[#932A83] rounded text-black focus:outline-none focus:ring-2 focus:ring-[#932A83]"
+                className="w-full mt-1 px-3 py-2 border border-[#81059e] rounded text-black focus:outline-none focus:ring-2 focus:ring-[#81059e]"
               >
                 <option value="loja1">Óticas Popular 1</option>
                 <option value="loja2">Óticas Popular 2</option>
@@ -350,13 +350,13 @@ const NovaConsulta = () => {
 
             {/* Campo para Clínica */}
             <div className="col-span-2">
-              <label className="block text-[#932A83]">Clínica</label>
+              <label className="block text-[#81059e]">Clínica</label>
               <input
                 type="text"
                 name="clinica"
                 value={formData.clinica}
                 onChange={handleInputChange}
-                className="w-full mt-1 px-3 py-2 border border-[#932A83] rounded text-black focus:outline-none focus:ring-2 focus:ring-[#932A83]"
+                className="w-full mt-1 px-3 py-2 border border-[#81059e] rounded text-black focus:outline-none focus:ring-2 focus:ring-[#81059e]"
                 placeholder="Insira o nome da clínica"
               />
             </div>
@@ -364,7 +364,7 @@ const NovaConsulta = () => {
             <div className="col-span-2 flex justify-end">
               <button
                 type="submit"
-                className="px-6 py-2 bg-[#932A83] text-white rounded hover:bg-[#820f76]"
+                className="px-6 py-2 bg-[#81059e] text-white rounded hover:bg-[#820f76]"
               >
                 MARCAR CONSULTA
               </button>

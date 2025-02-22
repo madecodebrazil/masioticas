@@ -1,27 +1,27 @@
 "use client";
 
 import { useEffect, Suspense, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation'; 
+import { useRouter, useSearchParams } from 'next/navigation';
 import Layout from '@/components/Layout';
 import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
 import { firestore } from '../../../../lib/firebaseConfig';
 
 export function ListaTransacoes() {
-  const router = useRouter(); 
-  const searchParams = useSearchParams(); 
-  const loja = searchParams.get('loja'); 
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const loja = searchParams.get('loja');
 
   const [caixaData, setCaixaData] = useState(null);
   const [transacoes, setTransacoes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [filterDate, setFilterDate] = useState(new Date()); 
-  const [saldoFinal, setSaldoFinal] = useState(0); 
+  const [filterDate, setFilterDate] = useState(new Date());
+  const [saldoFinal, setSaldoFinal] = useState(0);
   const [isAfterHours, setIsAfterHours] = useState(false);
 
   const formatDate = (date) => {
     const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0'); 
+    const month = String(date.getMonth() + 1).padStart(2, '0');
     const year = date.getFullYear();
     return `${day}-${month}-${year}`;
   };
@@ -43,7 +43,7 @@ export function ListaTransacoes() {
     }, 0);
     return (initialBalance ? parseFloat(initialBalance) : 0) + totalTransacoes;
   };
-  
+
   useEffect(() => {
     const currentTime = new Date();
     const currentHour = currentTime.getHours();
@@ -112,14 +112,14 @@ export function ListaTransacoes() {
     <Layout>
       <div className="flex flex-col items-center h-full p-4 sm:p-8">
         <div className="flex-1 w-full max-w-6xl bg-[#F7F7F9] rounded-lg p-4 sm:p-8 shadow-lg">
-          <h2 className="text-2xl sm:text-3xl font-semibold text-[#932A83] mb-4 sm:mb-6">Detalhes do Caixa do Dia</h2>
+          <h2 className="text-2xl sm:text-3xl font-semibold text-[#81059e] mb-4 sm:mb-6">Detalhes do Caixa do Dia</h2>
 
           {/* Filtro por data */}
           <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row items-start sm:items-center">
-            <label className="text-lg font-semibold text-[#932A83] mb-2 sm:mb-0">Selecionar Data: </label>
+            <label className="text-lg font-semibold text-[#81059e] mb-2 sm:mb-0">Selecionar Data: </label>
             <input
               type="date"
-              value={filterDate.toISOString().substring(0, 10)} 
+              value={filterDate.toISOString().substring(0, 10)}
               onChange={(e) => setFilterDate(new Date(e.target.value))}
               className="ml-0 sm:ml-4 p-2 border border-purple-300 rounded-md text-black"
             />
@@ -133,7 +133,7 @@ export function ListaTransacoes() {
             <div className="bg-white p-4 sm:p-6 rounded-lg shadow-md">
               {caixaData && (
                 <div className="mb-4 sm:mb-6">
-                  <h3 className="text-xl sm:text-2xl text-[#932A83] font-semibold mb-4">Informações do Caixa</h3>
+                  <h3 className="text-xl sm:text-2xl text-[#81059e] font-semibold mb-4">Informações do Caixa</h3>
                   <p className="text-black"><strong>Data:</strong> {caixaData.date}</p>
                   <p className="text-black">
                     <strong>Saldo Inicial:</strong> R$ {caixaData.initialBalance !== undefined ? caixaData.initialBalance.toFixed(2) : 'Não disponível'}
@@ -148,11 +148,11 @@ export function ListaTransacoes() {
                 <p className="text-black">Nenhuma transação encontrada para o dia selecionado.</p>
               ) : (
                 <div>
-                  <h3 className="text-xl sm:text-2xl text-[#932A83] font-semibold mb-4">Transações do Caixa</h3>
+                  <h3 className="text-xl sm:text-2xl text-[#81059e] font-semibold mb-4">Transações do Caixa</h3>
                   <div className="overflow-x-auto">
                     <table className="min-w-full table-auto">
                       <thead>
-                        <tr className="bg-[#932A83] text-white">
+                        <tr className="bg-[#81059e] text-white">
                           <th className="px-4 py-2">ID da Transação</th>
                           <th className="px-4 py-2">Descrição</th>
                           <th className="px-4 py-2">Valor</th>

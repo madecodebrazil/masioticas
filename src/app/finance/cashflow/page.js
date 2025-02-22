@@ -75,8 +75,8 @@ const CashflowPage = () => {
 
   return (
     <Layout>
-      <div className="min-h-screen p-4">
-        <div className="w-full max-w-4xl mx-auto bg-white shadow-md rounded-lg p-6">
+      <div className="min-h-screen">
+        <div className="w-full bg-white rounded-lg p-2">
           <h2 className="text-lg font-bold text-[#a9529c] mb-6">FLUXO DE CAIXA</h2>
 
           {/* Filtro de Data */}

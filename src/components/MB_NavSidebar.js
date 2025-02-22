@@ -50,7 +50,7 @@ export default function MobileNavSidebar({ handleLogout, userPhotoURL, userData 
     return (
         <>
             {/* Barra superior com logo centralizada e menu de hambúrguer à esquerda (mobile apenas) */}
-            <div className="bg-[#932A83] w-full p-4 flex justify-between items-center lg:hidden z-50">
+            <div className="bg-[#81059e] w-full p-4 flex justify-between items-center lg:hidden z-50">
                 {/* Ícone de menu de hambúrguer à esquerda */}
                 <button className="text-white focus:outline-none" onClick={toggleMenu}>
                     <svg
@@ -68,16 +68,16 @@ export default function MobileNavSidebar({ handleLogout, userPhotoURL, userData 
                         ></path>
                     </svg>
                 </button>
-            {/* Logo centralizada */}
-            <Link href="/homepage" className="mx-auto">
-                <Image
-                    src="/images/logomasi_branca.png"
-                    alt="Logo"
-                    width={100}
-                    height={50}
-                    className="object-contain transition-all duration-300 hover:drop-shadow-[0_0_10px_rgba(255,255,0,0.8)]"
-                />
-            </Link>
+                {/* Logo centralizada */}
+                <Link href="/homepage" className="mx-auto">
+                    <Image
+                        src="/images/logomasi_branca.png"
+                        alt="Logo"
+                        width={100}
+                        height={50}
+                        className="object-contain transition-all duration-300 hover:drop-shadow-[0_0_10px_rgba(255,255,0,0.8)]"
+                    />
+                </Link>
 
 
                 {/* Ícone de sino e foto do usuário no lado direito */}
@@ -111,17 +111,17 @@ export default function MobileNavSidebar({ handleLogout, userPhotoURL, userData 
                     />
                 </div>
             </div>
-{isMenuOpen && (
-    <motion.div
-        initial="hidden"
-        animate="visible"
-        exit="exit"
-        variants={menuVariants}
-        className="fixed top-0 left-0 h-full w-[250px] bg-[#932A83] z-50"
-    >
-        <Sidebar showSidebar={isMenuOpen} hideSidebar={toggleMenu} />
-    </motion.div>
-)}
+            {isMenuOpen && (
+                <motion.div
+                    initial="hidden"
+                    animate="visible"
+                    exit="exit"
+                    variants={menuVariants}
+                    className="fixed top-0 left-0 h-full w-[250px] bg-[#81059e] z-50"
+                >
+                    <Sidebar showSidebar={isMenuOpen} hideSidebar={toggleMenu} />
+                </motion.div>
+            )}
 
 
 
@@ -132,7 +132,7 @@ export default function MobileNavSidebar({ handleLogout, userPhotoURL, userData 
                     animate="visible"
                     exit="exit"
                     variants={dropdownVariants}
-                    className="fixed top-0 right-0 w-[250px] h-full bg-gradient-to-b from-[#932A83] to-[#B7328C] text-white p-4 shadow-xl z-[9999]" // Definindo z-index alto
+                    className="fixed top-0 right-0 w-[250px] h-full bg-gradient-to-b from-[#81059e] to-[#B7328C] text-white p-4 shadow-xl z-[9999]" // Definindo z-index alto
                 >
                     {/* Botão para fechar o dropdown */}
                     <button
@@ -184,7 +184,7 @@ export default function MobileNavSidebar({ handleLogout, userPhotoURL, userData 
                                 </div>
                             </Link>
 
-                        
+
 
                             <Link href="/homepage/agenda">
                                 <div className="bg-[#84207B] text-white border border-[rgba(154,42,141,0.3)] rounded-lg py-4 px-4 w-full text-center shadow-lg flex items-center justify-start gap-4 hover:bg-[#D4A017] transition-colors duration-300">
@@ -199,7 +199,7 @@ export default function MobileNavSidebar({ handleLogout, userPhotoURL, userData 
                                 </div>
                             </Link>
 
-                             </nav>
+                        </nav>
 
                         {/* Logout */}
                         <div className="mt-6">

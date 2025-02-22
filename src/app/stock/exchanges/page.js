@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useState } from 'react';
 import Layout from '@/components/Layout';
-import { getDocs, collection } from 'firebase/firestore'; 
+import { getDocs, collection } from 'firebase/firestore';
 import { firestore } from '../../../lib/firebaseConfig';
 import { useRouter } from 'next/navigation';
 
@@ -15,11 +15,11 @@ export default function TrocasRegistradas() {
   const fetchTrocas = async () => {
     try {
       setIsLoading(true);
-      
+
       // Buscar trocas na coleção exchanges
       const querySnapshot = await getDocs(collection(firestore, 'exchanges'));
       const fetchedTrocas = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      
+
       setTrocas(fetchedTrocas);
       setIsLoading(false);
     } catch (error) {
@@ -53,9 +53,9 @@ export default function TrocasRegistradas() {
     <Layout>
       <div className="p-6">
         <div className="flex justify-between items-center mb-4">
-          <h1 className="text-2xl font-bold" style={{ color: '#932A83' }}>TROCAS REGISTRADAS</h1>
+          <h1 className="text-2xl font-bold" style={{ color: '#81059e' }}>TROCAS REGISTRADAS</h1>
           <button
-            className="bg-[#932A83] text-white font-bold px-4 py-2 rounded-lg"
+            className="bg-[#81059e] text-white font-bold px-4 py-2 rounded-lg"
             onClick={() => router.push('/stock/exchanges/add-exchange')}
           >
             ADICIONAR
@@ -71,7 +71,7 @@ export default function TrocasRegistradas() {
             value={searchTerm}
             onChange={handleSearch}
           />
-          <button className="text-white px-4 py-2 rounded-lg" style={{ backgroundColor: '#932A83' }}>
+          <button className="text-white px-4 py-2 rounded-lg" style={{ backgroundColor: '#81059e' }}>
             Buscar
           </button>
         </div>

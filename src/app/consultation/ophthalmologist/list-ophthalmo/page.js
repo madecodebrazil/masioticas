@@ -64,7 +64,7 @@ const ListOphthalmologist = () => {
     <Layout>
       <div className="min-h-screen flex flex-col bg-gray-50">
         <div className="flex justify-between items-center p-4">
-          <h2 className="text-2xl font-semibold text-[#932A83]">OFTALMOLOGISTAS REGISTRADOS</h2>
+          <h2 className="text-2xl font-semibold text-[#81059e]">OFTALMOLOGISTAS REGISTRADOS</h2>
         </div>
 
         {/* Campo de busca e botão adicionar */}
@@ -74,12 +74,12 @@ const ListOphthalmologist = () => {
             placeholder="Busque por CRM ou nome"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="border rounded-lg px-4 py-2 border-[#932A83] focus:ring-2 focus:ring-[#932A83] text-black w-1/2"
+            className="border rounded-lg px-4 py-2 border-[#81059e] focus:ring-2 focus:ring-[#81059e] text-black w-1/2"
           />
 
           <button
             onClick={handleAdd}
-            className="px-6 py-2 bg-[#932A83] text-white rounded-lg hover:bg-[#820f76] ml-4"
+            className="px-6 py-2 bg-[#81059e] text-white rounded-lg hover:bg-[#820f76] ml-4"
           >
             ADICIONAR
           </button>
@@ -92,7 +92,7 @@ const ListOphthalmologist = () => {
           ) : (
             <table className="min-w-full bg-white rounded-lg">
               <thead>
-                <tr className="bg-[#932A83] text-white rounded-lg">
+                <tr className="bg-[#81059e] text-white rounded-lg">
                   <th className="py-2 px-4 text-left">CRM</th>
                   <th className="py-2 px-4 text-left">Médico</th>
                   <th className="py-2 px-4 text-left">Gênero</th>

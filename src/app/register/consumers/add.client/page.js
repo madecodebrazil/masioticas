@@ -231,85 +231,85 @@ export default function ClientePage() {
     setFilhos(updatedFilhos);
   };
 
-// Função de submissão do formulário
-const handleSubmit = async (e) => {
-  e.preventDefault();
+  // Função de submissão do formulário
+  const handleSubmit = async (e) => {
+    e.preventDefault();
 
-  if (loadingUserData) return;
+    if (loadingUserData) return;
 
-  setLoadingUserData(true);
+    setLoadingUserData(true);
 
-  try {
-    // Validação de CPF/CNPJ
-    const identifier = formData.cpf ? formData.cpf.replace(/\D/g, "") : "";
-    const tipo = isValidCPFOrCNPJ(identifier);
-    if (!tipo) {
-      alert("O CPF deve conter 11 dígitos ou o CNPJ deve conter 14 dígitos.");
+    try {
+      // Validação de CPF/CNPJ
+      const identifier = formData.cpf ? formData.cpf.replace(/\D/g, "") : "";
+      const tipo = isValidCPFOrCNPJ(identifier);
+      if (!tipo) {
+        alert("O CPF deve conter 11 dígitos ou o CNPJ deve conter 14 dígitos.");
+        setLoadingUserData(false);
+        return;
+      }
+
+      // Verifica se o identificador já existe
+      const exists = await checkIfIdentifierExists(identifier);
+      if (exists) {
+        alert(`Erro: Este ${tipo} já está cadastrado.`);
+        setLoadingUserData(false);
+        return;
+      }
+
+      // Upload das imagens
+      const rgImageUrl = await uploadImage(formData.rgImage, `rg-${identifier}`);
+      const cpfImageUrl = await uploadImage(formData.cpfImage, `cpf-${identifier}`);
+      const addressImageUrl = await uploadImage(formData.addressImage, `address-${identifier}`);
+      const clientImageUrl = await uploadImage(formData.imagem, `client-${identifier}`);
+
+      // Upload da receita, se houver
+      let receitaUrl = null;
+      if (receitaFile) {
+        receitaUrl = await (async (file, fileName) => {
+          const storage = getStorage();
+          const storageRef = ref(storage, `receitas/${fileName}`);
+          const snapshot = await uploadBytes(storageRef, file);
+          return await getDownloadURL(snapshot.ref);
+        })(receitaFile, `receita-${Date.now()}`);
+      }
+
+      // Monta o objeto a ser salvo
+      const { rgImage, cpfImage, addressImage, imagem, ...clientData } = formData;
+      clientData.rgImageUrl = rgImageUrl;
+      clientData.cpfImageUrl = cpfImageUrl;
+      clientData.addressImageUrl = addressImageUrl;
+      clientData.clientImageUrl = clientImageUrl;
+      clientData.tipo = tipo;
+      clientData.filhos = filhos;
+      clientData.emprego = emprego;
+      clientData.telefones = telefones;
+      clientData.receitaUrl = receitaUrl;
+
+      // Aqui sobrescrevemos o CPF para remover qualquer formatação
+      clientData.cpf = identifier;
+
+      // Salva no Firestore
+      await setDoc(doc(firestore, "consumers", identifier), clientData);
+
+      console.log("Cliente adicionado com sucesso:", clientData);
+      setShowSuccessPopup(true);
+
+      // Redireciona após 3 segundos
+      setTimeout(() => {
+        router.push("/register/consumers/list-clients");
+      }, 3000);
+    } catch (error) {
+      console.error("Erro ao adicionar cliente:", error);
+    } finally {
       setLoadingUserData(false);
-      return;
     }
+  };
 
-    // Verifica se o identificador já existe
-    const exists = await checkIfIdentifierExists(identifier);
-    if (exists) {
-      alert(`Erro: Este ${tipo} já está cadastrado.`);
-      setLoadingUserData(false);
-      return;
-    }
 
-    // Upload das imagens
-    const rgImageUrl = await uploadImage(formData.rgImage, `rg-${identifier}`);
-    const cpfImageUrl = await uploadImage(formData.cpfImage, `cpf-${identifier}`);
-    const addressImageUrl = await uploadImage(formData.addressImage, `address-${identifier}`);
-    const clientImageUrl = await uploadImage(formData.imagem, `client-${identifier}`);
-
-    // Upload da receita, se houver
-    let receitaUrl = null;
-    if (receitaFile) {
-      receitaUrl = await (async (file, fileName) => {
-        const storage = getStorage();
-        const storageRef = ref(storage, `receitas/${fileName}`);
-        const snapshot = await uploadBytes(storageRef, file);
-        return await getDownloadURL(snapshot.ref);
-      })(receitaFile, `receita-${Date.now()}`);
-    }
-
-    // Monta o objeto a ser salvo
-    const { rgImage, cpfImage, addressImage, imagem, ...clientData } = formData;
-    clientData.rgImageUrl = rgImageUrl;
-    clientData.cpfImageUrl = cpfImageUrl;
-    clientData.addressImageUrl = addressImageUrl;
-    clientData.clientImageUrl = clientImageUrl;
-    clientData.tipo = tipo;
-    clientData.filhos = filhos;
-    clientData.emprego = emprego;
-    clientData.telefones = telefones;
-    clientData.receitaUrl = receitaUrl;
-    
-    // Aqui sobrescrevemos o CPF para remover qualquer formatação
-    clientData.cpf = identifier;
-
-    // Salva no Firestore
-    await setDoc(doc(firestore, "consumers", identifier), clientData);
-
-    console.log("Cliente adicionado com sucesso:", clientData);
-    setShowSuccessPopup(true);
-
-    // Redireciona após 3 segundos
-    setTimeout(() => {
-      router.push("/register/consumers/list-clients");
-    }, 3000);
-  } catch (error) {
-    console.error("Erro ao adicionar cliente:", error);
-  } finally {
-    setLoadingUserData(false);
-  }
-};
-
-  
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#932A83]">
+    <div className="flex flex-col min-h-screen bg-[#81059e]">
       <MobileNavSidebar
         userPhotoURL={userData?.imageUrl || "/default-avatar.png"}
         userData={userData}

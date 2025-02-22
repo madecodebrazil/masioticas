@@ -48,9 +48,9 @@ export default function OpcoesCaixa() {
 
   return (
     <Layout>
-      <div className="p-8 text-center bg-[#f0f0f0] rounded-lg shadow-lg">
-        <h2 className="text-2xl font-bold text-[#932A83] mb-4">
-          Caixa para {formattedDate}
+      <div className="max-w-7xl mx-auto bg-white mt-8 mb-20 text-center">
+        <h2 className="text-4xl font-bold text-[#81059e] mb-4">
+          CAIXA DO DIA {formattedDate}
         </h2>
         <p className="text-lg mb-8">Escolha uma opção para a data selecionada.</p>
 
@@ -59,14 +59,14 @@ export default function OpcoesCaixa() {
             <>
               {caixaExistsInLoja1 && (
                 <Link href={`/finance/cashier_day/daily_cashier_overview?date=${date}&loja=loja1`}>
-                <button className="bg-[#932A83] text-white px-6 py-3 rounded-lg shadow-lg hover:bg-[#7a2461]">
+                <button className="bg-[#81059e] text-white px-6 py-3 rounded-lg shadow-lg hover:bg-purple-500">
                   Visualizar Caixa da Loja 1
                 </button>
               </Link>
               )}
               {caixaExistsInLoja2 && (
                 <Link href={`/finance/cashier_day/daily_cashier_overview?date=${date}&loja=loja2`}>
-                <button className="bg-[#932A83] text-white px-6 py-3 rounded-lg shadow-lg hover:bg-[#7a2461]">
+                <button className="bg-[#81059e] text-white px-6 py-3 rounded-lg shadow-lg hover:bg-purple-500">
                   Visualizar Caixa da Loja 2
                 </button>
               </Link>
@@ -74,7 +74,7 @@ export default function OpcoesCaixa() {
               {!caixaExistsInLoja1 && (
                 <Link href={`/finance/cashier_day/create_cashier?date=${date}&loja=loja1`}>
                   <button
-                    className="bg-[#932A83] text-white px-6 py-3 rounded-lg shadow-lg hover:bg-[#7a2461]"
+                    className="bg-[#81059e] text-white px-6 py-3 rounded-lg shadow-lg hover:bg-purple-500"
                   >
                     Abrir Novo Caixa na Loja 1
                   </button>
@@ -83,7 +83,7 @@ export default function OpcoesCaixa() {
               {!caixaExistsInLoja2 && (
                 <Link href={`/finance/cashier_day/create_cashier?date=${date}&loja=loja2`}>
                   <button
-                    className="bg-[#932A83] text-white px-6 py-3 rounded-lg shadow-lg hover:bg-[#7a2461]"
+                    className="bg-[#81059e] text-white px-6 py-3 rounded-lg shadow-lg hover:bg-purple-500"
                   >
                     Abrir Novo Caixa na Loja 2
                   </button>
@@ -94,14 +94,14 @@ export default function OpcoesCaixa() {
             <>
               <Link href={`/finance/cashier_day/create_cashier?date=${date}&loja=loja1`}>
                 <button
-                  className="bg-[#932A83] text-white px-6 py-3 rounded-lg shadow-lg hover:bg-[#7a2461]"
+                  className="bg-[#81059e] text-white px-6 py-3 rounded-lg shadow-lg hover:bg-purple-500"
                 >
                   Abrir Novo Caixa na Loja 1
                 </button>
               </Link>
               <Link href={`/finance/cashier_day/create_cashier?date=${date}&loja=loja2`}>
                 <button
-                  className="bg-[#932A83] text-white px-6 py-3 rounded-lg shadow-lg hover:bg-[#7a2461]"
+                  className="bg-[#81059e] text-white px-6 py-3 rounded-lg shadow-lg hover:bg-purple-500"
                 >
                   Abrir Novo Caixa na Loja 2
                 </button>

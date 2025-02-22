@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Layout from '@/components/Layout';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation'; // Atualizado para usar `next/navigation`
-import { firestore } from '../../../../lib/firebaseConfig'; 
+import { firestore } from '../../../../lib/firebaseConfig';
 import { doc, setDoc, getDocs, collection, query, where } from 'firebase/firestore';
 
 export default function Confirm() {
@@ -103,7 +103,7 @@ export default function Confirm() {
     <Layout>
       <div className="flex h-full p-8 justify-center items-center flex-col">
         <div className="flex-1 w-full max-w-4xl">
-          <h2 className="text-2xl font-semibold text-[#932A83] mb-6">CONFIRMAÇÃO DOS DADOS</h2>
+          <h2 className="text-2xl font-semibold text-[#81059e] mb-6">CONFIRMAÇÃO DOS DADOS</h2>
 
           <div className="text-black bg-white p-6 rounded-lg shadow-md space-y-4">
             <div>
@@ -124,9 +124,9 @@ export default function Confirm() {
                   Editar
                 </button>
               </Link>
-              <button 
-                onClick={handleConfirm} 
-                className="bg-[#932A83] text-white py-2 px-4 rounded-md" 
+              <button
+                onClick={handleConfirm}
+                className="bg-[#81059e] text-white py-2 px-4 rounded-md"
                 disabled={isLoading}
               >
                 {isLoading ? 'Salvando...' : 'Confirmar'}

@@ -51,11 +51,11 @@ export function ConfirmAssembly() {
     <Layout>
       <div className="p-6">
         <div className="flex justify-between items-center mb-4">
-          <h1 className="text-2xl font-bold" style={{ color: '#932A83' }}>CONFIRMAR MALOTE</h1>
+          <h1 className="text-2xl font-bold" style={{ color: '#81059e' }}>CONFIRMAR MALOTE</h1>
         </div>
 
         <div className="bg-white p-6 rounded-lg shadow-lg mt-6">
-          <h2 className="text-lg font-bold mb-4" style={{ color: '#932A83' }}>Resumo do Malote:</h2>
+          <h2 className="text-lg font-bold mb-4" style={{ color: '#81059e' }}>Resumo do Malote:</h2>
 
           <div className="space-y-2 text-black">
             <p><span className="font-semibold">Nome do Cliente:</span> {formDataFromQuery.nomeCliente}</p>
@@ -76,7 +76,7 @@ export function ConfirmAssembly() {
             {/* Botão de Editar */}
             <button
               onClick={handleEdit}
-              className="flex items-center px-6 py-3 bg-[#932A83] text-white font-bold rounded-lg hover:bg-purple-600 transition"
+              className="flex items-center px-6 py-3 bg-[#81059e] text-white font-bold rounded-lg hover:bg-purple-600 transition"
             >
               <Image src="/images/edit.png" alt="Edit" width={20} height={20} className="mr-2" />
               Editar
@@ -85,7 +85,7 @@ export function ConfirmAssembly() {
             {/* Botão de Confirmar */}
             <button
               onClick={handleConfirm}
-              className="flex items-center px-6 py-3 bg-[#932A83] text-white font-bold rounded-lg hover:bg-green-700 transition"
+              className="flex items-center px-6 py-3 bg-[#81059e] text-white font-bold rounded-lg hover:bg-green-700 transition"
               disabled={isSubmitting} // Desabilita o botão durante o envio
             >
               <Image src="/images/check.png" alt="Confirm" width={20} height={20} className="mr-2" />

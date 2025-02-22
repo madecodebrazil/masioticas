@@ -1,6 +1,6 @@
 "use client";
 import React, { Suspense, useState } from 'react';
-import Layout from '@/components/Layout'; 
+import Layout from '@/components/Layout';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { doc, getDoc, updateDoc, collection, addDoc } from 'firebase/firestore';
 import { firestore } from '../../../../../lib/firebaseConfig';
@@ -17,8 +17,8 @@ export function ConfirmBreakdown() {
   const handleConfirmSubmit = async () => {
     setIsLoading(true);
     const collectionName = formDataFromQuery.produto.includes('Armação') ? 'armacoes_avariadas' :
-                           formDataFromQuery.produto.includes('Lentes') ? 'lentes_avariadas' :
-                           'solares_avariadas'; // Seleciona o tipo de avaria
+      formDataFromQuery.produto.includes('Lentes') ? 'lentes_avariadas' :
+        'solares_avariadas'; // Seleciona o tipo de avaria
 
     try {
       // Referência ao documento original do produto
@@ -27,7 +27,7 @@ export function ConfirmBreakdown() {
 
       if (productDoc.exists()) {
         const productData = productDoc.data();
-        
+
         // Verificar a quantidade
         if (productData.quantidade > 0) {
           const newQuantity = productData.quantidade - 1;
@@ -74,7 +74,7 @@ export function ConfirmBreakdown() {
         <h1 className="text-2xl font-bold text-purple-800">CONFIRMAR AVARIA</h1>
 
         <div className="bg-white p-6 rounded-lg shadow-lg mt-6">
-          <h2 className="text-lg font-bold mb-4 text-[#932A83]">Resumo da Avaria:</h2>
+          <h2 className="text-lg font-bold mb-4 text-[#81059e]">Resumo da Avaria:</h2>
 
           <div className="space-y-2 text-gray-700">
             <p><span className="font-semibold">Nome do Produto:</span> {formDataFromQuery.nomeProduto}</p>
