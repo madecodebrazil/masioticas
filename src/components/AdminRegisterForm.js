@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createUserWithEmailAndPassword, signOut } from "firebase/auth";
+import { getAuth } from "firebase/auth";
+import { createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { auth, firestore, storage } from "../lib/firebaseConfig";
@@ -15,7 +16,7 @@ const AdminRegisterForm = () => {
     phoneNumber: "",
     level_perm: "1",
     loja: [],
-    profession: "",
+    cargo: "",
     imageUrl: "",
     isAdmin: false,
     adminAccess: {
@@ -108,74 +109,82 @@ const AdminRegisterForm = () => {
     setError("");
 
     try {
-      if (!formData.email || !formData.password) {
-        setError("Email e senha são obrigatórios");
-        return;
-      }
+        if (!formData.email || !formData.password) {
+            setError("Email e senha são obrigatórios");
+            return;
+        }
 
-      if (formData.loja.length === 0) {
-        setError("Selecione pelo menos uma loja");
-        return;
-      }
+        if (formData.loja.length === 0) {
+            setError("Selecione pelo menos uma loja");
+            return;
+        }
 
-      let imageUrl = "";
-      if (imageFile) {
-        const fileName = `${Date.now()}-${imageFile.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
-        const storageRef = ref(storage, `profile-images/${fileName}`);
-        const uploadResult = await uploadBytes(storageRef, imageFile);
-        imageUrl = await getDownloadURL(uploadResult.ref);
-      }
+        // Upload da imagem
+        let imageUrl = "";
+        if (imageFile) {
+            const fileName = `${Date.now()}-${imageFile.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
+            const storageRef = ref(storage, `profile-images/${fileName}`);
+            const uploadResult = await uploadBytes(storageRef, imageFile);
+            imageUrl = await getDownloadURL(uploadResult.ref);
+        }
 
-      const userCredential = await createUserWithEmailAndPassword(
-        auth,
-        formData.email,
-        formData.password
-      );
+        // Criar uma nova instância do auth
+        const secondaryAuth = getAuth();
 
-      const user = userCredential.user;
-      const userData = {
-        nome: formData.name,
-        cpf: formData.cpf,
-        email: formData.email,
-        phoneNumber: formData.phoneNumber,
-        level_perm: formData.level_perm,
-        cargo: formData.profession,
-        imageUrl: imageUrl,
-        createdAt: new Date().toISOString()
-      };
-
-      const savePromises = [];
-
-      // Salva em cada loja selecionada - CORRIGIDO O CAMINHO
-      formData.loja.forEach(loja => {
-        savePromises.push(
-          // Aqui está a correção principal
-          setDoc(doc(firestore, `lojas/${loja}/users/${user.uid}`), userData)
+        // Criar o usuário com a instância secundária
+        const { user } = await createUserWithEmailAndPassword(
+            secondaryAuth,
+            formData.email,
+            formData.password
         );
-      });
 
-      // Se for admin, salva na coleção de admins
-      if (formData.isAdmin) {
-        const adminData = {
-          nome: formData.name,
-          email: formData.email,
-          isAdmin: true,
-          acesso_total: formData.adminAccess.acesso_total,
-          permissoes: {
-            acesso_total: formData.adminAccess.acesso_total,
-            lojas: formData.adminAccess.lojas
-          }
+        const userData = {
+            nome: formData.name,
+            cpf: formData.cpf,
+            email: formData.email,
+            phoneNumber: formData.phoneNumber,
+            level_perm: formData.level_perm,
+            cargo: formData.cargo,
+            imageUrl: imageUrl,
+            createdAt: new Date().toISOString()
         };
-        savePromises.push(setDoc(doc(firestore, `admins/${user.uid}`), adminData));
-      }
 
-      await Promise.all(savePromises);
-      await signOut(auth);
-      setSuccess(true);
-      setTimeout(() => router.push('/homepage'), 3000);
+        const savePromises = [];
+
+        // Salvar dados nas lojas selecionadas
+        formData.loja.forEach(loja => {
+            savePromises.push(
+                setDoc(doc(firestore, `lojas/${loja}/users/${user.uid}`), userData)
+            );
+        });
+
+        // Se for admin, salvar na coleção de admins
+        if (formData.isAdmin) {
+            const adminData = {
+                nome: formData.name,
+                email: formData.email,
+                isAdmin: true,
+                cargo: formData.cargo,
+                acesso_total: formData.adminAccess.acesso_total,
+                permissoes: {
+                    acesso_total: formData.adminAccess.acesso_total,
+                    lojas: formData.adminAccess.lojas
+                }
+            };
+            savePromises.push(setDoc(doc(firestore, `admins/${user.uid}`), adminData));
+        }
+
+        await Promise.all(savePromises);
+
+        // Fazer logout da instância secundária
+        await secondaryAuth.signOut();
+
+        setSuccess(true);
+        setTimeout(() => router.push('/homepage'), 3000);
+
     } catch (err) {
-      console.error("Erro completo:", err);
-      setError(err.message || "Erro ao registrar usuário");
+        console.error("Erro completo:", err);
+        setError(err.message || "Erro ao registrar usuário");
     }
 };
 
@@ -240,14 +249,15 @@ const AdminRegisterForm = () => {
         <div>
           <label className="block text-pink-600 mb-2">Profissão</label>
           <select
-            name="profession"
-            value={formData.profession}
+            name="cargo" // Mudando de profession para cargo
+            value={formData.cargo}
             onChange={handleInputChange}
             className="w-full px-4 py-2 rounded-lg bg-gray-200 text-black"
             required
           >
-            {professions.map((profession, index) => (
-              <option key={index} value={profession} disabled={index === 0}>
+            <option value="">Selecione uma profissão</option>
+            {professions.slice(1).map((profession) => (
+              <option key={profession} value={profession}>
                 {profession}
               </option>
             ))}

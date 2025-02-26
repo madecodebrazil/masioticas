@@ -120,9 +120,7 @@ export default function SalesListPage() {
       <div className="min-h-screen">
         <div className="bg-white w-full p-2">
           <div className="flex flex-col sm:flex-row justify-between items-center mb-4">
-            <h1 className="text-lg sm:text-2xl font-bold text-[#81059e]">
-              Vendas
-            </h1>
+          <h1 className='text-4xl ml-0 md:ml-4 font-bold text-[#9a5fc7] text-center md:text-left'>Vendas</h1>
 
             <div className="flex w-full justify-around space-x-2 sm:space-x-4 mt-2 sm:mt-0">
               <Link href="/commercial/sales/new_sale">

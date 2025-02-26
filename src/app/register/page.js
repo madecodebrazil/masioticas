@@ -4,58 +4,15 @@ import Link from 'next/link';
 import Sidebar from '@/components/Sidebar';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import React, { useEffect, useState } from 'react';
-import { auth, firestore } from '@/lib/firebaseConfig';
-import { doc, getDoc } from 'firebase/firestore';
+import React from 'react';
 import { motion } from 'framer-motion';
 import MobileNavSidebar from '@/components/MB_NavSidebar';
 import BottomMobileNav from '@/components/MB_BottomNav';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function ProductsPage() {
-    const [userData, setUserData] = useState(null);
-    const [loading, setLoading] = useState(true);
+    const { user, userData, loading } = useAuth();
     const router = useRouter();
-
-    const fetchUserData = async (uid) => {
-        try {
-            // Novo caminho para o documento
-            const docRef = doc(firestore, `lojas/loja1/users/${uid}/dados/perfil`);
-            const docSnap = await getDoc(docRef);
-
-            if (docSnap.exists()) {
-                setUserData(docSnap.data());
-            } else {
-                console.log('Nenhum documento encontrado para o UID:', uid);
-                // Criar dados iniciais
-                await setDoc(docRef, {
-                    nome: "Usuário Padrão",
-                    email: auth.currentUser.email,
-                    imageUrl: "/images/default-avatar.png",
-                    cargo: "colaborador",
-                    createdAt: new Date()
-                });
-
-                // Buscar dados novamente
-                const newDocSnap = await getDoc(docRef);
-                setUserData(newDocSnap.data());
-            }
-        } catch (error) {
-            console.error("Erro ao buscar os dados do usuário:", error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        const unsubscribe = auth.onAuthStateChanged((user) => {
-            if (user) {
-                fetchUserData(user.uid);
-            } else {
-                router.push('/login');
-            }
-        });
-        return () => unsubscribe();
-    }, [router]);
 
     if (loading) {
         return (
@@ -65,12 +22,9 @@ export default function ProductsPage() {
         );
     }
 
-    if (!userData) {
-        return (
-            <div className="flex justify-center items-center h-screen">
-                <p>Usuário não encontrado.</p>
-            </div>
-        );
+    if (!user || !userData) {
+        router.push('/login');
+        return null;
     }
 
     const userPhotoURL = userData?.imageUrl || '/default-avatar.png';

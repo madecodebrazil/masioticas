@@ -3,6 +3,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '../../hooks/useAuth';
 import { auth, firestore } from '../../lib/firebaseConfig';
 import { doc, getDoc, collection, getDocs, query, where } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -14,24 +15,19 @@ import MobileHeader from '@/components/MB_Homeheader';
 import BottomMobileNav from '../../components/MB_BottomNav';
 
 export default function Home() {
-    const [user, setUser] = useState(null);
-    const [userData, setUserData] = useState(null);
+    const { user, userData, loading: authLoading, userPermissions } = useAuth();
     const [loadingOS, setLoadingOS] = useState(true);
     const [loadingVendas, setLoadingVendas] = useState(true);
-    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
     const [osPendentes, setOsPendentes] = useState(0);
     const [osConcluidas, setOsConcluidas] = useState(0);
     const [osAtrasadas, setOsAtrasadas] = useState(0);
-
-    // Contagem das vendas por dia, semana e mês
     const [salesToday, setSalesToday] = useState(0);
     const [salesThisWeek, setSalesThisWeek] = useState(0);
     const [salesThisMonth, setSalesThisMonth] = useState(0);
-
-    // Contagem das consultas
     const [consultationsToday, setConsultationsToday] = useState(0);
     const [consultationsThisMonth, setConsultationsThisMonth] = useState(0);
+
 
     const router = useRouter();
 
@@ -103,6 +99,7 @@ export default function Home() {
 
     // Função para contar vendas do usuário por dia, semana e mês
     const contarVendasDoUsuario = useCallback(async (uid) => {
+        if (!uid) return;
         try {
             const vendasCollection = collection(firestore, 'vendas');
             const hoje = new Date();
@@ -190,58 +187,12 @@ export default function Home() {
     }, [contarOS, contarConsultas]);
 
     useEffect(() => {
-        const fetchUserData = async (uid) => {
-            try {
-                // Primeiro, buscar na coleção colaboradores
-                const colaboradorRef = doc(firestore, `colaboradores/${uid}`);
-                const colaboradorSnap = await getDoc(colaboradorRef);
-    
-                if (colaboradorSnap.exists()) {
-                    const userData = colaboradorSnap.data();
-                    setUserData(userData);
-                    // Chama contarVendasDoUsuario aqui após ter os dados do usuário
-                    await contarVendasDoUsuario(uid);
-                    return;
-                }
-    
-                // Se não encontrar na coleção colaboradores, tentar nas lojas individuais
-                const docRefLoja1 = doc(firestore, `loja1/users/${uid}/dados`);
-                const docRefLoja2 = doc(firestore, `loja2/users/${uid}/dados`);
-                const docSnapLoja1 = await getDoc(docRefLoja1);
-                const docSnapLoja2 = await getDoc(docRefLoja2);
-    
-                if (docSnapLoja1.exists()) {
-                    setUserData(docSnapLoja1.data());
-                    await contarVendasDoUsuario(uid);
-                } else if (docSnapLoja2.exists()) {
-                    setUserData(docSnapLoja2.data());
-                    await contarVendasDoUsuario(uid);
-                }
-            } catch (error) {
-                console.error("Erro ao buscar dados do usuário:", error);
-            }
-        };
-        const unsubscribe = onAuthStateChanged(auth, (user) => {
-            if (user) {
-                setUser(user);
-                fetchUserData(user.uid);
-            } else {
-                setUser(null);
-                setUserData(null);
-                setLoadingVendas(false); // Importante: definir como false quando não há usuário
-            }
-        });
-    
-
-        // Adicione antes do return
-        return () => unsubscribe();
-    }, [contarVendasDoUsuario]); 
-
-    const toggleSidebar = () => {
-        if (!loadingOS && !loadingVendas && userData) {
-            setIsSidebarOpen(!isSidebarOpen);
+        if (user) {
+            contarOS();
+            contarConsultas();
+            contarVendasDoUsuario(user.uid);
         }
-    };
+    }, [user, contarOS, contarConsultas, contarVendasDoUsuario]);
 
     const items = [
         { label: <>Financeiro</>, img: '/images/homepage/Coins.png', href: '/finance' },
@@ -258,18 +209,37 @@ export default function Home() {
 
     const userPhotoURL = userData?.imageUrl || '/images/default-avatar.png';
 
+
+    if (authLoading) {
+        return (
+            <div className="flex justify-center items-center w-full h-screen">
+                <p>Carregando...</p>
+            </div>
+        );
+    }
+
     return (
         <div className="flex flex-col md:flex-row min-h-screen bg-gradient-to-b from-[#81059e] to-[#B7328C]">
             {/* MobileHeader apenas no mobile */}
             <div className="block md:hidden">
-                <MobileHeader userPhotoURL={userPhotoURL} userData={userData} />
+                <MobileHeader
+                    userPhotoURL={userPhotoURL}
+                    userData={userData}
+                    userPermissions={userPermissions}
+                />
             </div>
 
             {/* Sidebar fixa para desktop */}
             <aside className="hidden md:block md:w-[300px] lg:w-[350px] bg-[#81059e] text-white p-4 pl-10 shadow-xl rounded-tr-xl rounded-br-lg fixed h-screen overflow-y-auto">
                 <SidebarHomepage
-                    userPhotoURL={userPhotoURL}
-                    userData={userData}
+                    userPhotoURL={userData?.imageUrl || '/images/default-avatar.png'}
+                    userData={{
+                        name: userData?.nome,
+                        email: userData?.email,
+                        cargo: userData?.cargo, // Corrigir para usar cargo ao invés de profession
+                        store: userPermissions?.isAdmin ? 'Todas as lojas' : userPermissions?.lojas[0]
+                    }}
+                    userPermissions={userPermissions}
                     currentPage="dashboard"
                 />
             </aside>
@@ -279,7 +249,7 @@ export default function Home() {
                 {/* Feedback de carregamento */}
                 {(loadingOS || loadingVendas) && (
                     <div className="flex justify-center items-center mb-8">
-                        <p>Carregando dados...</p>
+                        <p>Carregando...</p>
                     </div>
                 )}
 
@@ -289,7 +259,7 @@ export default function Home() {
                     <CarrouselPromo />
                 </div>
 
-                <div className="grid grid-cols-2 gap-x-16 gap-y-4 md:grid-cols-4 mb-20 justify-center mx-auto lg:gap-x-14 lg:gap-y-6 mt-6">
+                <div className="grid grid-cols-2 gap-x-2 gap-y-4 md:grid-cols-4 mb-32 justify-center mx-auto lg:gap-x-14 lg:gap-y-6 mt-10">
                     {items.map((item, index) => (
                         <div key={index} className="flex justify-center">
                             <Link href={item.href} className="w-full max-w-[180px]">
@@ -315,7 +285,7 @@ export default function Home() {
                                     ></div>
 
                                     <div className="relative z-10 flex flex-row justify-between items-center w-full h-full p-0 m-0">
-                                        <span className="text-white font-medium text-sm w-1/2 text-left pointer-events-none p-0 m-0">
+                                        <span className="text-white font-medium text-base md:text-sm w-1/2 text-left pointer-events-none p-0 m-0">
                                             {item.label}
                                         </span>
                                         <Image

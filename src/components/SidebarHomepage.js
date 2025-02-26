@@ -29,7 +29,7 @@ import NotificationsModal from '../components/NotificationsModal';
 import ConfigurationsModal from '../components/ConfigurationsModal';
 import LogoutConfirmationModal from '../components/LogoutConfirmationModal';
 
-export default function SidebarHomepage({ userPhotoURL, userData, currentPage }) {
+export default function SidebarHomepage({ userPhotoURL, userData, userPermissions, currentPage }) {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [showUserMenu, setShowUserMenu] = useState(false);
     const router = useRouter();
@@ -60,7 +60,30 @@ export default function SidebarHomepage({ userPhotoURL, userData, currentPage })
     const [isConfigOpen, setIsConfigOpen] = useState(false);
     const [isLogoutOpen, setIsLogoutOpen] = useState(false);
 
-
+    const renderUserInfo = () => {
+        if (userPermissions?.isAdmin) {
+            return (
+                <>
+                    <h3 className="text-white-600 text-lg font-semibold">
+                        {userData?.cargo}
+                    </h3>
+                    <p className="text-white-400 text-sm">
+                        Administrador - Acesso Total
+                    </p>
+                </>
+            );
+        }
+        return (
+            <>
+            <h3 className="text-white-600 text-lg font-normal">
+                {userData?.cargo}
+            </h3>
+            <h3>
+            Loja: {userData?.store}
+            </h3>
+            </>
+        );
+    };
     return (
         <>
             {/* Sidebar no mobile como um dropdown na lateral direita */}
@@ -103,11 +126,9 @@ export default function SidebarHomepage({ userPhotoURL, userData, currentPage })
                         <h2 className="text-white text-xl font-bold mb-1">
                             {userData?.name || 'Dev Account'}
                         </h2>
-                        {/* Verifica o nível de permissão */}
                         <h3 className="text-white-600 text-lg font-semibold">
-                            {userData?.profession || 'Cargo não definido'}
+                            {renderUserInfo()}
                         </h3>
-
                     </div>
                 </div>
             </aside>
@@ -172,8 +193,8 @@ export default function SidebarHomepage({ userPhotoURL, userData, currentPage })
                             {userData?.name || 'Dev Account'}
                         </h2>
                         <h3 className="text-white-600 text-lg font-semibold">
-                            {userData?.profession || 'Cargo não definido'}
                         </h3>
+                        {renderUserInfo()} {/* Adicionar esta linha */}
                     </div>
                 </div>
 

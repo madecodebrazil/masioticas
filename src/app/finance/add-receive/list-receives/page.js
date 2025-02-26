@@ -1,255 +1,233 @@
 "use client";
-import { useState, useEffect } from "react";
-import {
-  collection,
-  onSnapshot,
-  doc,
-  setDoc,
-  deleteDoc,
-} from "firebase/firestore";
-import { firestore } from "../../../../lib/firebaseConfig";
-import Layout from "@/components/Layout";
-import Link from "next/link";
-import jsPDF from "jspdf";
-import "jspdf-autotable";
 
-export default function CreditosPage() {
-  const [crediarios, setCrediarios] = useState([]);
-  const [selectedLoja, setSelectedLoja] = useState("");
-  const [selectedFormaPagamento, setSelectedFormaPagamento] = useState("");
-  const [selectedCrediario, setSelectedCrediario] = useState(null);
-  const [selectedParcela, setSelectedParcela] = useState(null);
+import React, { useEffect, useState } from 'react';
+import Layout from '@/components/Layout';
+import Link from 'next/link';
+import { collection, getDocs, doc, setDoc, deleteDoc, Timestamp } from 'firebase/firestore';
+import { useAuth } from '@/hooks/useAuth';
+import { firestore } from '../../../../lib/firebaseConfig';
+import jsPDF from 'jspdf';
+
+export default function ListaRecebimentos() {
+  const { userPermissions, userData } = useAuth();
+  const [contas, setContas] = useState([]);
+  const [filteredContas, setFilteredContas] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedLoja, setSelectedLoja] = useState('Ambas');
+  const [selectedConta, setSelectedConta] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [checkedParcelas, setCheckedParcelas] = useState({});
-  const [mensagemSucesso, setMensagemSucesso] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Estados para a forma de recebimento e mensagem de sucesso
+  const [formaRecebimento, setFormaRecebimento] = useState('');
+  const [settleMessage, setSettleMessage] = useState('');
 
   useEffect(() => {
-    const unsubscribe = onSnapshot(
-      collection(firestore, "crediarios"),
-      (querySnapshot) => {
-        const crediariosData = querySnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-        setCrediarios(crediariosData);
-      }
-    );
+    const fetchContas = async () => {
+      try {
+        setLoading(true);
+        const fetchedContas = [];
 
-    return () => unsubscribe();
-  }, []);
+        // Usar o caminho correto para lojas específicas
+        if (selectedLoja !== 'Ambas') {
+          // Caminho para uma loja específica
+          const contasReceberDocRef = collection(firestore, `lojas/${selectedLoja}/financeiro/contas_receber/items`);
+          const contasSnapshot = await getDocs(contasReceberDocRef);
 
-  const openModal = (crediario, parcela = null) => {
-    setSelectedCrediario(crediario);
-    setSelectedParcela(parcela);
-    setCheckedParcelas({});
-    setIsModalOpen(true);
-  };
-
-  const closeModal = () => {
-    console.log("Fechando o modal...");
-    setSelectedCrediario(null);
-    setSelectedParcela(null);
-    setIsModalOpen(false);
-    console.log("Modal fechado!");
-  };
-
-  const handleCheckboxChange = (parcelaId) => {
-    setCheckedParcelas((prevState) => ({
-      ...prevState,
-      [parcelaId]: !prevState[parcelaId],
-    }));
-  };
-
-  const handleQuitar = async () => {
-    console.log("Iniciando handleQuitar...");
-
-    // Verificações básicas
-    if (!selectedLoja || !selectedFormaPagamento) {
-      console.log("Loja ou forma de pagamento ausente. Cancelando operação.");
-      alert("Por favor, selecione a loja e a forma de pagamento.");
-      return;
-    }
-
-    try {
-      if (selectedParcela) {
-        console.log("Quitando parcela específica...");
-
-        const parcelas = selectedCrediario.parcelasDetalhadas || [];
-        const parcelasRestantes = parcelas.filter(
-          (parcela) => !checkedParcelas[parcela.numeroParcela]
-        );
-
-        const crediarioRef = doc(firestore, "crediarios", selectedCrediario.id);
-
-        if (parcelasRestantes.length > 0) {
-          await setDoc(
-            crediarioRef,
-            { parcelasDetalhadas: parcelasRestantes },
-            { merge: true }
-          );
+          contasSnapshot.docs.forEach((docItem) => {
+            const contaData = docItem.data();
+            fetchedContas.push({
+              id: docItem.id,
+              ...contaData,
+              loja: selectedLoja // Garantir que a loja seja definida corretamente
+            });
+          });
         } else {
-          await deleteDoc(crediarioRef);
+          // Se for "Ambas", buscar de todas as lojas que o usuário tem acesso
+          const lojas = userPermissions?.lojas || [];
+
+          for (const loja of lojas) {
+            const contasReceberDocRef = collection(firestore, `lojas/${loja}/financeiro/contas_receber/items`);
+            const contasSnapshot = await getDocs(contasReceberDocRef);
+
+            contasSnapshot.docs.forEach((docItem) => {
+              const contaData = docItem.data();
+              fetchedContas.push({
+                id: docItem.id,
+                ...contaData,
+                loja: loja
+              });
+            });
+          }
         }
 
-        // Registrando com TODOS os parâmetros
-        await registrarNoCaixa(
-          selectedCrediario,
-          selectedParcela,
-          selectedLoja,
-          selectedFormaPagamento
-        );
-        await registrarNoCashflow(
-          selectedCrediario,
-          selectedParcela,
-          selectedLoja,
-          selectedFormaPagamento
-        );
-      } else {
-        console.log(
-          "Nenhuma parcela específica selecionada. Excluindo crediário inteiro..."
-        );
+        setContas(fetchedContas);
+        setFilteredContas(fetchedContas);
+        setLoading(false);
+      } catch (err) {
+        console.error('Erro ao carregar as contas:', err);
+        setError(`Erro ao carregar os dados das contas: ${err.message}`);
+        setLoading(false);
+      }
+    };
 
-        const crediarioRef = doc(firestore, "crediarios", selectedCrediario.id);
-        await deleteDoc(crediarioRef);
+    fetchContas();
+  }, [selectedLoja, userPermissions]);
 
-        // Registrando com TODOS os parâmetros
-        await registrarNoCaixa(
-          selectedCrediario,
-          null,
-          selectedLoja,
-          selectedFormaPagamento
-        );
-        await registrarNoCashflow(
-          selectedCrediario,
-          null,
-          selectedLoja,
-          selectedFormaPagamento
+  // Função para filtrar contas com base na busca e loja
+  useEffect(() => {
+    const filterBySearchAndLoja = () => {
+      let filtered = contas;
+
+      // Filtro por loja
+      if (selectedLoja !== 'Ambas') {
+        filtered = filtered.filter((conta) => conta.loja === selectedLoja);
+      }
+
+      // Filtro por busca
+      if (searchQuery !== '') {
+        filtered = filtered.filter(
+          (conta) =>
+            (conta.numeroDocumento?.toLowerCase().includes(searchQuery.toLowerCase()) || '') ||
+            (conta.cliente?.toLowerCase().includes(searchQuery.toLowerCase()) || '')
         );
       }
 
-      // Alerta de sucesso
-      alert("Parcela quitada com sucesso!");
-      setMensagemSucesso("Parcela quitada com sucesso!");
-      setTimeout(() => setMensagemSucesso(""), 3000);
+      setFilteredContas(filtered);
+    };
 
-      // Só depois do alerta, feche o modal
-      closeModal();
-    } catch (error) {
-      console.error("Erro ao quitar parcela:", error);
+    filterBySearchAndLoja();
+  }, [searchQuery, selectedLoja, contas]);
+
+  const getStatusColor = (dataCobranca) => {
+    if (!dataCobranca) return 'bg-gray-200 text-gray-800';
+
+    const now = new Date();
+    // Se for um timestamp do Firestore
+    const dueDate = dataCobranca.seconds ?
+      new Date(dataCobranca.seconds * 1000) :
+      new Date(dataCobranca);
+
+    if (dueDate < now) return 'bg-red-200 text-red-800'; // Vencido
+    if (dueDate - now <= 7 * 24 * 60 * 60 * 1000) return 'bg-yellow-200 text-yellow-800'; // Próximo
+    return 'bg-green-200 text-green-800'; // Longe de vencer
+  };
+
+  // Formata data do Firebase
+  const formatFirestoreDate = (firestoreDate) => {
+    if (!firestoreDate) return 'N/A';
+    
+    // Se for um timestamp do Firestore (com seconds e nanoseconds)
+    if (firestoreDate && typeof firestoreDate === 'object' && firestoreDate.seconds) {
+      const date = new Date(firestoreDate.seconds * 1000);
+      return date.toLocaleDateString('pt-BR');
     }
+    
+    // Se já for uma string de data, retorne como está
+    return firestoreDate;
   };
 
-  const registrarNoCaixa = async (
-    crediario,
-    parcela = null,
-    loja,
-    formaPagamento
-  ) => {
-    const lojaSelecionada = loja === "Ótica Popular 1" ? "loja1" : "loja2";
-    const dataAtual = new Date()
-      .toLocaleDateString("pt-BR")
-      .replace(/\//g, "-");
-
-    const caixaRef = collection(
-      firestore,
-      `${lojaSelecionada}/finances/caixas/${dataAtual}/transactions`
-    );
-
-    const transacao = {
-      nome: crediario.nome,
-      valorFinal: parcela
-        ? parseFloat(parcela.valorParcela)
-        : parseFloat(crediario.valorParcela),
-      cpf: crediario.cpf,
-      data: new Date(),
-      descricao: parcela
-        ? `Quitação de parcela ${parcela.numeroParcela} (CPF: ${crediario.cpf})`
-        : `Quitação de crediário (CPF: ${crediario.cpf})`,
-      type: "receita",
-      formaPagamento: formaPagamento,
-    };
-
-    await setDoc(doc(caixaRef), transacao);
+  // Função para abrir o modal e definir a conta selecionada
+  const openModal = (conta) => {
+    setSelectedConta(conta);
+    setIsModalOpen(true);
+    setFormaRecebimento('');
+    setSettleMessage('');
   };
 
-  const registrarNoCashflow = async (
-    crediario,
-    parcela = null,
-    loja,
-    formaPagamento
-  ) => {
-    const cashflowRef = collection(firestore, `cashflow`);
-
-    const transacao = {
-      nome: crediario.nome,
-      valorFinal: parcela
-        ? parseFloat(parcela.valorParcela)
-        : parseFloat(crediario.valorParcela),
-      data: new Date(),
-      descricao: parcela
-        ? `Quitação de parcela ${parcela.numeroParcela} (CPF: ${crediario.cpf})`
-        : `Quitação de crediário (CPF: ${crediario.cpf})`,
-      formaPagamento: formaPagamento,
-      paymentMethod: formaPagamento,
-    };
-
-    await setDoc(doc(cashflowRef), transacao);
+  // Função para fechar o modal
+  const closeModal = () => {
+    setSelectedConta(null);
+    setIsModalOpen(false);
   };
 
+  // Função para gerar PDF
   const generatePDF = () => {
-    const docPDF = new jsPDF();
-    docPDF.text(
-      `Detalhes da Parcela ${selectedParcela?.numeroParcela || "Geral"}`,
-      10,
-      10
-    );
+    if (!selectedConta) return;
 
-    docPDF.text(`Nome do Devedor: ${selectedCrediario.nome}`, 10, 20);
-    docPDF.text(`Código do Documento: ${selectedCrediario.id}`, 10, 30);
-    if (selectedParcela) {
-      docPDF.text(
-        `Valor da Parcela: R$ ${parseFloat(
-          selectedParcela.valorParcela
-        ).toFixed(2)}`,
-        10,
-        40
-      );
-      docPDF.text(
-        `Data de Vencimento: ${new Date(
-          selectedParcela.dataVencimento
-        ).toLocaleDateString("pt-BR")}`,
-        10,
-        50
-      );
-    } else {
-      docPDF.text(
-        `Valor Total: R$ ${parseFloat(selectedCrediario.valorParcela).toFixed(
-          2
-        )}`,
-        10,
-        40
-      );
-      docPDF.text(`Nenhuma parcela detalhada`, 10, 50);
+    const doc = new jsPDF();
+    doc.text(`Detalhes da Conta a Receber`, 10, 10);
+    doc.text(`Código: ${selectedConta.numeroDocumento || 'N/A'}`, 10, 20);
+    doc.text(`Cliente: ${selectedConta.cliente || 'N/A'}`, 10, 30);
+    doc.text(`Valor: R$ ${parseFloat(selectedConta.valor || 0).toFixed(2)}`, 10, 40);
+    doc.text(`Data de Registro: ${formatFirestoreDate(selectedConta.dataRegistro)}`, 10, 50);
+    doc.text(`Data de Cobrança: ${formatFirestoreDate(selectedConta.dataCobranca)}`, 10, 60);
+    doc.text(`Loja: ${selectedConta.loja || 'N/A'}`, 10, 70);
+    if (selectedConta.observacoes) {
+      doc.text(`Observações: ${selectedConta.observacoes}`, 10, 80);
     }
-    docPDF.save(`Parcela_${selectedParcela?.numeroParcela || "Geral"}.pdf`);
+    doc.save(`Conta_${selectedConta.numeroDocumento || selectedConta.id}.pdf`);
   };
 
+  // Função para lidar com a impressão
   const handlePrint = () => {
     window.print();
   };
 
-  const getRowColor = (dataRecebimento) => {
-    if (!dataRecebimento) return "";
+  // Função para quitar o recebimento
+  const handleSettlePayment = async () => {
+    if (!formaRecebimento) {
+      alert('Por favor, selecione a forma de recebimento.');
+      return;
+    }
 
-    const hoje = new Date();
-    const dataRecebimentoDate = new Date(dataRecebimento.seconds * 1000);
-    const diffInDays = Math.ceil(
-      (dataRecebimentoDate - hoje) / (1000 * 60 * 60 * 24)
-    );
+    try {
+      // Preparar descrição personalizada
+      const descricao = `Recebimento da conta ${selectedConta.numeroDocumento || selectedConta.id} via ${formaRecebimento}`;
 
-    if (diffInDays < 0) return "bg-red-100";
-    if (diffInDays <= 2) return "bg-yellow-100";
-    return "bg-white";
+      // Preparar dados para o cashflow
+      const cashflowData = {
+        nome: selectedConta.cliente || 'Cliente não especificado',
+        formaPagamento: formaRecebimento,
+        data: new Date(),
+        valorFinal: parseFloat(selectedConta.valor || 0), // Valor positivo (receita)
+        descricao: descricao,
+        type: 'receita'
+      };
+
+      // Adicionar ao 'cashflow'
+      await setDoc(doc(collection(firestore, 'cashflow')), cashflowData);
+
+      // Preparar dados para o caixa do dia
+      const loja = selectedConta.loja || 'loja1'; // Padrão para 'loja1' se não especificada
+      const dataAtual = new Date();
+      const dataFormatada = dataAtual.toLocaleDateString('pt-BR').replace(/\//g, '-');
+
+      const caixaRef = collection(
+        firestore,
+        `${loja}/finances/caixas/${dataFormatada}/transactions`
+      );
+
+      const caixaData = {
+        nome: selectedConta.cliente || 'Cliente não especificado',
+        valorFinal: parseFloat(selectedConta.valor || 0), // Valor positivo (receita)
+        data: dataAtual,
+        descricao: descricao,
+        type: 'receita',
+        formaPagamento: formaRecebimento,
+      };
+
+      // Adicionar ao caixa do dia
+      await setDoc(doc(caixaRef), caixaData);
+
+      // Remover a conta da coleção 'contas_receber/items'
+      const contaRef = doc(firestore, `lojas/${selectedConta.loja}/financeiro/contas_receber/items`, selectedConta.id);
+      await deleteDoc(contaRef);
+
+      // Atualizar o estado local para remover a conta quitada
+      setContas((prevContas) => prevContas.filter((conta) => conta.id !== selectedConta.id));
+      setFilteredContas((prevContas) => prevContas.filter((conta) => conta.id !== selectedConta.id));
+
+      setSettleMessage('Recebimento registrado com sucesso!');
+      setTimeout(() => {
+        setSettleMessage('');
+        closeModal();
+      }, 2000);
+    } catch (error) {
+      console.error('Erro ao registrar recebimento:', error);
+      alert('Erro ao registrar recebimento.');
+    }
   };
 
   return (
@@ -258,298 +236,172 @@ export default function CreditosPage() {
         <div className="w-full max-w-5xl mx-auto rounded-lg">
           <h2 className="text-3xl font-bold text-[#81059e] mb-6">RECEBIMENTOS PENDENTES</h2>
 
-          <div className="mb-4">
+          {/* Barra de busca e filtro de loja */}
+          <div className="flex justify-between items-center mb-6 space-x-4">
+            <input
+              type="text"
+              placeholder="Busque por código ou cliente"
+              className="p-3 flex-grow border-2 border-[#81059e] rounded-lg text-black"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+
+            {/* Filtro por loja */}
+            <select
+              value={selectedLoja}
+              onChange={(e) => setSelectedLoja(e.target.value)}
+              className="p-3 border-2 border-[#81059e] rounded-lg text-black"
+            >
+              {userPermissions?.isAdmin && <option value="Ambas">Ambas</option>}
+              {userPermissions?.lojas?.includes('loja1') && <option value="loja1">Loja 1</option>}
+              {userPermissions?.lojas?.includes('loja2') && <option value="loja2">Loja 2</option>}
+            </select>
+
             <Link href="/finance/add-receive">
-              <button className="bg-[#81059e] text-white px-4 py-2 rounded-md">
-                ADICIONAR CONTA
+              <button className="bg-[#81059e] text-white py-2 px-6 rounded-md">
+                Adicionar
               </button>
             </Link>
           </div>
 
-          {mensagemSucesso && (
-            <div className="bg-green-100 text-green-700 p-2 rounded-md mb-4">
-              {mensagemSucesso}
+          {/* Tabela de contas */}
+          {loading ? (
+            <p>Carregando...</p>
+          ) : error ? (
+            <p>{error}</p>
+          ) : (
+            <div className="w-full">
+              {filteredContas.length === 0 ? (
+                <p>Nenhuma conta encontrada.</p>
+              ) : (
+                <table className="min-w-full table-auto">
+                  <thead>
+                    <tr className="bg-[#81059e] text-white">
+                      <th className="px-4 py-2">Código</th>
+                      <th className="px-4 py-2">Cliente</th>
+                      <th className="px-4 py-2">Valor</th>
+                      <th className="px-4 py-2">Registro</th>
+                      <th className="px-4 py-2">Cobrança</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredContas.map((conta) => (
+                      <tr
+                        key={conta.id}
+                        className="text-black text-left hover:bg-gray-100 cursor-pointer"
+                        onClick={() => openModal(conta)}
+                      >
+                        <td className="border px-4 py-2">{conta.numeroDocumento || 'N/A'}</td>
+                        <td className="border px-4 py-2">{conta.cliente || 'N/A'}</td>
+                        <td className="border px-4 py-2">
+                          R$ {parseFloat(conta.valor || 0).toFixed(2)}
+                        </td>
+                        <td className="border px-4 py-2">{formatFirestoreDate(conta.dataRegistro)}</td>
+                        <td className={`border px-4 py-2 ${getStatusColor(conta.dataCobranca)}`}>
+                          {formatFirestoreDate(conta.dataCobranca)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
           )}
 
-          {/* Layout antigo: Tabela */}
-          <div className="overflow-x-auto">
-            <table className="text-black min-w-full  ">
-              <thead className="bg-gray-200 ">
-                <tr>
-                  <th className="py-2 px-4 border">Cód</th>
-                  <th className="py-2 px-4 border">Devedor</th>
-                  <th className="py-2 px-4 border">Valor</th>
-                  <th className="py-2 px-4 border">Entrada</th>
-                  <th className="py-2 px-4 border">Recebimento</th>
-                  <th className="py-2 px-4 border">Parcela/Detalhes</th>
-                </tr>
-              </thead>
-              <tbody>
-                {crediarios.map((crediario) => {
-                  const parcelas = crediario.parcelasDetalhadas || [];
-                  const entradaDate = crediario.data
-                    ? crediario.data.toDate().toLocaleDateString("pt-BR")
-                    : "Data não disponível";
-
-                  const recebimentoDate = crediario.dataRecebimento
-                    ? crediario.dataRecebimento
-                      .toDate()
-                      .toLocaleDateString("pt-BR")
-                    : null;
-
-                  // Se não houver parcelas detalhadas, mostra só um row
-                  if (parcelas.length === 0) {
-                    return (
-                      <tr
-                        key={crediario.id}
-                        onClick={() => openModal(crediario)}
-                        className={`cursor-pointer ${getRowColor(
-                          crediario.dataRecebimento
-                        )}`}
-                      >
-                        <td className="py-2 px-4 border" title={crediario.id}>
-                          {crediario.id}
-                        </td>
-                        <td className="py-2 px-4 border">
-                          {crediario.nome || "Não disponível"}
-                        </td>
-                        <td className="py-2 px-4 border">
-                          {crediario.valorParcela
-                            ? `R$ ${parseFloat(crediario.valorParcela).toFixed(
-                              2
-                            )}`
-                            : "N/D"}
-                        </td>
-                        <td className="py-2 px-4 border">{entradaDate}</td>
-                        <td className="py-2 px-4 border">
-                          {recebimentoDate || "N/D"}
-                        </td>
-                        <td className="py-2 px-4 border text-blue-600 underline">
-                          Nenhuma parcela detalhada
-                        </td>
-                      </tr>
-                    );
-                  } else {
-                    // Se tiver parcelas, mostra um row para cada parcela
-                    return parcelas.map((parcela, index) => (
-                      <tr
-                        key={`${crediario.id}-${index}`}
-                        className={`cursor-pointer ${getRowColor(
-                          crediario.dataRecebimento
-                        )}`}
-                        onClick={() => openModal(crediario, parcela)}
-                      >
-                        <td className="py-2 px-4 border" title={crediario.id}>
-                          {crediario.id}
-                        </td>
-                        <td className="py-2 px-4 border">
-                          {crediario.nome || "Não disponível"}
-                        </td>
-                        <td className="py-2 px-4 border">
-                          R${" "}
-                          {parcela.valorParcela
-                            ? parseFloat(parcela.valorParcela).toFixed(2)
-                            : "N/D"}
-                        </td>
-                        <td className="py-2 px-4 border">{entradaDate}</td>
-                        <td className="py-2 px-4 border">
-                          {recebimentoDate || "N/D"}
-                        </td>
-                        <td className="py-2 px-4 border text-blue-600 underline">
-                          Parcela {parcela.numeroParcela} - Venc:{" "}
-                          {parcela.dataVencimento
-                            ? new Date(
-                              parcela.dataVencimento
-                            ).toLocaleDateString("pt-BR")
-                            : "Data inválida"}
-                        </td>
-                      </tr>
-                    ));
-                  }
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          {/* MODAL */}
-          {isModalOpen && selectedCrediario && (
-            <div className="text-black fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-              <div className="bg-white p-4 sm:p-6 rounded-lg w-full max-w-md sm:max-w-lg shadow-lg">
-                <h3 className="text-lg font-bold mb-4 text-[#81059e]">
-                  {selectedParcela
-                    ? `Parcela ${selectedParcela.numeroParcela}`
-                    : "Detalhes do Credor"}
+          {/* Modal para detalhes da conta */}
+          {isModalOpen && selectedConta && (
+            <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+              <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md relative text-black">
+                <h3 className="text-xl font-bold text-[#81059e] mb-4">
+                  Detalhes da Conta a Receber
                 </h3>
                 <p>
-                  <strong>Nome do Devedor:</strong> {selectedCrediario.nome}
+                  <strong>Código:</strong> {selectedConta.numeroDocumento || 'N/A'}
                 </p>
                 <p>
-                  <strong>Código do Documento:</strong> {selectedCrediario.id}
+                  <strong>Cliente:</strong> {selectedConta.cliente || 'N/A'}
                 </p>
                 <p>
-                  <strong>Loja:</strong> Ótica Popular 1
+                  <strong>Valor:</strong> R${' '}
+                  {parseFloat(selectedConta.valor || 0).toFixed(2)}
                 </p>
                 <p>
-                  <strong>Entrada:</strong>{" "}
-                  {selectedCrediario.data
-                    ? selectedCrediario.data
-                      .toDate()
-                      .toLocaleDateString("pt-BR")
-                    : "Data não disponível"}
+                  <strong>Data de Registro:</strong> {formatFirestoreDate(selectedConta.dataRegistro)}
                 </p>
                 <p>
-                  <strong>Recebimento:</strong>{" "}
-                  {selectedCrediario.dataRecebimento
-                    ? new Date(
-                      selectedCrediario.dataRecebimento.seconds * 1000
-                    ).toLocaleDateString("pt-BR")
-                    : "Data não disponível"}
+                  <strong>Data de Cobrança:</strong>{' '}
+                  {formatFirestoreDate(selectedConta.dataCobranca)}
                 </p>
                 <p>
-                  <strong>Forma de Pagamento da Entrada:</strong>{" "}
-                  {selectedCrediario.formaPagamentoEntrada || "Não informado"}
+                  <strong>Loja:</strong> {selectedConta.loja || 'Não especificada'}
                 </p>
-                <p>
-                  <strong>Forma de Pagamento Selecionada:</strong>{" "}
-                  {selectedCrediario.formaPagamento || "Não informado"}
-                </p>
-
-                {selectedParcela ? (
-                  <div className="mt-4">
-                    <div className="mt-4">
-                      <label className="block text-[#81059e] font-bold">
-                        Loja:
-                      </label>
-                      <select
-                        value={selectedLoja}
-                        onChange={(e) => setSelectedLoja(e.target.value)}
-                        className="mt-1 block w-full bg-white border border-gray-300 rounded-md shadow-sm px-4 py-3 text-lg"
-                      >
-                        <option value="">Selecione a loja</option>
-                        <option value="Ótica Popular 1">Ótica Popular 1</option>
-                        <option value="Ótica Popular 2">Ótica Popular 2</option>
-                      </select>
-                    </div>
-                    <div className="mt-8">
-                      <label className="text-[#81059e] font-bold">
-                        Forma de Pagamento:
-                      </label>
-                      <select
-                        value={selectedFormaPagamento}
-                        onChange={(e) =>
-                          setSelectedFormaPagamento(e.target.value)
-                        }
-                        className="mt-1 block w-full bg-white border border-gray-300 rounded-md shadow-sm px-4 py-3 text-lg"
-                      >
-                        <option value="">Selecione a forma de pagamento</option>
-                        <option value="Dinheiro">Dinheiro</option>
-                        <option value="Cartão de Crédito">
-                          Cartão de Crédito
-                        </option>
-                        <option value="Cartão de Débito">
-                          Cartão de Débito
-                        </option>
-                        <option value="Pix">Pix</option>
-                        <option value="Boleto">Boleto</option>
-                      </select>
-                    </div>
-
-                    <h4 className="mt-4 text-md font-bold text-[#81059e]">
-                      Detalhes da Parcela:
-                    </h4>
-                    <p>
-                      <strong>Número da Parcela:</strong>{" "}
-                      {selectedParcela.numeroParcela}
-                    </p>
-                    <p>
-                      <strong>Valor:</strong> R${" "}
-                      {parseFloat(selectedParcela.valorParcela).toFixed(2)}
-                    </p>
-                    <p>
-                      <strong>Vencimento:</strong>{" "}
-                      {new Date(
-                        selectedParcela.dataVencimento
-                      ).toLocaleDateString("pt-BR")}
-                    </p>
-                    <div>
-                      <label>
-                        <input
-                          type="checkbox"
-                          checked={
-                            checkedParcelas[selectedParcela.numeroParcela] ||
-                            false
-                          }
-                          onChange={() =>
-                            handleCheckboxChange(selectedParcela.numeroParcela)
-                          }
-                        />
-                        Quitar Parcela
-                      </label>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="mt-4">
-                    <p>
-                      <strong>Valor Total:</strong> R${" "}
-                      {parseFloat(selectedCrediario.valorParcela).toFixed(2)}
-                    </p>
-                    <p>
-                      <strong>Sem parcelas detalhadas</strong>
-                    </p>
-                    <div>
-                      <label>
-                        <input
-                          type="checkbox"
-                          checked={
-                            checkedParcelas[selectedCrediario.id] || false
-                          }
-                          onChange={() =>
-                            handleCheckboxChange(selectedCrediario.id)
-                          }
-                        />
-                        Quitar Todo o Crediário
-                      </label>
-                    </div>
-                  </div>
+                {selectedConta.observacoes && (
+                  <p>
+                    <strong>Observações:</strong> {selectedConta.observacoes}
+                  </p>
                 )}
 
-                {/* Se tiver qualquer parcela “checkada”, habilita o botão Quitar */}
-                {Object.values(checkedParcelas).some(
-                  (isChecked) => isChecked
-                ) && (
-                    <div className="flex justify-around mt-6">
-                      <button
-                        className="bg-[#81059e] text-white p-2 rounded-md flex items-center justify-center"
-                        onClick={handleQuitar}
-                      >
-                        Quitar
-                      </button>
-                    </div>
-                  )}
+                {/* Seção para registrar o recebimento */}
+                <div className="mt-6">
+                  <label className="block text-[#81059e] mb-2">
+                    Forma de Recebimento
+                  </label>
+                  <select
+                    value={formaRecebimento}
+                    onChange={(e) => setFormaRecebimento(e.target.value)}
+                    className="w-full p-2 border border-gray-300 rounded-md text-black"
+                  >
+                    <option value="">Selecione</option>
+                    <option value="Dinheiro">Dinheiro</option>
+                    <option value="Cartão de Crédito">Cartão de Crédito</option>
+                    <option value="Cartão de Débito">Cartão de Débito</option>
+                    <option value="Pix">Pix</option>
+                    <option value="Cheque">Cheque</option>
+                    <option value="Boleto">Boleto</option>
+                  </select>
+                </div>
+
+                {settleMessage && (
+                  <p className="text-green-600 mt-4">{settleMessage}</p>
+                )}
 
                 <div className="flex justify-around mt-6">
                   <button
-                    className="bg-[#81059e] text-white p-2 rounded-md flex items-center justify-center"
                     onClick={generatePDF}
-                  >
-                    <img src="/images/PDF.png" alt="PDF" className="h-6 w-6" />
-                  </button>
-                  <button
-                    className="bg-[#81059e] text-white p-2 rounded-md flex items-center justify-center"
-                    onClick={handlePrint}
+                    className="bg-[#81059e] text-white px-4 py-2 rounded-md flex items-center"
                   >
                     <img
-                      src="/images/Print.png"
-                      alt="Imprimir"
-                      className="h-6 w-6"
+                      src="/images/pdf.png"
+                      alt="PDF"
+                      className="h-6 w-6 mr-2"
                     />
+                    Ver PDF
+                  </button>
+                  <button
+                    onClick={handlePrint}
+                    className="bg-[#81059e] text-white px-4 py-2 rounded-md flex items-center"
+                  >
+                    <img
+                      src="/images/print.png"
+                      alt="Imprimir"
+                      className="h-6 w-6 mr-2"
+                    />
+                    Imprimir
+                  </button>
+                </div>
+
+                <div className="flex justify-center mt-4">
+                  <button
+                    onClick={handleSettlePayment}
+                    className="bg-green-600 text-white px-4 py-2 rounded-md"
+                  >
+                    Registrar Recebimento
                   </button>
                 </div>
 
                 <button
-                  className="absolute top-2 right-2 text-black hover:text-gray-600"
                   onClick={closeModal}
+                  className="absolute top-2 right-2 text-gray-600 hover:text-gray-800"
                 >
                   &times;
                 </button>

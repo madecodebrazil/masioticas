@@ -2,10 +2,11 @@
 
 import React, { useEffect, useState } from 'react';
 import Layout from '@/components/Layout';
-import { collection, getDocs, addDoc, Timestamp, doc, setDoc } from 'firebase/firestore';
+import { collection, getDocs, addDoc, getDoc, Timestamp, doc, setDoc } from 'firebase/firestore';
 import { firestore } from '../../../lib/firebaseConfig';
 import { useAuth } from '@/hooks/useAuth';
 import DatePicker from 'react-datepicker';
+import InputMask from 'react-input-mask';
 import "react-datepicker/dist/react-datepicker.css";
 import Link from 'next/link';
 import ConfirmationModal from '../../../components/ConfirmationModal';
@@ -50,6 +51,22 @@ export default function ContasPagar() {
   const [credores, setCredores] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [numeroParcelas, setNumeroParcelas] = useState('1');
+  const [taxaJuros, setTaxaJuros] = useState('0,00');
+
+  const calcularValorParcela = () => {
+    const parcelas = parseInt(numeroParcelas) || 1;
+    const jurosMensal = parseFloat(taxaJuros.replace(',', '.')) / 100;
+
+    if (jurosMensal === 0) {
+      return (valorTotal / parcelas).toFixed(2);
+    }
+
+    // Fórmula de parcelamento com juros compostos
+    const valorParcela = valorTotal * (jurosMensal / (1 - Math.pow(1 + jurosMensal, -parcelas)));
+    return valorParcela.toFixed(2);
+  };
+
 
   const fetchCredores = async () => {
     if (!searchTerm.trim() || !selectedLoja) return setCredores([]);
@@ -58,8 +75,8 @@ export default function ContasPagar() {
       const querySnapshot = await getDocs(collection(firestore, `lojas/${selectedLoja}/clientes`));
       const filtered = querySnapshot.docs
         .map(doc => ({ id: doc.id, ...doc.data() }))
-        .filter(credor => 
-          credor.nome?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        .filter(credor =>
+          credor.nome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
           credor.cpf?.includes(searchTerm)
         );
       setCredores(filtered);
@@ -84,7 +101,7 @@ export default function ContasPagar() {
 
   const handleCredorSelect = (credor) => {
     setFormData(prev => ({ ...prev, credor: credor.nome, cpfCredor: credor.cpf }));
-    setSearchTerm('');
+    setSearchTerm(credor.nome); // Define o termo de busca como o nome selecionado
     setCredores([]);
   };
 
@@ -110,24 +127,57 @@ export default function ContasPagar() {
     }
 
     try {
-      const timestampEntrada = Timestamp.fromDate(new Date());
-      const timestampVencimento = formData.dataVencimento;
+      // Converter valor de string formatada para number 
+      const valorNumerico = parseFloat(
+        formData.valor
+          .replace(/[^\d,]/g, '') // Remove tudo exceto dígitos e vírgula 
+          .replace(',', '.') // Substitui vírgula por ponto 
+      );
 
+      // Converter taxa de juros para número 
+      const taxaJurosNumerica = formData.taxaJuros ? parseFloat(formData.taxaJuros) : 0;
+
+      // Preparar os dados para salvar 
       const contaData = {
-        ...formData,
-        loja: selectedLoja,
-        registradoPor: userData?.nome || 'Sistema',
-        dataEntrada: timestampEntrada,
-        dataVencimento: timestampVencimento,
+        credor: formData.credor,
+        cpfCredor: formData.cpfCredor,
+        documento: formData.documento || '',
+        parcela: formData.parcela || '',
+        tipoCobranca: formData.tipoCobranca || '',
+        origem: formData.origem || '',
+        valor: valorNumerico,
+        taxaJuros: taxaJurosNumerica,
+        dataEntrada: Timestamp.now(),
+        dataVencimento: formData.dataVencimento
+          ? Timestamp.fromDate(formData.dataVencimento)
+          : null,
+        localCobranca: formData.localCobranca || '',
+        contaLancamentoCaixa: formData.contaLancamentoCaixa || '',
+        dispensarJuros: formData.dispensarJuros || false,
+        observacoes: formData.observacoes || '',
         status: 'pendente',
-        createdAt: Timestamp.now()
+        registradoPor: userData?.nome || 'Sistema',
+        loja: selectedLoja,
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now(),
+        dataPagamento: null
       };
 
-      // Salva na subcoleção da loja correta
-      await addDoc(
-        collection(firestore, `lojas/${selectedLoja}/financeiro/contas_pagar`), 
-        contaData
-      );
+      // Primeiro, garantimos que o documento contas_pagar existe
+      const contasPagarDocRef = doc(firestore, `lojas/${selectedLoja}/financeiro`, 'contas_pagar');
+
+      // Verificar se o documento existe, se não, criá-lo
+      const docSnap = await getDoc(contasPagarDocRef);
+      if (!docSnap.exists()) {
+        await setDoc(contasPagarDocRef, {
+          descricao: "Contas a pagar",
+          createdAt: Timestamp.now()
+        });
+      }
+
+      // Agora criamos a conta na subcoleção "items" do documento contas_pagar
+      const itemsCollectionRef = collection(contasPagarDocRef, 'items');
+      await addDoc(itemsCollectionRef, contaData);
 
       alert("Conta a pagar registrada com sucesso!");
       handleClear();
@@ -143,7 +193,7 @@ export default function ContasPagar() {
       <div className="min-h-screen p-2">
         <div className="w-full max-w-5xl mx-auto rounded-lg">
           <h2 className="text-3xl font-bold text-[#81059e] mb-8">ADICIONAR CONTAS A PAGAR</h2>
-          
+
           {/* Seletor de Loja para Admins */}
           {userPermissions?.isAdmin && (
             <div className="mb-6">
@@ -164,7 +214,7 @@ export default function ContasPagar() {
           )}
 
           <div className='space-x-2'>
-            <Link href={`/finance/${selectedLoja}/add-pay/list-bills`}>
+            <Link href={`/finance/add-pay/list-bills`}>
               <button className="bg-[#81059e] p-3 rounded-sm text-white">
                 PAGAMENTOS PENDENTES
               </button>
@@ -183,8 +233,11 @@ export default function ContasPagar() {
                 <label className="text-[#81059e] font-medium">Nome do Credor</label>
                 <input
                   type="text"
-                  value={formData.credor}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  value={searchTerm}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    setFormData(prev => ({ ...prev, credor: e.target.value }));
+                  }}
                   placeholder="Digite o nome do credor"
                   className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
                   required
@@ -225,13 +278,25 @@ export default function ContasPagar() {
                   className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
                 />
               </div>
-              <div>
-                <label className="text-[#81059e] font-medium">Parcela</label>
+              <div className="mb-4">
+                <label className="text-[#81059e] font-medium">
+                  Número de Parcelas
+                </label>
                 <input
-                  type="text"
-                  name="parcela"
-                  value={formData.parcela}
-                  onChange={handleInputChange}
+                  type="number"
+                  min="1"
+                  max="24"
+                  value={numeroParcelas}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value === '' || parseInt(value) < 1) {
+                      setNumeroParcelas('0');
+                    } else if (parseInt(value) > 24) {
+                      setNumeroParcelas('24');
+                    } else {
+                      setNumeroParcelas(value);
+                    }
+                  }}
                   className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
                 />
               </div>
@@ -265,13 +330,31 @@ export default function ContasPagar() {
                   required
                 />
               </div>
-              <div>
-                <label className="text-[#81059e] font-medium">Taxa de Juros (%)</label>
-                <input
-                  type="number"
-                  name="taxaJuros"
-                  value={formData.taxaJuros}
-                  onChange={handleInputChange}
+              <div className="mb-4">
+                <label className="text-[#81059e] font-medium">
+                  Taxa de Juros (%)
+                </label>
+                <InputMask
+                  mask="99,99%"
+                  maskChar={null}
+                  value={taxaJuros.endsWith('%') ? taxaJuros : `${taxaJuros}%`}
+                  onChange={(e) => {
+                    let value = e.target.value.replace(/[^\d,]/g, '');
+
+                    // Garantir formato correto (até 2 dígitos antes da vírgula, 2 depois)
+                    if (value) {
+                      const parts = value.split(',');
+                      if (parts[0].length > 2) {
+                        parts[0] = parts[0].substring(0, 2);
+                      }
+                      if (parts.length > 1 && parts[1].length > 2) {
+                        parts[1] = parts[1].substring(0, 2);
+                      }
+                      value = parts.join(',');
+                    }
+
+                    setTaxaJuros(value);
+                  }}
                   className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
                 />
               </div>
@@ -309,7 +392,7 @@ export default function ContasPagar() {
       <ConfirmationModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        data={{...formData, loja: selectedLoja}}
+        data={{ ...formData, loja: selectedLoja }}
         onConfirm={handleConfirm}
       />
     </Layout>

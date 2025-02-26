@@ -19,15 +19,18 @@ export const useAuth = () => {
         if (adminDoc.exists()) {
           const adminData = adminDoc.data();
           setUserPermissions({
-            isAdmin: true,
-            acesso_total: adminData.acesso_total,
-            lojas: adminData.permissoes.lojas
+              isAdmin: true,
+              acesso_total: adminData.acesso_total,
+              lojas: adminData.permissoes.lojas
           });
-          setUserData(adminData);
-        } else {
-          // Verifica permissões em cada loja
-          const loja1Doc = await getDoc(doc(firestore, `loja1/users/${user.uid}/dados`));
-          const loja2Doc = await getDoc(doc(firestore, `loja2/users/${user.uid}/dados`));
+          setUserData({
+              ...adminData,
+              cargo: adminData.cargo // Garantindo que o cargo seja incluído
+          });
+      } else {
+          // Verifica permissões em cada loja - CORRIGIDO O CAMINHO
+          const loja1Doc = await getDoc(doc(firestore, `lojas/loja1/users/${user.uid}`));
+          const loja2Doc = await getDoc(doc(firestore, `lojas/loja2/users/${user.uid}`));
           
           const lojas = [];
           let userData = null;

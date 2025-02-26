@@ -1,53 +1,25 @@
 "use client";
 
-import Link from 'next/link'; // Importando Link do Next.js para navegação
-import Sidebar from '../../../components/Sidebar'; // Importando o MobileNavSidebar para navegação mobile
-import Image from 'next/image'; // Importando Image para a foto de perfil do usuário
+import Link from 'next/link';
+import Sidebar from '../../../components/Sidebar';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import React, { useEffect, useState } from 'react';
-import { auth, firestore } from '../../../lib/firebaseConfig'; // Importe a instância do Firebase e Firestore
-import { doc, getDoc } from 'firebase/firestore';
-import { motion } from 'framer-motion'; // Importando o motion para animações
+import React, { useEffect } from 'react';
+import { motion } from 'framer-motion';
 import MobileNavSidebar from '../../../components/MB_NavSidebar';
 import BottomMobileNav from '../../../components/MB_BottomNav';
-
+import { useAuth } from '@/hooks/useAuth'; // Importando o hook useAuth
 
 export default function ProductsPage() {
-    const [userData, setUserData] = useState(null);
-    const [loading, setLoading] = useState(true); // Estado de carregamento
+    const { user, userData, loading, userPermissions } = useAuth(); // Usando o hook useAuth
     const router = useRouter();
-
-    // Função para buscar os dados do usuário logado no Firestore
-    const fetchUserData = async (uid) => {
-        try {
-            const docRef = doc(firestore, `loja1/users/${uid}/dados`);
-            const docSnap = await getDoc(docRef);
-
-            if (docSnap.exists()) {
-                setUserData(docSnap.data());
-            } else {
-                console.log('Nenhum documento encontrado para o UID:', uid);
-            }
-        } catch (error) {
-            console.error("Erro ao buscar os dados do usuário:", error);
-        } finally {
-            setLoading(false); // Conclui o carregamento
-        }
-    };
 
     useEffect(() => {
         // Verifica se o usuário está autenticado
-        const unsubscribe = auth.onAuthStateChanged((user) => {
-            if (user) {
-                // Busca os dados do Firestore usando o UID do usuário logado
-                fetchUserData(user.uid);
-            } else {
-                router.push('/login'); // Redireciona para a página de login se não estiver logado
-            }
-        });
-
-        return () => unsubscribe();
-    }, [router]);
+        if (!loading && !user) {
+            router.push('/login'); // Redireciona para a página de login se não estiver logado
+        }
+    }, [user, loading, router]);
 
     // Verifique o carregamento
     if (loading) {
@@ -59,10 +31,10 @@ export default function ProductsPage() {
     }
 
     // Se os dados do usuário não forem encontrados
-    if (!userData) {
+    if (!user || !userData) {
         return (
             <div className="flex justify-center items-center h-screen">
-                <p>Usuário não encontrado.</p>
+                <p>Usuário não encontrado ou não autenticado.</p>
             </div>
         );
     }
@@ -74,7 +46,6 @@ export default function ProductsPage() {
     const productsItems = [
         { icon: '/images/clientes/cad.client.png', label: 'Adicionar Cliente', route: '/register/consumers/add.client' },
         { icon: '/images/clientes/reg.client.png', label: 'Registro de Clientes', route: '/register/consumers/list-clients' },
-
     ];
 
     return (
@@ -82,30 +53,45 @@ export default function ProductsPage() {
             <div className="flex flex-col lg:flex-row relative min-h-screen">
                 {/* Sidebar para telas grandes */}
                 <div className="hidden lg:block w-64 z-10">
-                    <Sidebar /> {/* Instanciando o componente Sidebar em telas grandes */}
+                    <Sidebar />
                 </div>
 
                 <MobileNavSidebar
                     userPhotoURL={userPhotoURL}
-                    userData={userData}  // Certifique-se de passar o userData aqui
-                    handleLogout={() => router.push("/login")}  // Função de logout que redireciona para a página de login
-                /> {/* Instanciando o MobileNavSidebar em telas pequenas */}
+                    userData={userData}
+                    handleLogout={() => router.push("/login")}
+                />
 
                 {/* Main Content */}
                 <div className="absolute top-2 right-8 z-30 hidden lg:block">
                     <Image
                         src={userPhotoURL}
                         alt="User Avatar"
-                        width={60} // Largura da imagem
-                        height={60} // Altura da imagem
+                        width={60}
+                        height={60}
                         className="rounded-full object-cover border-4 border-purple-200 shadow-md bg-white"
                     />
                 </div>
+                
                 <main className="bg-white rounded-[25px] p-4 lg:p-6 w-full max-w-5xl mx-auto relative z-20 m-10 ml-0 md:ml-14 mt-20">
-                    {/* Container para a foto do usuário - visível apenas em telas grandes */}
+                    {/* Seletor de loja para admins */}
+                    {userPermissions && (userPermissions.isAdmin || userPermissions.acesso_total) && userPermissions.lojas.length > 1 && (
+                        <div className="mb-6 p-3 bg-purple-100 rounded-lg shadow">
+                            <h3 className="text-purple-700 font-medium mb-2">Selecionar Loja:</h3>
+                            <div className="flex flex-wrap gap-2">
+                                {userPermissions.lojas.map((loja) => (
+                                    <button
+                                        key={loja}
+                                        className="px-4 py-2 rounded-md transition-colors bg-purple-600 text-white hover:bg-purple-700"
+                                    >
+                                        {loja.charAt(0).toUpperCase() + loja.slice(1)}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
 
                     <div className="w-full">
-
                         {/* Cards de Produtos com imagem de fundo opaca e animações */}
                         <div className="grid items-center grid-cols-2 gap-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-2">
                             {productsItems.map((item, index) => (
@@ -124,7 +110,7 @@ export default function ProductsPage() {
                                         <div
                                             className="absolute inset-0 opacity-10 pointer-events-none"
                                             style={{
-                                                backgroundImage: `url('/images/fundo.png')`, // Substitua pelo caminho correto da imagem
+                                                backgroundImage: `url('/images/fundo.png')`,
                                                 backgroundSize: 'cover',
                                                 backgroundRepeat: 'no-repeat',
                                                 backgroundPosition: 'center',
@@ -137,7 +123,7 @@ export default function ProductsPage() {
                                                 alt={item.label}
                                                 width={50}
                                                 height={50}
-                                                className="object-contain mr-4" // Adiciona margem à direita do ícone
+                                                className="object-contain mr-4"
                                             />
                                             <span className="text-white font-bold text-lg text-left flex-grow">
                                                 {item.label}
@@ -153,6 +139,5 @@ export default function ProductsPage() {
                 </main>
             </div>
         </div>
-
     );
 }

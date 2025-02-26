@@ -1,339 +1,225 @@
 "use client";
-import { useEffect } from "react";
-import { auth } from "../../../../lib/firebaseConfig";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
-import {
-  getDoc,
-  updateDoc,
-  addDoc,
-  collection,
-  getDocs,
-  doc,
-  setDoc,
-} from "firebase/firestore";
+
+import { useEffect, useState } from "react";
+import { collection, getDocs, doc, setDoc } from "firebase/firestore";
 import { firestore } from "../../../../lib/firebaseConfig";
+import { useAuth } from "@/hooks/useAuth";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+import Layout from "@/components/Layout";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import Sidebar from "../../../../components/Sidebar";
-import MobileNavSidebar from "../../../../components/MB_NavSidebar";
 
 export default function ClientePage() {
-  const [emprego, setEmprego] = useState({
-    cargo: "",
-    empresa: "",
-    telefone: "",
-    endereco: "",
-  });
-  const [receitaFile, setReceitaFile] = useState(null);
-  const [receitaPreview, setReceitaPreview] = useState(null); // Para pré-visualização de imagens
+  const { userPermissions, userData, user } = useAuth();
+  const [selectedLoja, setSelectedLoja] = useState(null);
+  const [formData, setFormData] = useState({});
+  const [loadingUserData, setLoadingUserData] = useState(false);
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+  // ... outros estados permanecem os mesmos ...
 
-  const [telefones, setTelefones] = useState([]);
-  const [userData, setUserData] = useState(null);
-  const [loading, setLoading] = useState(true); // Estado de carregamento inicial
-  const [loadingUserData, setLoadingUserData] = useState(false); // Estado para carregamento dos dados do formulário
-  const router = useRouter();
-  const [formData, setFormData] = useState({}); // Estado dinâmico para dados do formulário
-  const [imagePreviews, setImagePreviews] = useState({});
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [showSuccessPopup, setShowSuccessPopup] = useState(false); // Estado para exibir o popup de sucesso
-  const [convenios, setConvenios] = useState([]);
-  const [filhos, setFilhos] = useState([]); // Estado para armazenar os filhos
-
-  const handleReceitaChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setReceitaFile(file);
-      if (file.type.startsWith("image/")) {
-        // Cria pré-visualização apenas se for imagem
-        setReceitaPreview(URL.createObjectURL(file));
-      } else {
-        setReceitaPreview(null); // Não há preview para PDFs
+  // Definir loja inicial baseado nas permissões
+  useEffect(() => {
+    if (userPermissions) {
+      if (!userPermissions.isAdmin && userPermissions.lojas.length > 0) {
+        setSelectedLoja(userPermissions.lojas[0]);
+      }
+      else if (userPermissions.isAdmin && userPermissions.lojas.length > 0) {
+        setSelectedLoja(userPermissions.lojas[0]);
       }
     }
-  };
+  }, [userPermissions]);
 
-  const handleEmpregoChange = (e) => {
-    const { name, value } = e.target;
-    setEmprego((prevEmprego) => ({
-      ...prevEmprego,
-      [name]: value,
-    }));
-  };
-
-  // Adicionar um novo telefone
-  const handleAddTelefone = () => {
-    setTelefones([...telefones, ""]);
-  };
-
-  // Atualizar um telefone específico
-  const handleTelefoneChange = (index, value) => {
-    const updatedTelefones = [...telefones];
-    updatedTelefones[index] = value;
-    setTelefones(updatedTelefones);
-  };
-
-  // Remover um telefone específico
-  const handleRemoveTelefone = (index) => {
-    const updatedTelefones = [...telefones];
-    updatedTelefones.splice(index, 1);
-    setTelefones(updatedTelefones);
-  };
-
-  const checkIfIdentifierExists = async (identifier) => {
+  // Função para verificar se o cliente já existe
+  const checkIfClientExists = async (identifier, lojaId) => {
     try {
-      const docRef = doc(firestore, "consumers", identifier);
+      const docRef = doc(firestore, `lojas/${lojaId}/clientes/${identifier}`);
       const docSnap = await getDoc(docRef);
-      return docSnap.exists(); // Retorna `true` se o documento já existir
+      return docSnap.exists();
     } catch (error) {
       console.error("Erro ao verificar duplicidade:", error);
       return false;
     }
   };
 
-  const isValidCPFOrCNPJ = (value) => {
-    const cleanedValue = value.replace(/\D/g, ""); // Remove caracteres não numéricos
-    if (cleanedValue.length === 11) {
-      // CPF
-      return "CPF";
-    } else if (cleanedValue.length === 14) {
-      // CNPJ
-      return "CNPJ";
-    }
-    return false; // Valor inválido
-  };
-
-  const fetchConvenios = async () => {
-    try {
-      const snapshot = await getDocs(collection(firestore, "convenios"));
-      const conveniosList = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      setConvenios(conveniosList);
-    } catch (error) {
-      console.error("Erro ao buscar dados de convenios: ", error);
-    }
-  };
-
-  // Carrega os convênios ao montar o componente
-  useEffect(() => {
-    fetchConvenios();
-  }, []);
-
-  const fetchUserData = async (uid) => {
-    try {
-      const docRef = doc(firestore, `loja1/users/${uid}/dados`);
-      const docSnap = await getDoc(docRef);
-
-      if (docSnap.exists()) {
-        setUserData(docSnap.data());
-      } else {
-        console.log("Nenhum documento encontrado para o UID:", uid);
-      }
-    } catch (error) {
-      console.error("Erro ao buscar os dados do usuário:", error);
-    } finally {
-      setLoading(false); // Conclui o carregamento
-    }
-  };
-
-  useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      if (user) {
-        console.log("Usuário autenticado:", user); // Verifica se o usuário está autenticado
-        fetchUserData(user.uid);
-      } else {
-        console.log("Usuário não autenticado");
-        router.push("/login"); // Redireciona para a página de login se não estiver logado
-      }
-    });
-
-    return () => unsubscribe();
-  }, [router]);
-
-  // Função para capturar as mudanças nos campos do formulário
-  const handleChange = (e) => {
-    const { name, value, files } = e.target;
-
-    if (files && files.length > 0) {
-      // Atualiza formData com o arquivo
-      setFormData((prevData) => ({ ...prevData, [name]: files[0] }));
-
-      // Cria e armazena a URL de visualização da imagem
-      setImagePreviews((prevPreviews) => ({
-        ...prevPreviews,
-        [name]: URL.createObjectURL(files[0]),
-      }));
-    } else {
-      // Atualiza formData com o valor do campo de texto
-      setFormData((prevData) => ({ ...prevData, [name]: value }));
-    }
-  };
-
-  // Função para buscar o endereço via API do ViaCEP
-  const fetchAddressByCep = async (cep) => {
-    try {
-      const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
-      const data = await response.json();
-      if (!data.erro) {
-        // Preencher os campos de endereço automaticamente
-        setFormData((prevData) => ({
-          ...prevData,
-          logradouro: data.logradouro,
-          bairro: data.bairro,
-          cidade: data.localidade,
-          estado: data.uf,
-        }));
-      } else {
-        console.error("CEP inválido.");
-      }
-    } catch (error) {
-      console.error("Erro ao buscar o endereço:", error);
-    }
-  };
-
-  // Função para capturar as mudanças no campo de CEP
-  const handleCepChange = (e) => {
-    const cep = e.target.value.replace(/\D/g, ""); // Remove caracteres não numéricos
-    if (cep.length === 8) {
-      fetchAddressByCep(cep);
-    }
-    setFormData((prevData) => ({ ...prevData, cep: e.target.value }));
-  };
-
-  // Função para fazer upload de uma imagem e retornar a URL
-  const uploadImage = async (file, fileName) => {
+  // Upload de imagem modificado para incluir a loja
+  const uploadImage = async (file, fileName, lojaId) => {
     if (!file) return null;
 
     const storage = getStorage();
-    const storageRef = ref(storage, `consumers/${fileName}`);
+    const storageRef = ref(storage, `lojas/${lojaId}/clientes/${fileName}`);
 
     const snapshot = await uploadBytes(storageRef, file);
     return await getDownloadURL(snapshot.ref);
   };
 
-  // Função para adicionar um novo filho ao array
+  // Função para capturar mudanças nos campos do formulário
+  const handleChange = (e) => {
+    const { name, value, files } = e.target;
+
+    if (files && files.length > 0) {
+      // Atualiza formData com o arquivo
+      setFormData(prev => ({ ...prev, [name]: files[0] }));
+
+      // Cria e armazena a URL de visualização da imagem
+      setImagePreviews(prev => ({
+        ...prev,
+        [name]: URL.createObjectURL(files[0])
+      }));
+    } else {
+      // Atualiza formData com o valor do campo de texto
+      setFormData(prev => ({ ...prev, [name]: value }));
+    }
+  };
+
+  // Função para buscar o endereço via API do ViaCEP
+  const handleCepChange = async (e) => {
+    const cep = e.target.value.replace(/\D/g, '');
+    if (cep.length === 8) {
+      try {
+        const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+        const data = await response.json();
+        if (!data.erro) {
+          setFormData(prev => ({
+            ...prev,
+            cep: e.target.value,
+            logradouro: data.logradouro,
+            bairro: data.bairro,
+            cidade: data.localidade,
+            estado: data.uf
+          }));
+        }
+      } catch (error) {
+        console.error("Erro ao buscar o endereço:", error);
+      }
+    } else {
+      setFormData(prev => ({ ...prev, cep: e.target.value }));
+    }
+  };
+
+  // Função para lidar com os filhos
   const handleAddFilho = () => {
-    setFilhos((prevFilhos) => [...prevFilhos, { nome: "", idade: "" }]);
+    setFilhos(prev => [...prev, { nome: "", idade: "", telefone: "" }]);
   };
 
-  // Função para atualizar informações de um filho específico
   const handleFilhoChange = (index, field, value) => {
-    const updatedFilhos = [...filhos];
-    updatedFilhos[index][field] = value;
-    setFilhos(updatedFilhos);
+    setFilhos(prev => {
+      const newFilhos = [...prev];
+      newFilhos[index] = { ...newFilhos[index], [field]: value };
+      return newFilhos;
+    });
   };
 
-  // Função para remover um filho do array
   const handleRemoveFilho = (index) => {
-    const updatedFilhos = [...filhos];
-    updatedFilhos.splice(index, 1);
-    setFilhos(updatedFilhos);
+    setFilhos(prev => prev.filter((_, i) => i !== index));
   };
 
-  // Função de submissão do formulário
+  // Estados do componente
+  const [imagePreviews, setImagePreviews] = useState({});
+  const [filhos, setFilhos] = useState([]);
+  const [emprego, setEmprego] = useState({
+    cargo: "",
+    empresa: "",
+    telefone: "",
+    endereco: ""
+  });
+
+  // Função para atualizar dados do emprego
+  const handleEmpregoChange = (e) => {
+    const { name, value } = e.target;
+    setEmprego(prev => ({
+      ...prev,
+      [name]: value
+    }));
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    if (!selectedLoja) {
+      alert("Selecione uma loja primeiro!");
+      return;
+    }
 
     if (loadingUserData) return;
-
     setLoadingUserData(true);
 
     try {
-      // Validação de CPF/CNPJ
       const identifier = formData.cpf ? formData.cpf.replace(/\D/g, "") : "";
-      const tipo = isValidCPFOrCNPJ(identifier);
-      if (!tipo) {
-        alert("O CPF deve conter 11 dígitos ou o CNPJ deve conter 14 dígitos.");
-        setLoadingUserData(false);
-        return;
-      }
-
-      // Verifica se o identificador já existe
-      const exists = await checkIfIdentifierExists(identifier);
+      
+      // Verifica se o cliente já existe na loja selecionada
+      const exists = await checkIfClientExists(identifier, selectedLoja);
       if (exists) {
-        alert(`Erro: Este ${tipo} já está cadastrado.`);
+        alert("Este cliente já está cadastrado nesta loja.");
         setLoadingUserData(false);
         return;
       }
 
-      // Upload das imagens
-      const rgImageUrl = await uploadImage(formData.rgImage, `rg-${identifier}`);
-      const cpfImageUrl = await uploadImage(formData.cpfImage, `cpf-${identifier}`);
-      const addressImageUrl = await uploadImage(formData.addressImage, `address-${identifier}`);
-      const clientImageUrl = await uploadImage(formData.imagem, `client-${identifier}`);
+      // Upload das imagens com o contexto da loja
+      const rgImageUrl = await uploadImage(formData.rgImage, `rg-${identifier}`, selectedLoja);
+      const cpfImageUrl = await uploadImage(formData.cpfImage, `cpf-${identifier}`, selectedLoja);
+      const addressImageUrl = await uploadImage(formData.addressImage, `address-${identifier}`, selectedLoja);
+      const clientImageUrl = await uploadImage(formData.imagem, `client-${identifier}`, selectedLoja);
 
-      // Upload da receita, se houver
-      let receitaUrl = null;
-      if (receitaFile) {
-        receitaUrl = await (async (file, fileName) => {
-          const storage = getStorage();
-          const storageRef = ref(storage, `receitas/${fileName}`);
-          const snapshot = await uploadBytes(storageRef, file);
-          return await getDownloadURL(snapshot.ref);
-        })(receitaFile, `receita-${Date.now()}`);
-      }
-
-      // Monta o objeto a ser salvo
+      // Monta o objeto do cliente
       const { rgImage, cpfImage, addressImage, imagem, ...clientData } = formData;
-      clientData.rgImageUrl = rgImageUrl;
-      clientData.cpfImageUrl = cpfImageUrl;
-      clientData.addressImageUrl = addressImageUrl;
-      clientData.clientImageUrl = clientImageUrl;
-      clientData.tipo = tipo;
-      clientData.filhos = filhos;
-      clientData.emprego = emprego;
-      clientData.telefones = telefones;
-      clientData.receitaUrl = receitaUrl;
+      const clientToSave = {
+        ...clientData,
+        rgImageUrl,
+        cpfImageUrl,
+        addressImageUrl,
+        clientImageUrl,
+        cpf: identifier,
+        createdAt: new Date(),
+        createdBy: userData?.nome || user?.email,
+        updatedAt: new Date()
+      };
 
-      // Aqui sobrescrevemos o CPF para remover qualquer formatação
-      clientData.cpf = identifier;
+      // Salva o cliente na subcoleção correta da loja
+      await setDoc(
+        doc(firestore, `lojas/${selectedLoja}/clientes/${identifier}`), 
+        clientToSave
+      );
 
-      // Salva no Firestore
-      await setDoc(doc(firestore, "consumers", identifier), clientData);
-
-      console.log("Cliente adicionado com sucesso:", clientData);
       setShowSuccessPopup(true);
-
-      // Redireciona após 3 segundos
       setTimeout(() => {
-        router.push("/register/consumers/list-clients");
+        router.push(`/register/${selectedLoja}/list-clients`);
       }, 3000);
+      
     } catch (error) {
       console.error("Erro ao adicionar cliente:", error);
+      alert("Erro ao salvar cliente. Por favor, tente novamente.");
     } finally {
       setLoadingUserData(false);
     }
   };
 
-
-
   return (
-    <div className="flex flex-col min-h-screen bg-[#81059e]">
-      <MobileNavSidebar
-        userPhotoURL={userData?.imageUrl || "/default-avatar.png"}
-        userData={userData}
-        handleLogout={() => router.push("/login")}
-      />
-      <div className="hidden lg:block w-16">
-        <Sidebar />
-      </div>
+    <Layout>
+      <div className="min-h-screen p-4">
+        <div className="w-full max-w-3xl mx-auto bg-white rounded-lg shadow-lg p-6">
+          <h1 className="text-2xl font-bold text-purple-700 mb-6">
+            Adicionar Cliente
+          </h1>
 
-      <div className="flex flex-col items-center justify-center w-full mt-12 lg:mt-0">
-        <div className="flex-1 flex justify-center items-center w-full p-6">
-          <div className="bg-white p-6 rounded-3xl shadow-lg border border-gray-300 w-full max-w-3xl">
-            <h1 className="text-purple-700 text-xl font-bold mb-4">
-              Adicionar cliente
-            </h1>
-            <img
-              src="/images/Settings.png" // Caminho para o ícone de configurações
-              alt="Ícone de Configurações"
-              className="cursor-pointer hover:opacity-80 transition mb-4" // Adiciona margem inferior e hover
-              style={{ width: "40px", height: "40px" }} // Define o tamanho do ícone
-              onClick={() => router.push("/register/clients-ab")} // Redireciona para a rota desejada ao clicar
-            />
-            <main className="">
-              <form
+          {/* Seletor de Loja para Admins */}
+          {userPermissions?.isAdmin && (
+            <div className="mb-6">
+              <label className="text-purple-700 font-medium">Selecionar Loja</label>
+              <select
+                value={selectedLoja || ''}
+                onChange={(e) => setSelectedLoja(e.target.value)}
+                className="w-full border-2 border-purple-700 rounded-lg p-2 mt-1"
+              >
+                <option value="">Selecione uma loja</option>
+                {userPermissions.lojas.map((loja) => (
+                  <option key={loja} value={loja}>
+                    {loja === 'loja1' ? 'Loja 1' : 'Loja 2'}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+<form
                 onSubmit={handleSubmit}
                 className="p-4 text-black bg-white justify-center rounded-lg shadow-md"
               >
@@ -912,17 +798,9 @@ export default function ClientePage() {
                   )}
                 </button>
               </form>
-            </main>
-          </div>
         </div>
       </div>
-
-      {/* Popup de sucesso */}
-      {showSuccessPopup && (
-        <div className="fixed bottom-5 right-5 bg-green-500 text-white p-4 rounded-lg shadow-lg transition-opacity duration-500">
-          <p>Cliente adicionado com sucesso! Redirecionando...</p>
-        </div>
-      )}
-    </div>
+    </Layout>
   );
+}
 }

@@ -4,10 +4,12 @@ import React, { useEffect, useState } from 'react';
 import Layout from '@/components/Layout';
 import Link from 'next/link';
 import { collection, getDocs, doc, setDoc, deleteDoc } from 'firebase/firestore';
+import { useAuth } from '@/hooks/useAuth';
 import { firestore } from '../../../../lib/firebaseConfig';
 import jsPDF from 'jspdf';
 
 export default function ListaContas() {
+  const { userPermissions } = useAuth();
   const [contas, setContas] = useState([]);
   const [filteredContas, setFilteredContas] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -25,17 +27,39 @@ export default function ListaContas() {
     const fetchContas = async () => {
       try {
         setLoading(true);
-        const lojas = ['loja1', 'loja2'];
         const fetchedContas = [];
 
-        for (const loja of lojas) {
-          const contasSnapshot = await getDocs(collection(firestore, loja, 'finances', 'a_pagar'));
-          const lojaContas = contasSnapshot.docs.map((doc) => ({
-            id: doc.id,
-            loja: loja,
-            ...doc.data(),
-          }));
-          fetchedContas.push(...lojaContas);
+        // Usar o caminho correto para lojas específicas
+        if (selectedLoja !== 'Ambas') {
+          // Caminho para uma loja específica
+          const contasPagarDocRef = collection(firestore, `lojas/${selectedLoja}/financeiro/contas_pagar/items`);
+          const contasSnapshot = await getDocs(contasPagarDocRef);
+
+          contasSnapshot.docs.forEach((docItem) => {
+            const contaData = docItem.data();
+            fetchedContas.push({
+              id: docItem.id,
+              ...contaData,
+              loja: selectedLoja // Garantir que a loja seja definida corretamente
+            });
+          });
+        } else {
+          // Se for "Ambas", buscar de todas as lojas que o usuário tem acesso
+          const lojas = userPermissions?.lojas || [];
+
+          for (const loja of lojas) {
+            const contasPagarDocRef = collection(firestore, `lojas/${loja}/financeiro/contas_pagar/items`);
+            const contasSnapshot = await getDocs(contasPagarDocRef);
+
+            contasSnapshot.docs.forEach((docItem) => {
+              const contaData = docItem.data();
+              fetchedContas.push({
+                id: docItem.id,
+                ...contaData,
+                loja: loja
+              });
+            });
+          }
         }
 
         setContas(fetchedContas);
@@ -43,13 +67,13 @@ export default function ListaContas() {
         setLoading(false);
       } catch (err) {
         console.error('Erro ao carregar as contas:', err);
-        setError('Erro ao carregar os dados das contas.');
+        setError(`Erro ao carregar os dados das contas: ${err.message}`);
         setLoading(false);
       }
     };
 
     fetchContas();
-  }, []);
+  }, [selectedLoja, userPermissions]);
 
   // Função para filtrar contas com base na busca e loja
   useEffect(() => {
@@ -61,12 +85,15 @@ export default function ListaContas() {
         filtered = filtered.filter((conta) => conta.loja === selectedLoja);
       }
 
+      // Adicione esta função auxiliar para formatar datas do Firestore
+
+
       // Filtro por busca
       if (searchQuery !== '') {
         filtered = filtered.filter(
           (conta) =>
-            conta.documento.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            conta.credor.toLowerCase().includes(searchQuery.toLowerCase())
+            (conta.documento?.toLowerCase().includes(searchQuery.toLowerCase()) || '') ||
+            (conta.credor?.toLowerCase().includes(searchQuery.toLowerCase()) || '')
         );
       }
 
@@ -77,13 +104,33 @@ export default function ListaContas() {
   }, [searchQuery, selectedLoja, contas]);
 
   const getStatusColor = (vencimento) => {
+    if (!vencimento) return 'bg-gray-200 text-gray-800';
+
     const now = new Date();
-    const dueDate = new Date(vencimento);
+    // Se for um timestamp do Firestore
+    const dueDate = vencimento.seconds ?
+      new Date(vencimento.seconds * 1000) :
+      new Date(vencimento);
 
     if (dueDate < now) return 'bg-red-200 text-red-800'; // Vencido
-    if (dueDate - now <= 7 * 24 * 60 * 60 * 1000) return 'bg-yellow-200 text-yellow-800'; // Próximo de vencer
+    if (dueDate - now <= 7 * 24 * 60 * 60 * 1000) return 'bg-yellow-200 text-yellow-800';
     return 'bg-green-200 text-green-800'; // Longe de vencer
+    
   };
+
+  // Adicione esta função no escopo principal do componente, antes do return
+const formatFirestoreDate = (firestoreDate) => {
+  if (!firestoreDate) return 'N/A';
+  
+  // Se for um timestamp do Firestore (com seconds e nanoseconds)
+  if (firestoreDate && typeof firestoreDate === 'object' && firestoreDate.seconds) {
+    const date = new Date(firestoreDate.seconds * 1000);
+    return date.toLocaleDateString('pt-BR');
+  }
+  
+  // Se já for uma string de data, retorne como está
+  return firestoreDate;
+};
 
   // Função para abrir o modal e definir a conta selecionada
   const openModal = (conta) => {
@@ -103,18 +150,32 @@ export default function ListaContas() {
   const generatePDF = () => {
     if (!selectedConta) return;
 
+    // Adicione esta função auxiliar para formatar datas do Firestore
+    const formatFirestoreDate = (firestoreDate) => {
+      if (!firestoreDate) return 'N/A';
+
+      // Se for um timestamp do Firestore (com seconds e nanoseconds)
+      if (firestoreDate.seconds) {
+        const date = new Date(firestoreDate.seconds * 1000);
+        return date.toLocaleDateString('pt-BR');
+      }
+
+      // Se já for uma string de data, retorne como está
+      return firestoreDate;
+    };
+
     const doc = new jsPDF();
     doc.text(`Detalhes da Conta`, 10, 10);
-    doc.text(`Código: ${selectedConta.documento}`, 10, 20);
-    doc.text(`Credor: ${selectedConta.credor}`, 10, 30);
-    doc.text(`Valor: R$ ${parseFloat(selectedConta.valor).toFixed(2)}`, 10, 40);
-    doc.text(`Data de Entrada: ${selectedConta.dataEntrada}`, 10, 50);
-    doc.text(`Data de Vencimento: ${selectedConta.dataVencimento}`, 10, 60);
-    doc.text(`Loja: ${selectedConta.loja}`, 10, 70);
+    doc.text(`Código: ${selectedConta.documento || 'N/A'}`, 10, 20);
+    doc.text(`Credor: ${selectedConta.credor || 'N/A'}`, 10, 30);
+    doc.text(`Valor: R$ ${parseFloat(selectedConta.valor || 0).toFixed(2)}`, 10, 40);
+    doc.text(`Data de Entrada: ${selectedConta.dataEntrada || 'N/A'}`, 10, 50);
+    doc.text(`Data de Vencimento: ${selectedConta.dataVencimento || 'N/A'}`, 10, 60);
+    doc.text(`Loja: ${selectedConta.loja || 'N/A'}`, 10, 70);
     if (selectedConta.observacoes) {
       doc.text(`Observações: ${selectedConta.observacoes}`, 10, 80);
     }
-    doc.save(`Conta_${selectedConta.documento}.pdf`);
+    doc.save(`Conta_${selectedConta.documento || selectedConta.id}.pdf`);
   };
 
   // Função para lidar com a impressão
@@ -131,22 +192,22 @@ export default function ListaContas() {
 
     try {
       // Preparar descrição personalizada
-      const descricao = `Pagamento da conta ${selectedConta.documento} via ${formaPagamento}`;
+      const descricao = `Pagamento da conta ${selectedConta.documento || selectedConta.id} via ${formaPagamento}`;
 
       // Preparar dados para o cashflow
       const cashflowData = {
-        nome: selectedConta.credor,
+        nome: selectedConta.credor || 'Credor não especificado',
         formaPagamento: formaPagamento,
         data: new Date(),
-        valorFinal: -Math.abs(parseFloat(selectedConta.valor)), // Valor negativo
-        descricao: descricao, // Adicionado o campo 'descricao' com a descrição personalizada
+        valorFinal: -Math.abs(parseFloat(selectedConta.valor || 0)), // Valor negativo
+        descricao: descricao,
       };
 
       // Adicionar ao 'cashflow'
       await setDoc(doc(collection(firestore, 'cashflow')), cashflowData);
 
       // Preparar dados para o caixa do dia
-      const loja = selectedConta.loja; // 'loja1' ou 'loja2'
+      const loja = selectedConta.loja || 'loja1'; // Padrão para 'loja1' se não especificada
       const dataAtual = new Date();
       const dataFormatada = dataAtual.toLocaleDateString('pt-BR').replace(/\//g, '-');
 
@@ -156,8 +217,8 @@ export default function ListaContas() {
       );
 
       const caixaData = {
-        nome: selectedConta.credor,
-        valorFinal: -Math.abs(parseFloat(selectedConta.valor)), // Valor negativo
+        nome: selectedConta.credor || 'Credor não especificado',
+        valorFinal: -Math.abs(parseFloat(selectedConta.valor || 0)), // Valor negativo
         data: dataAtual,
         descricao: descricao,
         type: 'despesa',
@@ -167,8 +228,8 @@ export default function ListaContas() {
       // Adicionar ao caixa do dia
       await setDoc(doc(caixaRef), caixaData);
 
-      // Remover a conta da coleção 'a_pagar'
-      const contaRef = doc(firestore, loja, 'finances', 'a_pagar', selectedConta.id);
+      // Remover a conta da coleção 'contas_pagar/items'
+      const contaRef = doc(firestore, 'contas_pagar/items', selectedConta.id);
       await deleteDoc(contaRef);
 
       // Atualizar o estado local para remover a conta quitada
@@ -208,9 +269,9 @@ export default function ListaContas() {
               onChange={(e) => setSelectedLoja(e.target.value)}
               className="p-3 border-2 border-[#81059e] rounded-lg text-black"
             >
-              <option value="Ambas">Ambas</option>
-              <option value="loja1">Loja 1</option>
-              <option value="loja2">Loja 2</option>
+              {userPermissions?.isAdmin && <option value="Ambas">Ambas</option>}
+              {userPermissions?.lojas?.includes('loja1') && <option value="loja1">Loja 1</option>}
+              {userPermissions?.lojas?.includes('loja2') && <option value="loja2">Loja 2</option>}
             </select>
 
             <Link href="/finance/add-pay">
@@ -226,7 +287,7 @@ export default function ListaContas() {
           ) : error ? (
             <p>{error}</p>
           ) : (
-            <div className="bg-white p-6 rounded-lg shadow-md">
+            <div className="w-full">
               {filteredContas.length === 0 ? (
                 <p>Nenhuma conta encontrada.</p>
               ) : (
@@ -244,21 +305,17 @@ export default function ListaContas() {
                     {filteredContas.map((conta) => (
                       <tr
                         key={conta.id}
-                        className="text-black text-center hover:bg-gray-100 cursor-pointer"
+                        className="text-black text-left hover:bg-gray-100 cursor-pointer"
                         onClick={() => openModal(conta)}
                       >
-                        <td className="border px-4 py-2">{conta.documento}</td>
-                        <td className="border px-4 py-2">{conta.credor}</td>
+                        <td className="border px-4 py-2">{conta.documento || 'N/A'}</td>
+                        <td className="border px-4 py-2">{conta.credor || 'N/A'}</td>
                         <td className="border px-4 py-2">
-                          R$ {parseFloat(conta.valor).toFixed(2)}
+                          R$ {parseFloat(conta.valor || 0).toFixed(2)}
                         </td>
-                        <td className="border px-4 py-2">{conta.dataEntrada}</td>
-                        <td
-                          className={`border px-4 py-2 ${getStatusColor(
-                            conta.dataVencimento
-                          )}`}
-                        >
-                          {conta.dataVencimento}
+                        <td className="border px-4 py-2">{formatFirestoreDate(conta.dataEntrada)}</td>
+                        <td className={`border px-4 py-2 ${getStatusColor(conta.dataVencimento)}`}>
+                          {formatFirestoreDate(conta.dataVencimento)}
                         </td>
                       </tr>
                     ))}
@@ -276,24 +333,24 @@ export default function ListaContas() {
                   Detalhes da Conta
                 </h3>
                 <p>
-                  <strong>Código:</strong> {selectedConta.documento}
+                  <strong>Código:</strong> {selectedConta.documento || 'N/A'}
                 </p>
                 <p>
-                  <strong>Credor:</strong> {selectedConta.credor}
+                  <strong>Credor:</strong> {selectedConta.credor || 'N/A'}
                 </p>
                 <p>
                   <strong>Valor:</strong> R${' '}
-                  {parseFloat(selectedConta.valor).toFixed(2)}
+                  {parseFloat(selectedConta.valor || 0).toFixed(2)}
                 </p>
                 <p>
-                  <strong>Data de Entrada:</strong> {selectedConta.dataEntrada}
+                  <strong>Data de Entrada:</strong> {formatFirestoreDate(selectedConta.dataEntrada)}
                 </p>
                 <p>
                   <strong>Data de Vencimento:</strong>{' '}
-                  {selectedConta.dataVencimento}
+                  {formatFirestoreDate(selectedConta.dataVencimento)}
                 </p>
                 <p>
-                  <strong>Loja:</strong> {selectedConta.loja}
+                  <strong>Loja:</strong> {selectedConta.loja || 'Não especificada'}
                 </p>
                 {selectedConta.observacoes && (
                   <p>
@@ -318,7 +375,6 @@ export default function ListaContas() {
                     <option value="Pix">Pix</option>
                     <option value="Cheque">Cheque</option>
                     <option value="Boleto">Boleto</option>
-                    {/* Adicione outras formas de pagamento conforme necessário */}
                   </select>
                 </div>
 
