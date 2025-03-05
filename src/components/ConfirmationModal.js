@@ -3,27 +3,52 @@ import React from 'react';
 const ConfirmationDialog = ({ isOpen, onClose, data, onConfirm }) => {
   if (!isOpen || !data) return null;
 
+  // Formata o valor para exibição
+  const formatarValor = (valor) => {
+    if (typeof valor === 'string' && valor) {
+      return valor;
+    } else if (typeof valor === 'number') {
+      return valor.toLocaleString('pt-BR', { 
+        style: 'currency', 
+        currency: 'BRL' 
+      });
+    }
+    return "N/A";
+  };
+
+  // Formata a data para exibição
+  const formatarData = (data) => {
+    if (!data) return "N/A";
+    if (data instanceof Date) {
+      return data.toLocaleDateString('pt-BR');
+    }
+    return "N/A";
+  };
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg max-w-[500px] w-full mx-4 p-6">
         <div className="mb-4">
           <h2 className="text-xl font-bold text-[#81059e]">
-            CONFIRMAÇÃO DOS DADOS
+            TEM CERTEZA QUE DESEJA REGISTRAR?
           </h2>
         </div>
 
         <div className="text-black space-y-3 mt-4">
           <div className="grid gap-2">
-            <p><span className="font-semibold">Nome do Devedor:</span> {data.cliente}</p>
-            <p><span className="font-semibold">CPF/CNPJ:</span> {data.cpf}</p>
-            <p><span className="font-semibold">Loja:</span> {data.loja}</p>
-            <p><span className="font-semibold">Observações:</span> {data.observacoes}</p>
-            <p><span className="font-semibold">Caixa:</span> {data.caixa}</p>
-            <p><span className="font-semibold">Data da Entrada:</span> {data.dataEntrada}</p>
-            <p><span className="font-semibold">Hora da Entrada:</span> {data.horaEntrada}</p>
-            <p><span className="font-semibold">Valor:</span> {data.valorFinal}</p>
-            <p><span className="font-semibold">Data de Recebimento:</span> {data.dataRecebimento}</p>
-            <p><span className="font-semibold">Hora de Recebimento:</span> {data.horaRecebimento}</p>
+            <p><span className="font-semibold">Cliente:</span> {data.cliente || "N/A"}</p>
+            <p><span className="font-semibold">CPF:</span> {data.cpf || "N/A"}</p>
+            <p><span className="font-semibold">Loja:</span> {data.loja || "N/A"}</p>
+            <p><span className="font-semibold">Nº Documento:</span> {data.numeroDocumento || "N/A"}</p>
+            <p><span className="font-semibold">Tipo de Cobrança:</span> {data.tipoCobranca || "N/A"}</p>
+            <p><span className="font-semibold">Origem:</span> {data.origem || "N/A"}</p>
+            <p><span className="font-semibold">Valor:</span> {formatarValor(data.valor)}</p>
+            <p><span className="font-semibold">Taxa de Juros:</span> {data.taxaJuros ? `${data.taxaJuros}%` : "0%"}</p>
+            <p><span className="font-semibold">Data de Cobrança:</span> {formatarData(data.dataCobranca)}</p>
+            <p><span className="font-semibold">Local de Cobrança:</span> {data.localCobranca || "N/A"}</p>
+            <p><span className="font-semibold">Conta para Lançamento:</span> {data.contaLancamentoCaixa || "N/A"}</p>
+            <p><span className="font-semibold">Dispensar Juros:</span> {data.dispensarJuros ? "Sim" : "Não"}</p>
+            {data.observacoes && <p><span className="font-semibold">Observações:</span> {data.observacoes}</p>}
           </div>
         </div>
 

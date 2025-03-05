@@ -86,10 +86,15 @@ export default function AddAccountPage() {
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData(prev => ({ 
-      ...prev, 
-      [name]: type === 'checkbox' ? checked : value 
-    }));
+    if (name === 'numeroDocumento') {
+      const numericValue = value.replace(/\D/g, '');
+      setFormData(prev => ({ ...prev, [name]: numericValue }));
+    } else {
+      setFormData(prev => ({ 
+        ...prev, 
+        [name]: type === 'checkbox' ? checked : value 
+      }));
+    }
   };
 
   const handleValorChange = (e) => {
@@ -413,7 +418,7 @@ export default function AddAccountPage() {
                     onChange={(date) => setFormData(prev => ({ ...prev, dataCobranca: date }))}
                     dateFormat="dd/MM/yyyy"
                     className="border-2 border-[#81059e] p-3 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-[#81059e] text-black"
-                    placeholderText="Selecione a data"
+                    placeholderText="dd/mm/aaaa"
                   />
                 </div>
               </div>

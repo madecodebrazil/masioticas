@@ -3,6 +3,13 @@
 import React, { useEffect, useState } from 'react';
 import Layout from '@/components/Layout';
 import Link from 'next/link';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import {
+  faFileInvoice,
+  faDollarSign,
+  faClock,
+  faExclamationTriangle
+} from '@fortawesome/free-solid-svg-icons';
 import { collection, getDocs, doc, setDoc, deleteDoc, Timestamp } from 'firebase/firestore';
 import { useAuth } from '@/hooks/useAuth';
 import { firestore } from '../../../../lib/firebaseConfig';
@@ -18,10 +25,29 @@ export default function ListaRecebimentos() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [totalContas, setTotalContas] = useState(0); // Estado para armazenar o total de contas
 
   // Estados para a forma de recebimento e mensagem de sucesso
   const [formaRecebimento, setFormaRecebimento] = useState('');
   const [settleMessage, setSettleMessage] = useState('');
+
+  // Estado para marcar contas para exclusão
+  const [selectedForDeletion, setSelectedForDeletion] = useState([]);
+
+  // Estados para ordenação
+  const [sortField, setSortField] = useState('dataCobranca');
+  const [sortDirection, setSortDirection] = useState('asc');
+  const [yearFilter, setYearFilter] = useState('Todos');
+  const [monthFilter, setMonthFilter] = useState('Todos');
+  const [dayFilter, setDayFilter] = useState('Todos');
+
+  // Anos disponíveis para filtro (dinâmico, baseado nos dados)
+  const [availableYears, setAvailableYears] = useState(['Todos']);
+  // Meses disponíveis (fixo)
+  const months = ['Todos', 'Janeiro', 'Fevereiro', 'Marco', 'Abril', 'Maio', 'Junho', 
+    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+  // Dias disponíveis (1-31)
+  const [availableDays, setAvailableDays] = useState(['Todos']);
 
   useEffect(() => {
     const fetchContas = async () => {
@@ -62,8 +88,11 @@ export default function ListaRecebimentos() {
           }
         }
 
-        setContas(fetchedContas);
-        setFilteredContas(fetchedContas);
+        // Aplicar ordenação inicial
+        const sortedContas = sortContas(fetchedContas, sortField, sortDirection);
+        setContas(sortedContas);
+        setFilteredContas(sortedContas);
+        setTotalContas(sortedContas.length); // Atualizar o contador total de contas
         setLoading(false);
       } catch (err) {
         console.error('Erro ao carregar as contas:', err);
@@ -75,9 +104,35 @@ export default function ListaRecebimentos() {
     fetchContas();
   }, [selectedLoja, userPermissions]);
 
+  // Extrair anos disponíveis dos dados
+  useEffect(() => {
+    if (contas.length > 0) {
+      const years = ['Todos'];
+      contas.forEach(conta => {
+        if (conta.dataCobranca) {
+          const date = conta.dataCobranca.seconds
+            ? new Date(conta.dataCobranca.seconds * 1000)
+            : new Date(conta.dataCobranca);
+          const year = date.getFullYear().toString();
+          if (!years.includes(year)) {
+            years.push(year);
+          }
+        }
+      });
+      setAvailableYears(years.sort());
+
+      // Gerar dias de 1 a 31
+      const days = ['Todos'];
+      for (let i = 1; i <= 31; i++) {
+        days.push(i.toString());
+      }
+      setAvailableDays(days);
+    }
+  }, [contas]);
+
   // Função para filtrar contas com base na busca e loja
   useEffect(() => {
-    const filterBySearchAndLoja = () => {
+    const filterBySearchAndLojaAndDate = () => {
       let filtered = contas;
 
       // Filtro por loja
@@ -94,11 +149,108 @@ export default function ListaRecebimentos() {
         );
       }
 
+      // Filtro por data
+      filtered = filtered.filter(conta => {
+        // Se não tem data de cobrança e qualquer filtro está ativo, ocultar
+        if (!conta.dataCobranca && (yearFilter !== 'Todos' || monthFilter !== 'Todos' || dayFilter !== 'Todos')) {
+          return false;
+        }
+
+        if (!conta.dataCobranca) return true;
+
+        const contaDate = conta.dataCobranca.seconds
+          ? new Date(conta.dataCobranca.seconds * 1000)
+          : new Date(conta.dataCobranca);
+
+        // Filtrar por ano se não for "Todos"
+        if (yearFilter !== 'Todos' && contaDate.getFullYear().toString() !== yearFilter) {
+          return false;
+        }
+
+        // Filtrar por mês se não for "Todos"
+        if (monthFilter !== 'Todos') {
+          const monthIndex = months.indexOf(monthFilter) - 1;
+          if (contaDate.getMonth() !== monthIndex) {
+            return false;
+          }
+        }
+
+        // Filtrar por dia se não for "Todos"
+        if (dayFilter !== 'Todos' && contaDate.getDate().toString() !== dayFilter) {
+          return false;
+        }
+
+        return true;
+      });
+
+      // Aplicar ordenação
+      filtered = sortContas(filtered, sortField, sortDirection);
       setFilteredContas(filtered);
     };
 
-    filterBySearchAndLoja();
-  }, [searchQuery, selectedLoja, contas]);
+    filterBySearchAndLojaAndDate();
+  }, [searchQuery, selectedLoja, contas, sortField, sortDirection, yearFilter, monthFilter, dayFilter]);
+
+  // Função para ordenar contas
+  const sortContas = (contasToSort, field, direction) => {
+    return [...contasToSort].sort((a, b) => {
+      let aValue = a[field];
+      let bValue = b[field];
+
+      // Tratar datas (objetos Firestore Timestamp ou strings de data)
+      if (field === 'dataRegistro' || field === 'dataCobranca' || field === 'dataPagamento') {
+        aValue = convertToDate(aValue);
+        bValue = convertToDate(bValue);
+      }
+      // Tratar números
+      else if (field === 'valor' || field === 'valorPago' || field === 'juros') {
+        aValue = parseFloat(aValue || 0);
+        bValue = parseFloat(bValue || 0);
+      }
+      // Tratar strings
+      else {
+        aValue = String(aValue || '').toLowerCase();
+        bValue = String(bValue || '').toLowerCase();
+      }
+
+      // Comparação
+      if (aValue < bValue) return direction === 'asc' ? -1 : 1;
+      if (aValue > bValue) return direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+  };
+
+  // Função para converter diferentes formatos de data para objeto Date
+  const convertToDate = (date) => {
+    if (!date) return new Date(0); // Valor mínimo para datas vazias
+
+    // Se for um timestamp do Firestore
+    if (typeof date === 'object' && date.seconds) {
+      return new Date(date.seconds * 1000);
+    }
+
+    // Se for uma string ou outro formato, tentar converter para Date
+    return new Date(date);
+  };
+
+  // Função para alternar a ordenação
+  const handleSort = (field) => {
+    const direction = field === sortField && sortDirection === 'asc' ? 'desc' : 'asc';
+    setSortField(field);
+    setSortDirection(direction);
+
+    // Reordenar as contas filtradas
+    const sorted = sortContas(filteredContas, field, direction);
+    setFilteredContas(sorted);
+  };
+
+  // Renderizar seta de ordenação - apenas quando a coluna estiver selecionada
+  const renderSortArrow = (field) => {
+    if (sortField !== field) return null;
+    return sortDirection === 'asc' ?
+      <span className="ml-1">↑</span> :
+      <span className="ml-1">↓</span>;
+  };
 
   const getStatusColor = (dataCobranca) => {
     if (!dataCobranca) return 'bg-gray-200 text-gray-800';
@@ -117,13 +269,13 @@ export default function ListaRecebimentos() {
   // Formata data do Firebase
   const formatFirestoreDate = (firestoreDate) => {
     if (!firestoreDate) return 'N/A';
-    
+
     // Se for um timestamp do Firestore (com seconds e nanoseconds)
     if (firestoreDate && typeof firestoreDate === 'object' && firestoreDate.seconds) {
       const date = new Date(firestoreDate.seconds * 1000);
       return date.toLocaleDateString('pt-BR');
     }
-    
+
     // Se já for uma string de data, retorne como está
     return firestoreDate;
   };
@@ -154,15 +306,85 @@ export default function ListaRecebimentos() {
     doc.text(`Data de Registro: ${formatFirestoreDate(selectedConta.dataRegistro)}`, 10, 50);
     doc.text(`Data de Cobrança: ${formatFirestoreDate(selectedConta.dataCobranca)}`, 10, 60);
     doc.text(`Loja: ${selectedConta.loja || 'N/A'}`, 10, 70);
-    if (selectedConta.observacoes) {
-      doc.text(`Observações: ${selectedConta.observacoes}`, 10, 80);
+
+    // Adicionar campos adicionais
+    if (selectedConta.dataPagamento) {
+      doc.text(`Data de Pagamento: ${formatFirestoreDate(selectedConta.dataPagamento)}`, 10, 80);
     }
+    if (selectedConta.origem) {
+      doc.text(`Origem: ${selectedConta.origem || 'N/A'}`, 10, 90);
+    }
+    if (selectedConta.parcela) {
+      doc.text(`Parcela: ${selectedConta.parcela || 'N/A'}`, 10, 100);
+    }
+    if (selectedConta.juros) {
+      doc.text(`Juros: R$ ${parseFloat(selectedConta.juros || 0).toFixed(2)}`, 10, 110);
+    }
+    if (selectedConta.valorPago) {
+      doc.text(`Total Pago: R$ ${parseFloat(selectedConta.valorPago || 0).toFixed(2)}`, 10, 120);
+    }
+    if (selectedConta.observacoes) {
+      doc.text(`Observações: ${selectedConta.observacoes}`, 10, 130);
+    }
+
     doc.save(`Conta_${selectedConta.numeroDocumento || selectedConta.id}.pdf`);
   };
 
   // Função para lidar com a impressão
   const handlePrint = () => {
     window.print();
+  };
+
+  // Função para marcar ou desmarcar conta para exclusão
+  const toggleDeletion = (e, contaId) => {
+    e.stopPropagation(); // Evitar abrir o modal
+
+    setSelectedForDeletion(prev => {
+      if (prev.includes(contaId)) {
+        return prev.filter(id => id !== contaId);
+      } else {
+        return [...prev, contaId];
+      }
+    });
+  };
+
+  // Função para excluir as contas selecionadas
+  const handleDeleteSelected = async () => {
+    if (selectedForDeletion.length === 0) {
+      alert('Selecione pelo menos uma conta para excluir.');
+      return;
+    }
+
+    if (confirm(`Deseja realmente excluir ${selectedForDeletion.length} contas selecionadas?`)) {
+      try {
+        for (const contaId of selectedForDeletion) {
+          // Encontrar a loja da conta
+          const conta = contas.find(c => c.id === contaId);
+          if (conta && conta.loja) {
+            // Excluir a conta
+            const contaRef = doc(firestore, `lojas/${conta.loja}/financeiro/contas_receber/items`, contaId);
+            await deleteDoc(contaRef);
+          }
+        }
+
+        // Atualizar as listas de contas
+        const updatedContas = contas.filter(conta => !selectedForDeletion.includes(conta.id));
+        setContas(updatedContas);
+        setFilteredContas(updatedContas.filter(c =>
+          (selectedLoja === 'Ambas' || c.loja === selectedLoja) &&
+          (!searchQuery ||
+            c.numeroDocumento?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            c.cliente?.toLowerCase().includes(searchQuery.toLowerCase()))
+        ));
+        setTotalContas(updatedContas.length);
+        setSelectedForDeletion([]);
+
+        alert('Contas excluídas com sucesso!');
+      } catch (error) {
+        console.error('Erro ao excluir contas:', error);
+        alert('Erro ao excluir as contas selecionadas.');
+      }
+    }
   };
 
   // Função para quitar o recebimento
@@ -218,6 +440,7 @@ export default function ListaRecebimentos() {
       // Atualizar o estado local para remover a conta quitada
       setContas((prevContas) => prevContas.filter((conta) => conta.id !== selectedConta.id));
       setFilteredContas((prevContas) => prevContas.filter((conta) => conta.id !== selectedConta.id));
+      setTotalContas(prevState => prevState - 1); // Decrementar o contador
 
       setSettleMessage('Recebimento registrado com sucesso!');
       setTimeout(() => {
@@ -230,38 +453,200 @@ export default function ListaRecebimentos() {
     }
   };
 
+  // Estados para paginação
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(15);
+
+  // Calcular contas para a página atual
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentContas = filteredContas.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredContas.length / itemsPerPage);
+
+  // Funções de navegação
+  const goToPage = (pageNumber) => {
+    setCurrentPage(Math.max(1, Math.min(pageNumber, totalPages)));
+  };
+
   return (
     <Layout>
-      <div className="min-h-screen p-2">
+      <div className="min-h-screen p-2 mb-20">
         <div className="w-full max-w-5xl mx-auto rounded-lg">
-          <h2 className="text-3xl font-bold text-[#81059e] mb-6">RECEBIMENTOS PENDENTES</h2>
+          <div className="mb-4">
+            <h2 className="text-3xl font-bold text-[#81059e]">RECEBIMENTOS PENDENTES</h2>
+          </div>
 
-          {/* Barra de busca e filtro de loja */}
-          <div className="flex justify-between items-center mb-6 space-x-4">
-            <input
-              type="text"
-              placeholder="Busque por código ou cliente"
-              className="p-3 flex-grow border-2 border-[#81059e] rounded-lg text-black"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+          {/* Dashboard compacto com estatísticas essenciais */}
+          <div className="mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
+              {/* Card - Contas a Receber */}
+              <div className="border-2 rounded-lg p-4 border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                <div className="flex items-center justify-between mb-3">
+                  <FontAwesomeIcon
+                    icon={faFileInvoice}
+                    className="h-8 w-8 text-[#81059e] bg-purple-300 p-2 rounded-2xl"
+                  />
+                  <span className="text-lg font-medium text-gray-700 flex-grow ml-3">Contas a Receber</span>
+                </div>
+                <p className="text-2xl font-semibold text-center mt-2">{totalContas}</p>
+              </div>
 
-            {/* Filtro por loja */}
-            <select
-              value={selectedLoja}
-              onChange={(e) => setSelectedLoja(e.target.value)}
-              className="p-3 border-2 border-[#81059e] rounded-lg text-black"
-            >
-              {userPermissions?.isAdmin && <option value="Ambas">Ambas</option>}
-              {userPermissions?.lojas?.includes('loja1') && <option value="loja1">Loja 1</option>}
-              {userPermissions?.lojas?.includes('loja2') && <option value="loja2">Loja 2</option>}
-            </select>
+              {/* Card - Valor Total */}
+              <div className="border-2 rounded-lg p-4 border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                <div className="flex items-center justify-between mb-3">
+                  <FontAwesomeIcon
+                    icon={faDollarSign}
+                    className="h-8 w-8 text-[#81059e] bg-purple-300 p-2 rounded-2xl"
+                  />
+                  <span className="text-lg font-medium text-gray-700 flex-grow ml-3">Valor Total</span>
+                </div>
+                <p className="text-2xl font-semibold text-center mt-2">
+                  R$ {contas.reduce((total, conta) => total + parseFloat(conta.valor || 0), 0).toFixed(2)}
+                </p>
+              </div>
 
-            <Link href="/finance/add-receive">
-              <button className="bg-[#81059e] text-white py-2 px-6 rounded-md">
-                Adicionar
+              {/* Card - Vencidas */}
+              <div className="border-2 rounded-lg p-4 border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                <div className="flex items-center justify-between mb-3">
+                  <FontAwesomeIcon
+                    icon={faClock}
+                    className="h-8 w-8 text-[#81059e] bg-purple-300 p-2 rounded-2xl"
+                  />
+                  <span className="text-lg font-medium text-gray-700 flex-grow ml-3">Vencidas</span>
+                </div>
+                <p className="text-2xl font-semibold text-center mt-2">
+                  {contas.filter(conta => {
+                    const now = new Date();
+                    const dueDate = conta.dataCobranca?.seconds
+                      ? new Date(conta.dataCobranca.seconds * 1000)
+                      : new Date(conta.dataCobranca);
+                    return dueDate < now;
+                  }).length}
+                </p>
+                <p className="text-sm text-gray-500 text-center mt-1">
+                  Estimativa de Perda:
+                  <span className="whitespace-nowrap"> R$ {contas.filter(conta => {
+                    const now = new Date();
+                    const dueDate = conta.dataCobranca?.seconds
+                      ? new Date(conta.dataCobranca.seconds * 1000)
+                      : new Date(conta.dataCobranca);
+                    return dueDate < now;
+                  }).reduce((total, conta) => total + parseFloat(conta.valor || 0), 0).toFixed(2)}</span>
+                </p>
+              </div>
+
+              {/* Card - Próximos 7 dias */}
+              <div className="border-2 rounded-lg p-4 border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                <div className="flex items-center justify-between mb-3">
+                  <FontAwesomeIcon
+                    icon={faExclamationTriangle}
+                    className="h-8 w-8 text-[#81059e] bg-purple-300 p-2 rounded-2xl"
+                  />
+                  <span className="text-lg font-medium text-gray-700 flex-grow ml-3">Próximos 7 dias</span>
+                </div>
+                <p className="text-2xl font-semibold text-center mt-2">
+                  {contas.filter(conta => {
+                    const now = new Date();
+                    const dueDate = conta.dataCobranca?.seconds
+                      ? new Date(conta.dataCobranca.seconds * 1000)
+                      : new Date(conta.dataCobranca);
+                    const diffTime = dueDate - now;
+                    return dueDate >= now && diffTime <= 7 * 24 * 60 * 60 * 1000;
+                  }).length}
+                </p>
+                <p className="text-sm text-gray-500 text-center mt-1">
+                  <span className="whitespace-nowrap">R$ {contas.filter(conta => {
+                    const now = new Date();
+                    const dueDate = conta.dataCobranca?.seconds
+                      ? new Date(conta.dataCobranca.seconds * 1000)
+                      : new Date(conta.dataCobranca);
+                    const diffTime = dueDate - now;
+                    return dueDate >= now && diffTime <= 7 * 24 * 60 * 60 * 1000;
+                  }).reduce((total, conta) => total + parseFloat(conta.valor || 0), 0).toFixed(2)}</span>
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Barra de busca e filtro de loja - MODIFICADA */}
+          <div className="flex flex-col md:flex-row justify-between items-center mb-4 space-y-3 md:space-y-0 md:space-x-3">
+            <div className="flex w-full md:w-auto space-x-2 items-center">
+              {/* Barra de busca reduzida */}
+              <input
+                type="text"
+                placeholder="Busque por código ou cliente"
+                className="p-2 h-10 w-full md:w-60 border-2 border-gray-200 rounded-lg text-black"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+
+              {/* Filtro por loja */}
+              <select
+                value={selectedLoja}
+                onChange={(e) => setSelectedLoja(e.target.value)}
+                className="p-2 h-10 border-2 border-gray-200 rounded-lg text-gray-400 w-32"
+              >
+                {userPermissions?.isAdmin && <option value="Ambas">Ambas</option>}
+                {userPermissions?.lojas?.includes('loja1') && <option value="loja1">Loja 1</option>}
+                {userPermissions?.lojas?.includes('loja2') && <option value="loja2">Loja 2</option>}
+              </select>
+
+              {/* Filtros de data */}
+              <div className="flex items-center space-x-2">
+                {/* Filtro de ano */}
+                <select
+                  value={yearFilter}
+                  onChange={(e) => setYearFilter(e.target.value)}
+                  className="p-2 h-10 border-2 border-gray-200 rounded-lg text-gray-800 w-24"
+                >
+                  {availableYears.map(year => (
+                    <option key={year} value={year}>{year}</option>
+                  ))}
+                </select>
+
+                {/* Filtro de mês */}
+                <select
+                  value={monthFilter}
+                  onChange={(e) => setMonthFilter(e.target.value)}
+                  className="p-2 h-10 border-2 border-gray-200 rounded-lg text-gray-800 w-32"
+                >
+                  {months.map(month => (
+                    <option key={month} value={month}>{month}</option>
+                  ))}
+                </select>
+
+                {/* Filtro de dia */}
+                <select
+                  value={dayFilter}
+                  onChange={(e) => setDayFilter(e.target.value)}
+                  className="p-2 h-10 border-2 border-gray-200 rounded-lg text-gray-800 w-20"
+                >
+                  {availableDays.map(day => (
+                    <option key={day} value={day}>{day}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Botão Adicionar (com ícone +) */}
+              <Link href="/finance/add-receive">
+                <button className="bg-green-500 text-white h-10 w-10 rounded-md flex items-center justify-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                </button>
+              </Link>
+
+              {/* Botão Excluir (com ícone de lixeira) */}
+              <button
+                onClick={handleDeleteSelected}
+                className="bg-red-600 text-white h-10 w-10 rounded-md flex items-center justify-center"
+                disabled={selectedForDeletion.length === 0}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
               </button>
-            </Link>
+            </div>
           </div>
 
           {/* Tabela de contas */}
@@ -270,40 +655,141 @@ export default function ListaRecebimentos() {
           ) : error ? (
             <p>{error}</p>
           ) : (
-            <div className="w-full">
+            <div className="w-full overflow-x-auto">
               {filteredContas.length === 0 ? (
                 <p>Nenhuma conta encontrada.</p>
               ) : (
-                <table className="min-w-full table-auto">
-                  <thead>
-                    <tr className="bg-[#81059e] text-white">
-                      <th className="px-4 py-2">Código</th>
-                      <th className="px-4 py-2">Cliente</th>
-                      <th className="px-4 py-2">Valor</th>
-                      <th className="px-4 py-2">Registro</th>
-                      <th className="px-4 py-2">Cobrança</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredContas.map((conta) => (
-                      <tr
-                        key={conta.id}
-                        className="text-black text-left hover:bg-gray-100 cursor-pointer"
-                        onClick={() => openModal(conta)}
+                <>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full table-auto select-none">
+                      <thead>
+                        <tr className="bg-[#81059e] text-white">
+                          <th className="px-3 py-2 w-12">
+                            <span className="sr-only">Selecionar</span>
+                          </th>
+                          <th className="px-3 py-2 cursor-pointer whitespace-nowrap" onClick={() => handleSort('numeroDocumento')}>
+                            Código {renderSortArrow('numeroDocumento')}
+                          </th>
+                          <th className="px-3 py-2 cursor-pointer" onClick={() => handleSort('cliente')}>
+                            Cliente {renderSortArrow('cliente')}
+                          </th>
+                          <th className="px-3 py-2 cursor-pointer" onClick={() => handleSort('valor')}>
+                            Valor {renderSortArrow('valor')}
+                          </th>
+                          <th className="px-3 py-2 cursor-pointer whitespace-nowrap" onClick={() => handleSort('dataRegistro')}>
+                            Registro {renderSortArrow('dataRegistro')}
+                          </th>
+                          <th className="px-3 py-2 cursor-pointer whitespace-nowrap" onClick={() => handleSort('dataCobranca')}>
+                            Cobrança {renderSortArrow('dataCobranca')}
+                          </th>
+                          <th className="px-3 py-2 cursor-pointer whitespace-nowrap" onClick={() => handleSort('valorPago')}>
+                            Total Pago {renderSortArrow('valorPago')}
+                          </th>
+                          <th className="px-3 py-2 cursor-pointer" onClick={() => handleSort('juros')}>
+                            Juros {renderSortArrow('juros')}
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {currentContas.map((conta) => (
+                          <tr
+                            key={conta.id}
+                            className="text-black text-left hover:bg-gray-100 cursor-pointer"
+                          >
+                            <td className="border px-2 py-2 text-center">
+                              <input
+                                type="checkbox"
+                                checked={selectedForDeletion.includes(conta.id)}
+                                onChange={(e) => toggleDeletion(e, conta.id)}
+                                className="h-4 w-4 cursor-pointer"
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                            </td>
+                            <td className="border px-3 py-2 whitespace-nowrap" onClick={() => openModal(conta)}>
+                              {conta.numeroDocumento || 'N/A'}
+                            </td>
+                            <td className="border px-4 py-2 max-w-[300px] truncate" onClick={() => openModal(conta)}>
+                              {conta.cliente || 'N/A'}
+                            </td>
+                            <td className="border px-3 py-2 whitespace-nowrap" onClick={() => openModal(conta)}>
+                              R$ {parseFloat(conta.valor || 0).toFixed(2)}
+                            </td>
+                            <td className="border px-3 py-2 whitespace-nowrap" onClick={() => openModal(conta)}>
+                              {formatFirestoreDate(conta.dataRegistro)}
+                            </td>
+                            <td className={`border px-3 py-2 whitespace-nowrap ${getStatusColor(conta.dataCobranca)}`} onClick={() => openModal(conta)}>
+                              {formatFirestoreDate(conta.dataCobranca)}
+                            </td>
+                            <td className="border px-3 py-2 whitespace-nowrap" onClick={() => openModal(conta)}>
+                              R$ {parseFloat(conta.valorPago || 0).toFixed(2)}
+                            </td>
+                            <td className="border px-3 py-2 whitespace-nowrap" onClick={() => openModal(conta)}>
+                              R$ {parseFloat(conta.juros || 0).toFixed(2)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Paginação */}
+                  <div className="flex items-center justify-between mt-4">
+                    <div className="text-sm text-gray-700">
+                      Mostrando <span className="font-medium">{indexOfFirstItem + 1}</span> a{' '}
+                      <span className="font-medium">
+                        {Math.min(indexOfLastItem, filteredContas.length)}
+                      </span>{' '}
+                      de <span className="font-medium">{filteredContas.length}</span> registros
+                    </div>
+                    <div className="flex space-x-1">
+                      <button
+                        onClick={() => goToPage(1)}
+                        disabled={currentPage === 1}
+                        className={`px-3 py-1 rounded ${currentPage === 1
+                          ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                          : 'bg-[#81059e] text-white hover:bg-[#690480]'
+                          }`}
                       >
-                        <td className="border px-4 py-2">{conta.numeroDocumento || 'N/A'}</td>
-                        <td className="border px-4 py-2">{conta.cliente || 'N/A'}</td>
-                        <td className="border px-4 py-2">
-                          R$ {parseFloat(conta.valor || 0).toFixed(2)}
-                        </td>
-                        <td className="border px-4 py-2">{formatFirestoreDate(conta.dataRegistro)}</td>
-                        <td className={`border px-4 py-2 ${getStatusColor(conta.dataCobranca)}`}>
-                          {formatFirestoreDate(conta.dataCobranca)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                        &laquo;
+                      </button>
+                      <button
+                        onClick={() => goToPage(currentPage - 1)}
+                        disabled={currentPage === 1}
+                        className={`px-3 py-1 rounded ${currentPage === 1
+                          ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                          : 'bg-[#81059e] text-white hover:bg-[#690480]'
+                          }`}
+                      >
+                        &lt;
+                      </button>
+
+                      <span className="px-3 py-1 text-gray-700">
+                        {currentPage} / {totalPages}
+                      </span>
+
+                      <button
+                        onClick={() => goToPage(currentPage + 1)}
+                        disabled={currentPage === totalPages}
+                        className={`px-3 py-1 rounded ${currentPage === totalPages
+                          ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                          : 'bg-[#81059e] text-white hover:bg-[#690480]'
+                          }`}
+                      >
+                        &gt;
+                      </button>
+                      <button
+                        onClick={() => goToPage(totalPages)}
+                        disabled={currentPage === totalPages}
+                        className={`px-3 py-1 rounded ${currentPage === totalPages
+                          ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                          : 'bg-[#81059e] text-white hover:bg-[#690480]'
+                          }`}
+                      >
+                        &raquo;
+                      </button>
+                    </div>
+                  </div>
+                </>
               )}
             </div>
           )}
@@ -311,7 +797,7 @@ export default function ListaRecebimentos() {
           {/* Modal para detalhes da conta */}
           {isModalOpen && selectedConta && (
             <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-              <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md relative text-black">
+              <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md relative text-black overflow-y-auto max-h-[90vh]">
                 <h3 className="text-xl font-bold text-[#81059e] mb-4">
                   Detalhes da Conta a Receber
                 </h3>
@@ -333,7 +819,23 @@ export default function ListaRecebimentos() {
                   {formatFirestoreDate(selectedConta.dataCobranca)}
                 </p>
                 <p>
+                  <strong>Data de Pagamento:</strong>{' '}
+                  {formatFirestoreDate(selectedConta.dataPagamento) || 'Pendente'}
+                </p>
+                <p>
                   <strong>Loja:</strong> {selectedConta.loja || 'Não especificada'}
+                </p>
+                <p>
+                  <strong>Origem:</strong> {selectedConta.origem || 'N/A'}
+                </p>
+                <p>
+                  <strong>Parcela:</strong> {selectedConta.parcela || 'N/A'}
+                </p>
+                <p>
+                  <strong>Total Pago:</strong> R$ {parseFloat(selectedConta.valorPago || 0).toFixed(2)}
+                </p>
+                <p>
+                  <strong>Juros:</strong> R$ {parseFloat(selectedConta.juros || 0).toFixed(2)}
                 </p>
                 {selectedConta.observacoes && (
                   <p>
@@ -370,22 +872,18 @@ export default function ListaRecebimentos() {
                     onClick={generatePDF}
                     className="bg-[#81059e] text-white px-4 py-2 rounded-md flex items-center"
                   >
-                    <img
-                      src="/images/pdf.png"
-                      alt="PDF"
-                      className="h-6 w-6 mr-2"
-                    />
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                    </svg>
                     Ver PDF
                   </button>
                   <button
                     onClick={handlePrint}
                     className="bg-[#81059e] text-white px-4 py-2 rounded-md flex items-center"
                   >
-                    <img
-                      src="/images/print.png"
-                      alt="Imprimir"
-                      className="h-6 w-6 mr-2"
-                    />
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                    </svg>
                     Imprimir
                   </button>
                 </div>
