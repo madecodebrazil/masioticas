@@ -137,7 +137,7 @@ export default function SidebarHomepage({ userPhotoURL, userData, userPermission
             <aside className="w-[250px] h-full text-white flex-col items-center p-4 hidden md:flex">
                 <Link href="/homepage">
                     <Image
-                        src="/images/logomasi_branca.png"
+                        src="/images/masioticas.png"
                         alt="Logo Masi Eyewear"
                         width={120}
                         height={60}

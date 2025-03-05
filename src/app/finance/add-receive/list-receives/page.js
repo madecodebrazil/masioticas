@@ -8,9 +8,10 @@ import {
   faFileInvoice,
   faDollarSign,
   faClock,
-  faExclamationTriangle
+  faExclamationTriangle,
+  faFilter
 } from '@fortawesome/free-solid-svg-icons';
-import { collection, getDocs, doc, setDoc, deleteDoc, Timestamp } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, deleteDoc } from 'firebase/firestore';
 import { useAuth } from '@/hooks/useAuth';
 import { firestore } from '../../../../lib/firebaseConfig';
 import jsPDF from 'jspdf';
@@ -25,29 +26,23 @@ export default function ListaRecebimentos() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [totalContas, setTotalContas] = useState(0); // Estado para armazenar o total de contas
-
-  // Estados para a forma de recebimento e mensagem de sucesso
+  const [totalContas, setTotalContas] = useState(0);
   const [formaRecebimento, setFormaRecebimento] = useState('');
   const [settleMessage, setSettleMessage] = useState('');
-
-  // Estado para marcar contas para exclusão
   const [selectedForDeletion, setSelectedForDeletion] = useState([]);
-
-  // Estados para ordenação
   const [sortField, setSortField] = useState('dataCobranca');
   const [sortDirection, setSortDirection] = useState('asc');
   const [yearFilter, setYearFilter] = useState('Todos');
   const [monthFilter, setMonthFilter] = useState('Todos');
   const [dayFilter, setDayFilter] = useState('Todos');
-
-  // Anos disponíveis para filtro (dinâmico, baseado nos dados)
   const [availableYears, setAvailableYears] = useState(['Todos']);
-  // Meses disponíveis (fixo)
-  const months = ['Todos', 'Janeiro', 'Fevereiro', 'Marco', 'Abril', 'Maio', 'Junho', 
+  const months = ['Todos', 'Janeiro', 'Fevereiro', 'Marco', 'Abril', 'Maio', 'Junho',
     'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
-  // Dias disponíveis (1-31)
   const [availableDays, setAvailableDays] = useState(['Todos']);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(15);
+  // Estado para o dropdown de filtros
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
 
   useEffect(() => {
     const fetchContas = async () => {
@@ -129,6 +124,7 @@ export default function ListaRecebimentos() {
       setAvailableDays(days);
     }
   }, [contas]);
+
 
   // Função para filtrar contas com base na busca e loja
   useEffect(() => {
@@ -453,9 +449,6 @@ export default function ListaRecebimentos() {
     }
   };
 
-  // Estados para paginação
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(15);
 
   // Calcular contas para a página atual
   const indexOfLastItem = currentPage * itemsPerPage;
@@ -468,9 +461,133 @@ export default function ListaRecebimentos() {
     setCurrentPage(Math.max(1, Math.min(pageNumber, totalPages)));
   };
 
+  useEffect(() => {
+    if (showFilterDropdown) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [showFilterDropdown]);
+
+
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      const dropdownElement = document.getElementById('filter-dropdown');
+      const filterToggleElement = document.querySelector('button[data-filter-toggle="true"]');
+
+      if (showFilterDropdown &&
+        dropdownElement &&
+        !dropdownElement.contains(event.target) &&
+        filterToggleElement &&
+        !filterToggleElement.contains(event.target)) {
+        setShowFilterDropdown(false);
+      }
+    };
+
+    // Adicionar manipulador de cliques
+    document.addEventListener('mousedown', handleClickOutside);
+
+    // Adicionar manipulador para fechar ao pressionar ESC
+    const handleEscKey = (event) => {
+      if (event.key === 'Escape' && showFilterDropdown) {
+        setShowFilterDropdown(false);
+      }
+    };
+
+    document.addEventListener('keydown', handleEscKey);
+
+    // Limpar os event listeners ao desmontar o componente
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscKey);
+    };
+  }, [showFilterDropdown]);
+
+  const FilterActiveBadges = () => {
+    const activeFilters = [];
+
+    if (yearFilter !== 'Todos') {
+      activeFilters.push({ type: 'Ano', value: yearFilter });
+    }
+
+    if (monthFilter !== 'Todos') {
+      // Exibir o nome do mês em vez do índice
+      activeFilters.push({ type: 'Mês', value: monthFilter });
+    }
+
+    if (dayFilter !== 'Todos') {
+      activeFilters.push({ type: 'Dia', value: dayFilter });
+    }
+
+    if (activeFilters.length === 0) return null;
+
+    const handleRemoveFilter = (filterType) => {
+      switch (filterType) {
+        case 'Ano':
+          setYearFilter('Todos');
+          break;
+        case 'Mês':
+          setMonthFilter('Todos');
+          break;
+        case 'Dia':
+          setDayFilter('Todos');
+          break;
+        default:
+          break;
+      }
+    };
+
+    const handleClearAll = () => {
+      setYearFilter('Todos');
+      setMonthFilter('Todos');
+      setDayFilter('Todos');
+    };
+
+
+    return (
+      <div className="flex flex-wrap gap-1 mt-2">
+        {activeFilters.map((filter, index) => (
+          <span
+            key={index}
+            className="inline-flex items-center px-2 py-1 rounded text-xs bg-purple-100 text-[#81059e]"
+          >
+            <span>{filter.type}: {filter.value}</span>
+            <button
+              className="ml-1 text-[#81059e] hover:text-[#690480]"
+              onClick={() => {
+                if (filter.type === 'Ano') setYearFilter('Todos');
+                if (filter.type === 'Mês') setMonthFilter('Todos');
+                if (filter.type === 'Dia') setDayFilter('Todos');
+              }}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+              </svg>
+            </button>
+          </span>
+        ))}
+        <button
+          className="text-xs text-[#81059e] hover:underline px-2 py-1"
+          onClick={() => {
+            setYearFilter('Todos');
+            setMonthFilter('Todos');
+            setDayFilter('Todos');
+          }}
+        >
+          Limpar todos
+        </button>
+      </div>
+    );
+  };
+
   return (
     <Layout>
-      <div className="min-h-screen p-2 mb-20">
+      <div className="min-h-screen p-0 md:p-2 mb-20">
         <div className="w-full max-w-5xl mx-auto rounded-lg">
           <div className="mb-4">
             <h2 className="text-3xl font-bold text-[#81059e]">RECEBIMENTOS PENDENTES</h2>
@@ -568,86 +685,147 @@ export default function ListaRecebimentos() {
             </div>
           </div>
 
-          {/* Barra de busca e filtro de loja - MODIFICADA */}
-          <div className="flex flex-col md:flex-row justify-between items-center mb-4 space-y-3 md:space-y-0 md:space-x-3">
-            <div className="flex w-full md:w-auto space-x-2 items-center">
-              {/* Barra de busca reduzida */}
-              <input
-                type="text"
-                placeholder="Busque por código ou cliente"
-                className="p-2 h-10 w-full md:w-60 border-2 border-gray-200 rounded-lg text-black"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
+          {/* Barra de busca e filtros com dropdown */}
+          <div className="flex flex-wrap gap-2 items-center mb-4">
+            {/* Barra de busca */}
+            <input
+              type="text"
+              placeholder="Busque por código ou cliente"
+              className="p-2 h-10 flex-grow min-w-[200px] border-2 border-gray-200 rounded-lg text-black"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
 
-              {/* Filtro por loja */}
-              <select
-                value={selectedLoja}
-                onChange={(e) => setSelectedLoja(e.target.value)}
-                className="p-2 h-10 border-2 border-gray-200 rounded-lg text-gray-400 w-32"
+            {/* Filtro por loja */}
+            <select
+              value={selectedLoja}
+              onChange={(e) => setSelectedLoja(e.target.value)}
+              className="p-2 h-10 border-2 border-gray-200 rounded-lg text-gray-800 w-24"
+            >
+              {userPermissions?.isAdmin && <option value="Ambas">Ambas</option>}
+              {userPermissions?.lojas?.includes('loja1') && <option value="loja1">Loja 1</option>}
+              {userPermissions?.lojas?.includes('loja2') && <option value="loja2">Loja 2</option>}
+            </select>
+
+            {/* Dropdown de filtros de data */}
+            <div className="relative">
+              <button
+                data-filter-toggle="true"
+                onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+                className="p-2 h-10 border-2 border-gray-200 rounded-lg bg-white flex items-center gap-1 text-[#81059e]"
               >
-                {userPermissions?.isAdmin && <option value="Ambas">Ambas</option>}
-                {userPermissions?.lojas?.includes('loja1') && <option value="loja1">Loja 1</option>}
-                {userPermissions?.lojas?.includes('loja2') && <option value="loja2">Loja 2</option>}
-              </select>
+                <FontAwesomeIcon icon={faFilter} className="h-4 w-4" />
+                <span className="hidden sm:inline">Filtrar</span>
+                {(yearFilter !== 'Todos' || monthFilter !== 'Todos' || dayFilter !== 'Todos') && (
+                  <span className="ml-1 bg-[#81059e] text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
+                    {(yearFilter !== 'Todos' ? 1 : 0) + (monthFilter !== 'Todos' ? 1 : 0) + (dayFilter !== 'Todos' ? 1 : 0)}
+                  </span>
+                )}
+              </button>
 
-              {/* Filtros de data */}
-              <div className="flex items-center space-x-2">
-                {/* Filtro de ano */}
-                <select
-                  value={yearFilter}
-                  onChange={(e) => setYearFilter(e.target.value)}
-                  className="p-2 h-10 border-2 border-gray-200 rounded-lg text-gray-800 w-24"
+              {showFilterDropdown && (
+                <div
+                  id="filter-dropdown"
+                  className="fixed z-30 inset-x-4 top-24 sm:absolute sm:inset-x-auto sm:top-full sm:right-0 sm:mt-1 bg-white shadow-lg rounded-lg border p-4 w-auto sm:w-64 max-w-[calc(100vw-32px)] max-h-[80vh] overflow-y-auto"
                 >
-                  {availableYears.map(year => (
-                    <option key={year} value={year}>{year}</option>
-                  ))}
-                </select>
+                  <div className="flex justify-between items-center mb-2">
+                    <h3 className="text-sm font-semibold text-gray-700">Filtros de Data</h3>
+                    <button
+                      onClick={() => {
+                        setYearFilter('Todos');
+                        setMonthFilter('Todos');
+                        setDayFilter('Todos');
+                      }}
+                      className="text-xs text-[#81059e] hover:underline"
+                    >
+                      Limpar Filtros
+                    </button>
+                  </div>
 
-                {/* Filtro de mês */}
-                <select
-                  value={monthFilter}
-                  onChange={(e) => setMonthFilter(e.target.value)}
-                  className="p-2 h-10 border-2 border-gray-200 rounded-lg text-gray-800 w-32"
-                >
-                  {months.map(month => (
-                    <option key={month} value={month}>{month}</option>
-                  ))}
-                </select>
+                  <div className="space-y-3">
+                    {/* Filtro de ano */}
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">Ano</label>
+                      <select
+                        value={yearFilter}
+                        onChange={(e) => setYearFilter(e.target.value)}
+                        className="p-2 h-9 w-full border border-gray-200 rounded-lg text-gray-800 text-sm"
+                      >
+                        {availableYears.map(year => (
+                          <option key={year} value={year}>{year}</option>
+                        ))}
+                      </select>
+                    </div>
 
-                {/* Filtro de dia */}
-                <select
-                  value={dayFilter}
-                  onChange={(e) => setDayFilter(e.target.value)}
-                  className="p-2 h-10 border-2 border-gray-200 rounded-lg text-gray-800 w-20"
-                >
-                  {availableDays.map(day => (
-                    <option key={day} value={day}>{day}</option>
-                  ))}
-                </select>
-              </div>
+                    {/* Filtro de mês */}
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">Mês</label>
+                      <select
+                        value={monthFilter}
+                        onChange={(e) => setMonthFilter(e.target.value)}
+                        className="p-2 h-9 w-full border border-gray-200 rounded-lg text-gray-800 text-sm"
+                      >
+                        {months.map(month => (
+                          <option key={month} value={month}>{month}</option>
+                        ))}
+                      </select>
+                    </div>
 
-              {/* Botão Adicionar (com ícone +) */}
+                    {/* Filtro de dia */}
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">Dia</label>
+                      <select
+                        value={dayFilter}
+                        onChange={(e) => setDayFilter(e.target.value)}
+                        className="p-2 h-9 w-full border border-gray-200 rounded-lg text-gray-800 text-sm"
+                      >
+                        {availableDays.map(day => (
+                          <option key={day} value={day}>{day}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="pt-2">
+                      <button
+                        onClick={() => setShowFilterDropdown(false)}
+                        className="w-full bg-[#81059e] text-white rounded-lg p-2 text-sm hover:bg-[#690480]"
+                      >
+                        Fechar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Botões de ação */}
+            <div className="flex gap-2">
+              {/* Botão Adicionar */}
               <Link href="/finance/add-receive">
-                <button className="bg-green-500 text-white h-10 w-10 rounded-md flex items-center justify-center">
+                <button className="bg-green-400 text-white h-10 w-10 rounded-md flex items-center justify-center">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                   </svg>
                 </button>
               </Link>
 
-              {/* Botão Excluir (com ícone de lixeira) */}
+              {/* Botão Excluir */}
               <button
                 onClick={handleDeleteSelected}
-                className="bg-red-600 text-white h-10 w-10 rounded-md flex items-center justify-center"
+                className={`${selectedForDeletion.length === 0 ? 'bg-red-400' : 'bg-red-400'} text-white h-10 w-10 rounded-md flex items-center justify-center`}
                 disabled={selectedForDeletion.length === 0}
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                 </svg>
               </button>
+
             </div>
           </div>
+
+          <FilterActiveBadges />
+
+
 
           {/* Tabela de contas */}
           {loading ? (

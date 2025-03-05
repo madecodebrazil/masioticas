@@ -112,7 +112,7 @@ const Sidebar = ({ showSidebar, hideSidebar }) => {
           <div className="px-6 py-4 flex justify-between items-center">
             <Link href="/homepage" className="flex items-center">
               <Image
-                src="/images/logomasi_branca.png"
+                src="/images/masioticas.png"
                 alt="Logo Masi"
                 width={120}
                 height={60}
