@@ -58,7 +58,6 @@ export default function ProductsPage() {
                             </motion.div>
                         </Link>
                     ))}
-                    <BottomMobileNav />
                 </div>
             </div>
         </Layout>

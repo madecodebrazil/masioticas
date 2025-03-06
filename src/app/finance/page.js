@@ -79,7 +79,7 @@ export default function FinancesPage() {
                     <main>
                         <div className="w-full">
                             <div className="grid items-center grid-cols-1 gap-8 sm:grid-cols-3 md:grid-cols-1 lg:grid-cols-5 xl:grid-cols-2  mb-20 md:mb-0">
-                            <h1 className='text-4xl ml-0 md:ml-4 font-bold text-[#9a5fc7] text-center md:text-left'>Financeiro</h1>
+                                <h1 className='text-4xl ml-0 md:ml-4 font-bold text-[#9a5fc7] text-center md:text-left'>Financeiro</h1>
                                 {productsItems.map((item, index) => (
                                     <div
                                         key={index}
@@ -96,7 +96,7 @@ export default function FinancesPage() {
                                             animate={{ opacity: 1, scale: 1 }}
                                             transition={{ duration: 0.5, delay: index * 0.1 }}
                                         >
-                                            
+
                                             <div
                                                 className="absolute inset-0 opacity-10 pointer-events-none"
                                                 style={{
@@ -124,10 +124,7 @@ export default function FinancesPage() {
                             </div>
                         </div>
                     </main>
-                </div>
-
-                <BottomMobileNav />
-
+                </div>  
                 <ContasPagarModal
                     isOpen={isContasPagarOpen}
                     onClose={() => setIsContasPagarOpen(false)}

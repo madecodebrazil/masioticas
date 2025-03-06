@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { collection, getDocs } from "firebase/firestore";
-import { firestore } from "../../../lib/firebaseConfig";
+import { firestore } from "../../lib/firebaseConfig";
 import Layout from "@/components/Layout";
 import { formatCurrency } from "@/components/formatCurrency";
 import Link from "next/link";

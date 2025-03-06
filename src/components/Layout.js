@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { usePathname, useRouter } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
 import MobileNavSidebar from '@/components/MB_NavSidebar';
+import BottomMobileNav from '@/components/MB_BottomNav';
 import Image from 'next/image';
 
 const Layout = ({ children }) => {
@@ -90,6 +91,7 @@ const Layout = ({ children }) => {
                         `}>
                             {children}
                         </main>
+                        <BottomMobileNav/>
                     </div>
                 </div>
             </div>

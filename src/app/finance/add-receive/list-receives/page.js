@@ -590,7 +590,7 @@ export default function ListaRecebimentos() {
       <div className="min-h-screen p-0 md:p-2 mb-20">
         <div className="w-full max-w-5xl mx-auto rounded-lg">
           <div className="mb-4">
-            <h2 className="text-3xl font-bold text-[#81059e]">RECEBIMENTOS PENDENTES</h2>
+            <h2 className="text-3xl font-bold text-[#81059e] mb-8 mt-8">RECEBIMENTOS PENDENTES</h2>
           </div>
 
           {/* Dashboard compacto com estatísticas essenciais */}

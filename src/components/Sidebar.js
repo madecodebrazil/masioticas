@@ -67,7 +67,7 @@ const Sidebar = ({ showSidebar, hideSidebar }) => {
 
   const menuItems = [
     { icon: Wallet, label: "Financeiro", route: "/finance" },
-    { icon: ShoppingCart, label: "Vendas", route: "/commercial/sales" },
+    { icon: ShoppingCart, label: "Vendas", route: "/sales" },
     { icon: Package, label: "Estoque", route: "/stock" },
     { icon: Wrench, label: "Serviços", route: "/products_and_services" },
     { icon: FileText, label: "Cadastro", route: "/register" },

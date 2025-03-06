@@ -6,14 +6,45 @@ import { collection, getDocs, addDoc, getDoc, Timestamp, doc, setDoc } from 'fir
 import { firestore } from '../../../lib/firebaseConfig';
 import { useAuth } from '@/hooks/useAuth';
 import DatePicker from 'react-datepicker';
-import InputMask from 'react-input-mask';
 import "react-datepicker/dist/react-datepicker.css";
 import Link from 'next/link';
-import ConfirmationModal from '../../../components/ConfirmationModal';
+import ConfirmationModal from '../../../components/ConfirmationModalPay.js';
+import { FiCalendar, FiDollarSign, FiTag, FiFileText, FiUser, FiCreditCard, FiMapPin, FiLayers, FiTrendingUp, FiHome } from 'react-icons/fi';
 
 export default function ContasPagar() {
   const { userPermissions, userData } = useAuth();
   const [selectedLoja, setSelectedLoja] = useState(null);
+
+  // Estado do formulário com todos os campos necessários para contas a pagar
+  const [formData, setFormData] = useState({
+    credor: '',
+    documentoCredor: '',
+    documento: '',
+    parcela: '',
+    tipoCobranca: '',
+    origem: '',
+    valor: '',
+    taxaJuros: '',
+    dataEntrada: '',
+    horaEntrada: '',
+    dataVencimento: '',
+    horaVencimento: '',
+    localPagamento: '', // Local de pagamento
+    categoriaDespesa: '', // Categoria de despesa (equivalente a "Conta" na imagem)
+    contaBancaria: '', // Conta bancária para pagamento
+    lancamentoNoCaixa: '', // Lançamento no caixa
+    parcelaAtual: '1', // Parcela atual
+    totalParcelas: '1', // Total de parcelas
+    dispensarJuros: false,
+    observacoes: ''
+  });
+
+  const [credores, setCredores] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [numeroParcelas, setNumeroParcelas] = useState('1');
+  const [taxaJuros, setTaxaJuros] = useState('0,00');
+  const [isLoading, setIsLoading] = useState(false);
 
   // Definir loja inicial baseado nas permissões
   useEffect(() => {
@@ -29,47 +60,9 @@ export default function ContasPagar() {
     }
   }, [userPermissions]);
 
-  const [formData, setFormData] = useState({
-    credor: '',
-    cpfCredor: '',
-    documento: '',
-    parcela: '',
-    tipoCobranca: '',
-    origem: '',
-    valor: '',
-    taxaJuros: '',
-    dataEntrada: '',
-    horaEntrada: '',
-    dataVencimento: '',
-    horaVencimento: '',
-    localCobranca: '',
-    contaLancamentoCaixa: '',
-    dispensarJuros: false,
-    observacoes: ''
-  });
-
-  const [credores, setCredores] = useState([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [numeroParcelas, setNumeroParcelas] = useState('1');
-  const [taxaJuros, setTaxaJuros] = useState('0,00');
-
-  const calcularValorParcela = () => {
-    const parcelas = parseInt(numeroParcelas) || 1;
-    const jurosMensal = parseFloat(taxaJuros.replace(',', '.')) / 100;
-
-    if (jurosMensal === 0) {
-      return (valorTotal / parcelas).toFixed(2);
-    }
-
-    // Fórmula de parcelamento com juros compostos
-    const valorParcela = valorTotal * (jurosMensal / (1 - Math.pow(1 + jurosMensal, -parcelas)));
-    return valorParcela.toFixed(2);
-  };
-
-
   const fetchCredores = async () => {
     if (!searchTerm.trim() || !selectedLoja) return setCredores([]);
+    setIsLoading(true);
     try {
       // Busca credores da loja selecionada
       const querySnapshot = await getDocs(collection(firestore, `lojas/${selectedLoja}/clientes`));
@@ -82,6 +75,8 @@ export default function ContasPagar() {
       setCredores(filtered);
     } catch (error) {
       console.error("Erro ao buscar credores:", error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -100,8 +95,12 @@ export default function ContasPagar() {
   };
 
   const handleCredorSelect = (credor) => {
-    setFormData(prev => ({ ...prev, credor: credor.nome, cpfCredor: credor.cpf }));
-    setSearchTerm(credor.nome); // Define o termo de busca como o nome selecionado
+    setFormData(prev => ({
+      ...prev,
+      credor: credor.nome,
+      documentoCredor: credor.cnpj || credor.cpf // Aceita CNPJ ou CPF
+    }));
+    setSearchTerm(credor.nome);
     setCredores([]);
   };
 
@@ -110,21 +109,52 @@ export default function ContasPagar() {
     setIsModalOpen(true);
   };
 
+  const handleDocumentoChange = (e) => {
+    // Remove qualquer caractere que não seja número
+    const numeroApenas = e.target.value.replace(/\D/g, '');
+
+    setFormData(prev => ({ ...prev, documento: numeroApenas }));
+  };
+
+  // Modificar a função handleClear para incluir os novos campos
+  // Na função handleClear
   const handleClear = () => {
     setFormData({
-      credor: '', cpfCredor: '', loja: 'Óticas Popular 1', documento: '', parcela: '', tipoCobranca: '',
-      origem: '', valor: '', taxaJuros: '', dataEntrada: '', horaEntrada: '', dataVencimento: '',
-      horaVencimento: '', localCobranca: '', contaLancamentoCaixa: '', dispensarJuros: false, observacoes: ''
+      credor: '',
+      documentoCredor: '',
+      documento: '',
+      parcela: '',
+      tipoCobranca: '',
+      origem: '',
+      valor: '',
+      taxaJuros: '',
+      dataEntrada: '',
+      horaEntrada: '',
+      dataVencimento: '',
+      horaVencimento: '',
+      localPagamento: '',
+      categoriaDespesa: '',
+      contaBancaria: '',
+      lancamentoNoCaixa: '',
+      parcelaAtual: '1',
+      totalParcelas: '1',
+      dispensarJuros: false,
+      observacoes: ''
     });
     setSearchTerm('');
     setCredores([]);
+    setNumeroParcelas('1');
+    setTaxaJuros('0,00');
   };
 
+  // Adicionando ao handleConfirm para salvar os novos campos
   const handleConfirm = async () => {
     if (!selectedLoja) {
       alert("Selecione uma loja primeiro!");
       return;
     }
+
+    setIsLoading(true);
 
     try {
       // Converter valor de string formatada para number 
@@ -137,22 +167,30 @@ export default function ContasPagar() {
       // Converter taxa de juros para número 
       const taxaJurosNumerica = formData.taxaJuros ? parseFloat(formData.taxaJuros) : 0;
 
+      // Formatar parcelas no formato X/Y
+      const formatoParcela = formData.parcelaAtual && formData.totalParcelas ?
+        `${formData.parcelaAtual.padStart(2, '0')}/${formData.totalParcelas.padStart(2, '0')}` : '';
+
       // Preparar os dados para salvar 
       const contaData = {
         credor: formData.credor,
-        cpfCredor: formData.cpfCredor,
+        cpfCredor: formData.documentoCredor,
         documento: formData.documento || '',
-        parcela: formData.parcela || '',
+        parcela: formatoParcela,
         tipoCobranca: formData.tipoCobranca || '',
         origem: formData.origem || '',
         valor: valorNumerico,
         taxaJuros: taxaJurosNumerica,
-        dataEntrada: Timestamp.now(),
+        dataEntrada: formData.dataEntrada
+          ? Timestamp.fromDate(formData.dataEntrada)
+          : null,
         dataVencimento: formData.dataVencimento
           ? Timestamp.fromDate(formData.dataVencimento)
           : null,
-        localCobranca: formData.localCobranca || '',
-        contaLancamentoCaixa: formData.contaLancamentoCaixa || '',
+        localPagamento: formData.localPagamento || '',
+        categoriaDespesa: formData.categoriaDespesa || '',
+        contaBancaria: formData.contaBancaria || '',
+        lancamentoNoCaixa: formData.lancamentoNoCaixa || '',
         dispensarJuros: formData.dispensarJuros || false,
         observacoes: formData.observacoes || '',
         status: 'pendente',
@@ -185,38 +223,50 @@ export default function ContasPagar() {
     } catch (error) {
       console.error("Erro ao registrar conta a pagar:", error);
       alert("Erro ao registrar a conta. Tente novamente.");
+    } finally {
+      setIsLoading(false);
     }
+  };
+
+  const renderLojaName = (lojaId) => {
+    const lojaNames = {
+      'loja1': 'Loja 1 - Centro',
+      'loja2': 'Loja 2 - Caramuru'
+    };
+
+    return lojaNames[lojaId] || lojaId;
   };
 
   return (
     <Layout>
-      <div className="min-h-screen p-2">
+      <div className="min-h-screen">
         <div className="w-full max-w-5xl mx-auto rounded-lg">
-          <h2 className="text-3xl font-bold text-[#81059e] mb-8">ADICIONAR CONTAS A PAGAR</h2>
+          <h2 className="text-3xl font-bold text-[#81059e] mb-8 mt-8">CONTAS A PAGAR</h2>
 
           {/* Seletor de Loja para Admins */}
           {userPermissions?.isAdmin && (
             <div className="mb-6">
-              <label className="text-[#81059e] font-medium">Selecionar Loja</label>
+              <label className="text-[#81059e] font-medium flex items-center gap-2">
+                <FiHome /> Selecionar Loja
+              </label>
               <select
                 value={selectedLoja || ''}
                 onChange={(e) => setSelectedLoja(e.target.value)}
-                className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black ml-2"
+                className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black mt-1"
               >
                 <option value="">Selecione uma loja</option>
                 {userPermissions.lojas.map((loja) => (
                   <option key={loja} value={loja}>
-                    {loja === 'loja1' ? 'Loja 1' : 'Loja 2'}
+                    {renderLojaName(loja)}
                   </option>
                 ))}
               </select>
             </div>
           )}
 
-          <div className='space-x-2'>
+          <div className='space-x-2 mb-6'>
             <Link href={`/finance/add-pay/list-bills`}>
-              <button className="bg-[#81059e] p-3 rounded-sm text-white">
-                PAGAMENTOS PENDENTES
+              <button className="bg-[#81059e] p-3 rounded-sm text-white">PAGAMENTOS PENDENTES
               </button>
             </Link>
             <button
@@ -228,162 +278,270 @@ export default function ContasPagar() {
           </div>
 
           <form onSubmit={handleSubmit} className="mt-8 mb-20">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="text-[#81059e] font-medium">Nome do Credor</label>
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => {
-                    setSearchTerm(e.target.value);
-                    setFormData(prev => ({ ...prev, credor: e.target.value }));
-                  }}
-                  placeholder="Digite o nome do credor"
-                  className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
-                  required
-                />
-                {searchTerm && credores.length > 0 && (
-                  <ul className="absolute bg-white border-2 border-[#81059e] rounded-lg mt-1 max-h-60 overflow-auto z-10">
-                    {credores.map((credor) => (
-                      <li
-                        key={credor.id}
-                        onClick={() => handleCredorSelect(credor)}
-                        className="p-2 hover:bg-purple-50 cursor-pointer text-black border-b last:border-b-0"
-                      >
-                        {credor.nome} (CPF: {credor.cpf})
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-              <div>
-                <label className="text-[#81059e] font-medium">CPF do Credor</label>
-                <input
-                  type="text"
-                  value={formData.cpfCredor}
-                  readOnly
-                  className="border-2 border-[#81059e] p-3 rounded-lg w-full bg-gray-100 text-black"
-                />
+            {/* Seção Credor */}
+            <div className="p-4 bg-gray-50 rounded-lg mb-6 h-60">
+              <h3 className="text-lg font-semibold text-[#81059e] mb-4 flex items-center gap-2">
+                <FiUser /> Informações do Credor
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="text-[#81059e] font-medium">Nome do Credor</label>
+                  <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) => {
+                      setSearchTerm(e.target.value);
+                      setFormData(prev => ({ ...prev, credor: e.target.value }));
+                    }}
+                    placeholder="Digite o nome do credor"
+                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    required
+                  />
+                  {searchTerm && credores.length > 0 && (
+                    <ul className="absolute bg-white border-2 border-[#81059e] rounded-lg mt-1 max-h-60 overflow-auto z-10 w-[calc(100%-4rem)] md:w-64">
+                      {credores.map((credor) => (
+                        <li
+                          key={credor.id}
+                          onClick={() => handleCredorSelect(credor)}
+                          className="p-2 hover:bg-purple-50 cursor-pointer text-black border-b last:border-b-0"
+                        >
+                          {credor.nome} (CPF: {credor.cpf})
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {isLoading && searchTerm && (
+                    <p className="text-sm text-gray-500 mt-1">Buscando credores...</p>
+                  )}
+                </div>
+                <div>
+                  <label className="text-[#81059e] font-medium">CPF ou CNPJ do Credor</label>
+                  <input
+                    type="text"
+                    value={formData.documentoCredor}
+                    readOnly
+                    className="border-2 border-[#81059e] p-3 rounded-lg w-full bg-gray-100 text-black"
+                  />
+                </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
-              <div>
-                <label className="text-[#81059e] font-medium">Nº do Documento</label>
-                <input
-                  type="text"
-                  name="documento"
-                  value={formData.documento}
-                  onChange={handleInputChange}
-                  className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
-                />
+            {/* Seção Documento */}
+            <div className="p-4 bg-gray-50 rounded-lg mb-6">
+              <h3 className="text-lg font-semibold text-[#81059e] mb-4 flex items-center gap-2">
+                <FiFileText /> Informações do Documento
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                  <label className="text-[#81059e] font-medium">Nº do Documento</label>
+                  <input
+                    type="text"
+                    name="documento"
+                    value={formData.documento}
+                    onChange={handleDocumentoChange}
+                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                  />
+                </div>
+                <div>
+                  <label className="text-[#81059e] font-medium">Origem</label>
+                  <input
+                    type="text"
+                    name="origem"
+                    value={formData.origem}
+                    onChange={handleInputChange}
+                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                  />
+                </div>
+                <div>
+                  <label className="text-[#81059e] font-medium">Forma de Pagamento</label>
+                  <select
+                    name="tipoCobranca"
+                    value={formData.tipoCobranca}
+                    onChange={handleInputChange}
+                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                  >
+                    <option value="">Selecione</option>
+                    <option value="boleto">Boleto</option>
+                    <option value="cartao">Cartão de Débito/Crédito</option>
+                    <option value="dinheiro">Dinheiro</option>
+                    <option value="TED">TED</option>
+                    <option value="pix">PIX</option>
+                  </select>
+                </div>
               </div>
-              <div className="mb-4">
-                <label className="text-[#81059e] font-medium">
-                  Número de Parcelas
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  max="24"
-                  value={numeroParcelas}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    if (value === '' || parseInt(value) < 1) {
-                      setNumeroParcelas('0');
-                    } else if (parseInt(value) > 24) {
-                      setNumeroParcelas('24');
-                    } else {
-                      setNumeroParcelas(value);
-                    }
-                  }}
-                  className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
-                />
+            </div>
+
+            {/* Seção Pagamento */}
+            <div className="p-4 bg-gray-50 rounded-lg mb-6">
+              <h3 className="text-lg font-semibold text-[#81059e] mb-4 flex items-center gap-2">
+                <FiDollarSign /> Informações de Pagamento
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-4">
+                <div>
+                  <label className="text-[#81059e] font-medium">Valor</label>
+                  <input
+                    type="text"
+                    name="valor"
+                    value={formData.valor}
+                    onChange={handleValorChange}
+                    placeholder="R$ 0,00"
+                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[#81059e] font-medium">
+                    Número de Parcelas
+                  </label>
+                  <select
+                    value={numeroParcelas}
+                    onChange={(e) => {
+                      setNumeroParcelas(e.target.value);
+                      atualizarParcelas(formData.parcelaAtual, e.target.value);
+                    }}
+                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                  >
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                    <option value="5">5</option>
+                    <option value="6">6</option>
+                    <option value="12">12</option>
+                    <option value="18">18</option>
+                    <option value="24">24</option>
+                    <option value="Indefinido">Indefinido</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[#81059e] font-medium">Data de Emissão</label>
+                  <DatePicker
+                    selected={formData.dataEntrada}
+                    onChange={(date) => setFormData(prev => ({ ...prev, dataEntrada: date }))}
+                    dateFormat="dd/MM/yyyy"
+                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    placeholderText="Selecione a data de emissão"
+                  />
+                </div>
+                <div>
+                  <label className="text-[#81059e] font-medium">Data de Vencimento</label>
+                  <DatePicker
+                    selected={formData.dataVencimento}
+                    onChange={(date) => setFormData(prev => ({ ...prev, dataVencimento: date }))}
+                    dateFormat="dd/MM/yyyy"
+                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    placeholderText="Selecione a data"
+                  />
+                </div>
+                <div>
+                  <label className="text-[#81059e] font-medium">Local de Pagamento</label>
+                  <input
+                    type="text"
+                    name="localPagamento"
+                    value={formData.localPagamento}
+                    onChange={handleInputChange}
+                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                  />
+                </div>
               </div>
-              <div>
-                <label className="text-[#81059e] font-medium">Tipo de Cobrança</label>
+            </div>
+
+            {/* Seção Contabilidade */}
+            <div className="p-4 bg-gray-50 rounded-lg mb-6">
+              <h3 className="text-lg font-semibold text-[#81059e] mb-4 flex items-center gap-2">
+                <FiTrendingUp /> Informações Contábeis
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="text-[#81059e] font-medium">Lançamento no Caixa</label>
+                  <select
+                    name="lancamentoNoCaixa"
+                    value={formData.lancamentoNoCaixa}
+                    onChange={handleInputChange}
+                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                  >
+                    <option value="ENTRADA">CAIXA DA LOJA 1</option>
+                    <option value="SAÍDA">BOLETO FÁCIL</option>
+                    <option value="TRANSFERÊNCIA">BANCO CAIXA ECONÔMICA</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[#81059e] font-medium">Categoria da Despesa</label>
+                  <select
+                    name="categoriaDespesa"
+                    value={formData.categoriaDespesa}
+                    onChange={handleInputChange}
+                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                  >
+                    <option value="">Selecione</option>
+                    <option value="PUBLICIDADE/PROPAGANDA">PUBLICIDADE/PROPAGANDA</option>
+                    <option value="ALUGUEL">ALUGUEL</option>
+                    <option value="FORNECEDORES">FORNECEDORES</option>
+                    <option value="SALÁRIOS">SALÁRIOS</option>
+                    <option value="IMPOSTOS">IMPOSTOS</option>
+                    <option value="MANUTENÇÃO">MANUTENÇÃO</option>
+                    <option value="MANUTENÇÃO">TELEFONIA</option>
+
+                    <option value="OUTROS">OUTROS</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="mt-6">
+                <label className="text-[#81059e] font-medium">Conta Bancária</label>
                 <select
-                  name="tipoCobranca"
-                  value={formData.tipoCobranca}
+                  name="contaBancaria"
+                  value={formData.contaBancaria}
                   onChange={handleInputChange}
                   className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
                 >
                   <option value="">Selecione</option>
-                  <option value="boleto">Boleto</option>
-                  <option value="cartao">Cartão</option>
-                  <option value="dinheiro">Dinheiro</option>
-                  <option value="pix">PIX</option>
+                  <option value="01 BANCO ITAÚ">01 BANCO ITAÚ</option>
+                  <option value="02 BANCO BRADESCO">02 BANCO BRADESCO</option>
+                  <option value="03 BANCO CAIXA ECONOMICA">03 BANCO CAIXA ECONOMICA</option>
+                  <option value="04 BANCO DO BRASIL">04 BANCO DO BRASIL</option>
+                  <option value="05 BANCO SANTANDER">05 BANCO SANTANDER</option>
                 </select>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+            {/* Seção Observações */}
+            <div className="p-4 bg-gray-50 rounded-lg mb-6">
+              <h3 className="text-lg font-semibold text-[#81059e] mb-4 flex items-center gap-2">
+                <FiFileText /> Observações
+              </h3>
               <div>
-                <label className="text-[#81059e] font-medium">Valor</label>
-                <input
-                  type="text"
-                  name="valor"
-                  value={formData.valor}
-                  onChange={handleValorChange}
-                  placeholder="R$ 0,00"
-                  className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
-                  required
-                />
-              </div>
-              <div className="mb-4">
-                <label className="text-[#81059e] font-medium">
-                  Taxa de Juros (%)
-                </label>
-                <InputMask
-                  mask="99,99%"
-                  maskChar={null}
-                  value={taxaJuros.endsWith('%') ? taxaJuros : `${taxaJuros}%`}
-                  onChange={(e) => {
-                    let value = e.target.value.replace(/[^\d,]/g, '');
-
-                    // Garantir formato correto (até 2 dígitos antes da vírgula, 2 depois)
-                    if (value) {
-                      const parts = value.split(',');
-                      if (parts[0].length > 2) {
-                        parts[0] = parts[0].substring(0, 2);
-                      }
-                      if (parts.length > 1 && parts[1].length > 2) {
-                        parts[1] = parts[1].substring(0, 2);
-                      }
-                      value = parts.join(',');
-                    }
-
-                    setTaxaJuros(value);
-                  }}
-                  className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
-                />
-              </div>
-              <div>
-                <label className="text-[#81059e] font-medium">Data de Vencimento</label>
-                <DatePicker
-                  selected={formData.dataVencimento}
-                  onChange={(date) => setFormData(prev => ({ ...prev, dataVencimento: date }))}
-                  dateFormat="dd/MM/yyyy"
-                  className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
-                  placeholderText="Selecione a data"
-                />
+                <textarea
+                  name="observacoes"
+                  value={formData.observacoes}
+                  onChange={handleInputChange}
+                  className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black min-h-[120px]"
+                  placeholder="Adicione observações relevantes..."
+                ></textarea>
               </div>
             </div>
 
-            <div className="mt-6">
-              <label className="text-[#81059e] font-medium">Observações</label>
-              <textarea
-                name="observacoes"
-                value={formData.observacoes}
-                onChange={handleInputChange}
-                className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black min-h-[120px]"
-                placeholder="Adicione observações relevantes..."
-              ></textarea>
-            </div>
-
+            {/* Botões de ação */}
             <div className="flex justify-center gap-4 mt-8">
-              <button type="submit" className="bg-[#81059e] p-3 rounded-sm text-white">REGISTRAR</button>
-              <button type="button" onClick={() => setFormData({})} className="border-2 border-[#81059e] p-3 rounded-sm text-[#81059e]">CANCELAR</button>
+            <button
+                type="button"
+                onClick={handleClear}
+                className="inline-flex justify-center py-3 px-4 border-2 border-[#81059e] shadow-sm text-sm font-medium rounded-sm text-[#81059e] bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#81059e]"
+                disabled={isLoading}
+              >
+                CANCELAR
+              </button>
+              <button
+                type="submit"
+                className="bg-[#81059e] p-3 px-6 rounded-sm text-white flex items-center gap-2"
+                disabled={isLoading}
+              >
+                {isLoading ? 'PROCESSANDO...' : 'SALVAR'}
+              </button>
+              
             </div>
           </form>
         </div>

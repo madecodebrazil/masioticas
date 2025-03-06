@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
-import BottomMobileNav from '../../components/MB_BottomNav';
 import Layout from '@/components/Layout';
 
 export default function ProductsPage() {
@@ -55,7 +54,6 @@ export default function ProductsPage() {
                             </motion.div>
                         </Link>
                     ))}
-                    <BottomMobileNav />
                 </div>
             </div>
         </Layout>
