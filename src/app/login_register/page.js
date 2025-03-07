@@ -1,14 +1,13 @@
 "use client";
 import React, { useState } from 'react';
+import Layout from '@/components/Layout';
 import AdminRegisterForm from '@/components/AdminRegisterForm';
 
 const AdminRegisterPage = () => {
- 
-
   return (
-    <main className="w-full bg-white">
-    <AdminRegisterForm />
-  </main>
+    <Layout>
+      <AdminRegisterForm />
+    </Layout>
   );
 };
 

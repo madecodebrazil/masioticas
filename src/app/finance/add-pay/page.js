@@ -61,20 +61,96 @@ export default function ContasPagar() {
   }, [userPermissions]);
 
   const fetchCredores = async () => {
-    if (!searchTerm.trim() || !selectedLoja) return setCredores([]);
+    if (!searchTerm.trim() || !selectedLoja) {
+      setCredores([]);
+      return;
+    }
+
     setIsLoading(true);
     try {
-      // Busca credores da loja selecionada
-      const querySnapshot = await getDocs(collection(firestore, `lojas/${selectedLoja}/clientes`));
-      const filtered = querySnapshot.docs
-        .map(doc => ({ id: doc.id, ...doc.data() }))
-        .filter(credor =>
-          credor.nome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          credor.cpf?.includes(searchTerm)
-        );
-      setCredores(filtered);
+      const allCredores = [];
+
+      // 1. Buscar fornecedores em /lojas/fornecedores/users
+      try {
+        const fornecedoresRef = collection(firestore, 'lojas/fornecedores/users');
+        const fornecedoresSnapshot = await getDocs(fornecedoresRef);
+
+        fornecedoresSnapshot.docs.forEach(doc => {
+          const data = doc.data();
+          // Verifique se o nome ou CNPJ corresponde ao termo de busca
+          if ((data.razaoSocial && data.razaoSocial.toLowerCase().includes(searchTerm.toLowerCase())) ||
+            (data.nomeFantasia && data.nomeFantasia.toLowerCase().includes(searchTerm.toLowerCase())) ||
+            (data.cnpj && data.cnpj.includes(searchTerm.replace(/\D/g, '')))) {
+            allCredores.push({
+              id: doc.id,
+              nome: data.razaoSocial || data.nomeFantasia || 'Fornecedor sem nome',
+              cnpj: data.cnpj,
+              tipo: 'fornecedor', // Marcador para identificar o tipo de credor
+              email: data.email,
+              telefone: data.telefone
+            });
+          }
+        });
+      } catch (error) {
+        console.error("Erro ao buscar fornecedores:", error);
+      }
+
+      // 2. Buscar funcionários da loja 1 em /lojas/loja1/users
+      try {
+        const funcionariosLoja1Ref = collection(firestore, 'lojas/loja1/users');
+        const funcionariosLoja1Snapshot = await getDocs(funcionariosLoja1Ref);
+
+        funcionariosLoja1Snapshot.docs.forEach(doc => {
+          const data = doc.data();
+          // Verifique se o nome ou CPF corresponde ao termo de busca
+          if ((data.nome && data.nome.toLowerCase().includes(searchTerm.toLowerCase())) ||
+            (data.cpf && data.cpf.includes(searchTerm.replace(/\D/g, '')))) {
+            allCredores.push({
+              id: doc.id,
+              nome: data.nome || 'Funcionário sem nome',
+              cpf: data.cpf,
+              tipo: 'funcionario', // Marcador para identificar o tipo de credor
+              loja: 'loja1',
+              email: data.email,
+              telefone: data.telefone
+            });
+          }
+        });
+      } catch (error) {
+        console.error("Erro ao buscar funcionários da loja 1:", error);
+      }
+
+      // 3. Buscar funcionários da loja 2 em /lojas/loja2/users
+      try {
+        const funcionariosLoja2Ref = collection(firestore, 'lojas/loja2/users');
+        const funcionariosLoja2Snapshot = await getDocs(funcionariosLoja2Ref);
+
+        funcionariosLoja2Snapshot.docs.forEach(doc => {
+          const data = doc.data();
+          // Verifique se o nome ou CPF corresponde ao termo de busca
+          if ((data.nome && data.nome.toLowerCase().includes(searchTerm.toLowerCase())) ||
+            (data.cpf && data.cpf.includes(searchTerm.replace(/\D/g, '')))) {
+            allCredores.push({
+              id: doc.id,
+              nome: data.nome || 'Funcionário sem nome',
+              cpf: data.cpf,
+              tipo: 'funcionario', // Marcador para identificar o tipo de credor
+              loja: 'loja2',
+              email: data.email,
+              telefone: data.telefone
+            });
+          }
+        });
+      } catch (error) {
+        console.error("Erro ao buscar funcionários da loja 2:", error);
+      }
+
+      // Define os credores encontrados
+      setCredores(allCredores);
+
     } catch (error) {
-      console.error("Erro ao buscar credores:", error);
+      console.error("Erro geral ao buscar credores:", error);
+      setCredores([]);
     } finally {
       setIsLoading(false);
     }
@@ -98,7 +174,8 @@ export default function ContasPagar() {
     setFormData(prev => ({
       ...prev,
       credor: credor.nome,
-      documentoCredor: credor.cnpj || credor.cpf // Aceita CNPJ ou CPF
+      documentoCredor: credor.cnpj || credor.cpf, // Aceita CNPJ ou CPF
+      tipoCredor: credor.tipo // Armazena se é 'fornecedor' ou 'funcionario'
     }));
     setSearchTerm(credor.nome);
     setCredores([]);
@@ -153,9 +230,9 @@ export default function ContasPagar() {
       alert("Selecione uma loja primeiro!");
       return;
     }
-
+  
     setIsLoading(true);
-
+  
     try {
       // Converter valor de string formatada para number 
       const valorNumerico = parseFloat(
@@ -163,18 +240,19 @@ export default function ContasPagar() {
           .replace(/[^\d,]/g, '') // Remove tudo exceto dígitos e vírgula 
           .replace(',', '.') // Substitui vírgula por ponto 
       );
-
+  
       // Converter taxa de juros para número 
       const taxaJurosNumerica = formData.taxaJuros ? parseFloat(formData.taxaJuros) : 0;
-
+  
       // Formatar parcelas no formato X/Y
       const formatoParcela = formData.parcelaAtual && formData.totalParcelas ?
         `${formData.parcelaAtual.padStart(2, '0')}/${formData.totalParcelas.padStart(2, '0')}` : '';
-
+  
       // Preparar os dados para salvar 
       const contaData = {
         credor: formData.credor,
         cpfCredor: formData.documentoCredor,
+        tipoCredor: formData.tipoCredor || 'outro', // 'fornecedor', 'funcionario' ou 'outro'
         documento: formData.documento || '',
         parcela: formatoParcela,
         tipoCobranca: formData.tipoCobranca || '',
@@ -200,10 +278,10 @@ export default function ContasPagar() {
         updatedAt: Timestamp.now(),
         dataPagamento: null
       };
-
+  
       // Primeiro, garantimos que o documento contas_pagar existe
       const contasPagarDocRef = doc(firestore, `lojas/${selectedLoja}/financeiro`, 'contas_pagar');
-
+  
       // Verificar se o documento existe, se não, criá-lo
       const docSnap = await getDoc(contasPagarDocRef);
       if (!docSnap.exists()) {
@@ -212,11 +290,11 @@ export default function ContasPagar() {
           createdAt: Timestamp.now()
         });
       }
-
+  
       // Agora criamos a conta na subcoleção "items" do documento contas_pagar
       const itemsCollectionRef = collection(contasPagarDocRef, 'items');
       await addDoc(itemsCollectionRef, contaData);
-
+  
       alert("Conta a pagar registrada com sucesso!");
       handleClear();
       setIsModalOpen(false);
@@ -298,14 +376,21 @@ export default function ContasPagar() {
                     required
                   />
                   {searchTerm && credores.length > 0 && (
-                    <ul className="absolute bg-white border-2 border-[#81059e] rounded-lg mt-1 max-h-60 overflow-auto z-10 w-[calc(100%-4rem)] md:w-64">
+                    <ul className="bg-white border-2 border-[#81059e] rounded-lg w-full max-h-[104px] overflow-y-auto shadow-lg custom-scroll">
                       {credores.map((credor) => (
                         <li
                           key={credor.id}
                           onClick={() => handleCredorSelect(credor)}
                           className="p-2 hover:bg-purple-50 cursor-pointer text-black border-b last:border-b-0"
                         >
-                          {credor.nome} (CPF: {credor.cpf})
+                          {credor.nome} {" "}
+                          {credor.tipo === 'fornecedor' ? (
+                            <span className="text-xs text-gray-500">(Fornecedor - CNPJ: {credor.cnpj})</span>
+                          ) : (
+                            <span className="text-xs text-gray-500">
+                              (Funcionário {credor.loja === 'loja1' ? 'Loja 1' : 'Loja 2'} - CPF: {credor.cpf})
+                            </span>
+                          )}
                         </li>
                       ))}
                     </ul>
@@ -526,7 +611,7 @@ export default function ContasPagar() {
 
             {/* Botões de ação */}
             <div className="flex justify-center gap-4 mt-8">
-            <button
+              <button
                 type="button"
                 onClick={handleClear}
                 className="inline-flex justify-center py-3 px-4 border-2 border-[#81059e] shadow-sm text-sm font-medium rounded-sm text-[#81059e] bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#81059e]"
@@ -541,7 +626,7 @@ export default function ContasPagar() {
               >
                 {isLoading ? 'PROCESSANDO...' : 'SALVAR'}
               </button>
-              
+
             </div>
           </form>
         </div>

@@ -4,7 +4,7 @@ export const dynamic = "force-dynamic";
 
 import React, { useState, Suspense, useEffect } from "react";
 import Layout from "@/components/Layout";
-import { firestore, auth } from "../../../../lib/firebaseConfig";
+import { firestore, auth } from "../../../lib/firebaseConfig";
 import {
   collection,
   getDocs,

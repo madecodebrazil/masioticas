@@ -62,58 +62,61 @@ export default function AddAccountPage() {
       setConsumers([]);
       return;
     }
-
+  
     setIsLoading(true);
     try {
-      // Acessar o documento 'clientes' na coleção 'lojas'
-      const clientesDocRef = doc(firestore, 'lojas', 'clientes');
-      const clientesDoc = await getDoc(clientesDocRef);
-
-      if (clientesDoc.exists()) {
-        const clientesData = clientesDoc.data();
-
-        // Converter o objeto de clientes para um array
-        const clientesArray = Object.keys(clientesData)
-          .filter(key => key !== 'undefined' && key !== 'null')
-          .map(cpf => ({
-            id: cpf,
-            cpf: cpf,
-            ...clientesData[cpf]
-          }));
-
-        // Filtrar os clientes com base no termo de busca
-        const filteredClientes = clientesArray.filter(client =>
-          (client.nome && client.nome.toLowerCase().includes(searchTerm.toLowerCase())) ||
-          (client.cpf && client.cpf.includes(searchTerm))
+      // Buscar da coleção correta 'lojas/clientes/users'
+      // O caminho deve ser o mesmo utilizado no ClientForm
+      const clientesRef = collection(firestore, 'lojas/clientes/users');
+      const querySnapshot = await getDocs(
+        query(clientesRef, 
+          where('nome', '>=', searchTerm),
+          where('nome', '<=', searchTerm + '\uf8ff')
+        )
+      );
+  
+      // Se não encontrar por nome, tenta por CPF
+      let clientesData = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+  
+      // Se não encontrou por nome, tente por CPF
+      if (clientesData.length === 0 && searchTerm.replace(/\D/g, '').length > 0) {
+        const cpfQuerySnapshot = await getDocs(
+          query(clientesRef, where('cpf', '==', searchTerm.replace(/\D/g, '')))
         );
-
-        setConsumers(filteredClientes);
-      } else {
-        // Plano B: Tentar buscar da coleção global 'clientes'
-        try {
-          const clientesRef = collection(firestore, 'clientes');
-          const querySnapshot = await getDocs(clientesRef);
-
-          const clientesData = querySnapshot.docs
-            .map(doc => ({
-              id: doc.id,
-              cpf: doc.id,
-              ...doc.data()
-            }))
-            .filter(client =>
-              (client.nome && client.nome.toLowerCase().includes(searchTerm.toLowerCase())) ||
-              (client.cpf && client.cpf.includes(searchTerm))
-            );
-
-          setConsumers(clientesData);
-        } catch (err) {
-          console.error("Erro ao buscar na coleção global 'clientes':", err);
-          setConsumers([]);
-        }
+        
+        clientesData = cpfQuerySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
       }
+  
+      setConsumers(clientesData);
     } catch (error) {
       console.error("Erro ao buscar clientes:", error);
-      setConsumers([]);
+      
+      // Plano B: Tentar buscar na coleção 'clientes' global se existir
+      try {
+        const clientesGlobalRef = collection(firestore, 'clientes');
+        const globalQuerySnapshot = await getDocs(
+          query(clientesGlobalRef, 
+            where('nome', '>=', searchTerm),
+            where('nome', '<=', searchTerm + '\uf8ff')
+          )
+        );
+        
+        const clientesData = globalQuerySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        
+        setConsumers(clientesData);
+      } catch (fallbackError) {
+        console.error("Erro ao buscar no plano B:", fallbackError);
+        setConsumers([]);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -287,7 +290,7 @@ export default function AddAccountPage() {
   const renderLojaName = (lojaId) => {
     const lojaNames = {
       'loja1': 'Loja 1 - Centro',
-      'loja2': 'Loja 2 - Shopping'
+      'loja2': 'Loja 2 - Caramuru'
     };
 
     return lojaNames[lojaId] || lojaId;
