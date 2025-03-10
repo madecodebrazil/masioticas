@@ -41,7 +41,8 @@ export default function ListaRecebimentos() {
   const [availableDays, setAvailableDays] = useState(['Todos']);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(15);
-  // Estado para o dropdown de filtros
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingConta, setEditingConta] = useState(null);
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
 
   useEffect(() => {
@@ -383,6 +384,48 @@ export default function ListaRecebimentos() {
     }
   };
 
+  //Função Editar
+
+  const openEditModal = () => {
+    if (selectedForDeletion.length !== 1) return;
+
+    // Encontrar a conta selecionada
+    const contaToEdit = contas.find(conta => conta.id === selectedForDeletion[0]);
+
+    if (contaToEdit) {
+      setEditingConta({ ...contaToEdit });
+      setIsEditModalOpen(true);
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    try {
+      // Referência ao documento
+      const contaRef = doc(firestore, `lojas/${editingConta.loja}/financeiro/contas_receber/items`, editingConta.id);
+
+      // Salvar no Firestore
+      await setDoc(contaRef, editingConta, { merge: true });
+
+      // Atualizar estados locais
+      setContas(prevContas =>
+        prevContas.map(conta => conta.id === editingConta.id ? editingConta : conta)
+      );
+
+      setFilteredContas(prevFiltered =>
+        prevFiltered.map(conta => conta.id === editingConta.id ? editingConta : conta)
+      );
+
+      // Limpar seleção e fechar modal
+      setSelectedForDeletion([]);
+      setIsEditModalOpen(false);
+
+      alert('Conta atualizada com sucesso!');
+    } catch (error) {
+      console.error('Erro ao atualizar conta:', error);
+      alert('Erro ao atualizar a conta.');
+    }
+  };
+
   // Função para quitar o recebimento
   const handleSettlePayment = async () => {
     if (!formaRecebimento) {
@@ -467,7 +510,7 @@ export default function ListaRecebimentos() {
     } else {
       document.body.style.overflow = '';
     }
-    
+
     return () => {
       document.body.style.overflow = '';
     };
@@ -809,6 +852,18 @@ export default function ListaRecebimentos() {
                 </button>
               </Link>
 
+
+              {/* Botão Editar - aparece apenas quando há contas selecionadas */}
+              <button
+                onClick={() => openEditModal()}
+                className={`${selectedForDeletion.length !== 1 ? 'bg-blue-300' : 'bg-blue-500'} text-white h-10 w-10 rounded-md flex items-center justify-center`}
+                disabled={selectedForDeletion.length !== 1}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                </svg>
+              </button>
+
               {/* Botão Excluir */}
               <button
                 onClick={handleDeleteSelected}
@@ -1086,6 +1141,72 @@ export default function ListaRecebimentos() {
           )}
         </div>
       </div>
+
+      {/* Modal de Edição - ADICIONAR AQUI */}
+      {isEditModalOpen && editingConta && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <h3 className="text-xl font-bold text-[#81059e] mb-4">Editar Conta a Receber</h3>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium mb-1">Código:</label>
+                <input
+                  type="text"
+                  value={editingConta.numeroDocumento || ''}
+                  onChange={(e) => setEditingConta({ ...editingConta, numeroDocumento: e.target.value })}
+                  className="w-full p-2 border border-gray-300 rounded-md"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Cliente:</label>
+                <input
+                  type="text"
+                  value={editingConta.cliente || ''}
+                  onChange={(e) => setEditingConta({ ...editingConta, cliente: e.target.value })}
+                  className="w-full p-2 border border-gray-300 rounded-md"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Valor:</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={editingConta.valor || 0}
+                  onChange={(e) => setEditingConta({ ...editingConta, valor: parseFloat(e.target.value) || 0 })}
+                  className="w-full p-2 border border-gray-300 rounded-md"
+                />
+              </div>
+
+              {/* Você pode adicionar mais campos aqui conforme necessário */}
+
+              <div className="flex justify-end space-x-2 mt-4">
+                <button
+                  onClick={() => setIsEditModalOpen(false)}
+                  className="bg-gray-500 text-white px-4 py-2 rounded-md"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleSaveEdit}
+                  className="bg-[#81059e] text-white px-4 py-2 rounded-md"
+                >
+                  Salvar
+                </button>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setIsEditModalOpen(false)}
+              className="absolute top-2 right-2 text-gray-600 hover:text-gray-800"
+            >
+              &times;
+            </button>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 }
