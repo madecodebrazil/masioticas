@@ -230,9 +230,9 @@ export default function ContasPagar() {
       alert("Selecione uma loja primeiro!");
       return;
     }
-  
+
     setIsLoading(true);
-  
+
     try {
       // Converter valor de string formatada para number 
       const valorNumerico = parseFloat(
@@ -240,14 +240,14 @@ export default function ContasPagar() {
           .replace(/[^\d,]/g, '') // Remove tudo exceto dígitos e vírgula 
           .replace(',', '.') // Substitui vírgula por ponto 
       );
-  
+
       // Converter taxa de juros para número 
       const taxaJurosNumerica = formData.taxaJuros ? parseFloat(formData.taxaJuros) : 0;
-  
+
       // Formatar parcelas no formato X/Y
       const formatoParcela = formData.parcelaAtual && formData.totalParcelas ?
         `${formData.parcelaAtual.padStart(2, '0')}/${formData.totalParcelas.padStart(2, '0')}` : '';
-  
+
       // Preparar os dados para salvar 
       const contaData = {
         credor: formData.credor,
@@ -278,10 +278,10 @@ export default function ContasPagar() {
         updatedAt: Timestamp.now(),
         dataPagamento: null
       };
-  
+
       // Primeiro, garantimos que o documento contas_pagar existe
       const contasPagarDocRef = doc(firestore, `lojas/${selectedLoja}/financeiro`, 'contas_pagar');
-  
+
       // Verificar se o documento existe, se não, criá-lo
       const docSnap = await getDoc(contasPagarDocRef);
       if (!docSnap.exists()) {
@@ -290,11 +290,11 @@ export default function ContasPagar() {
           createdAt: Timestamp.now()
         });
       }
-  
+
       // Agora criamos a conta na subcoleção "items" do documento contas_pagar
       const itemsCollectionRef = collection(contasPagarDocRef, 'items');
       await addDoc(itemsCollectionRef, contaData);
-  
+
       alert("Conta a pagar registrada com sucesso!");
       handleClear();
       setIsModalOpen(false);
@@ -313,6 +313,14 @@ export default function ContasPagar() {
     };
 
     return lojaNames[lojaId] || lojaId;
+  };
+
+  const atualizarParcelas = (parcelaAtual, totalParcelas) => {
+    setFormData(prev => ({
+      ...prev,
+      parcelaAtual: parcelaAtual || '1',
+      totalParcelas: totalParcelas
+    }));
   };
 
   return (
@@ -483,7 +491,7 @@ export default function ContasPagar() {
                     value={numeroParcelas}
                     onChange={(e) => {
                       setNumeroParcelas(e.target.value);
-                      atualizarParcelas(formData.parcelaAtual, e.target.value);
+                      atualizarParcelas('1', e.target.value);  // Aqui estamos definindo a parcela atual como '1'
                     }}
                     className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
                   >
@@ -493,10 +501,16 @@ export default function ContasPagar() {
                     <option value="4">4</option>
                     <option value="5">5</option>
                     <option value="6">6</option>
+                    <option value="7">7</option>
+                    <option value="8">8</option>
+                    <option value="9">9</option>
+                    <option value="10">10</option>
+                    <option value="11">11</option>
                     <option value="12">12</option>
                     <option value="18">18</option>
                     <option value="24">24</option>
                     <option value="Indefinido">Indefinido</option>
+                    
                   </select>
                 </div>
 
