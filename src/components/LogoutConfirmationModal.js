@@ -1,5 +1,6 @@
-// components/modals/LogoutModal.js
 "use client";
+import { createPortal } from 'react-dom';
+
 export const LogoutConfirmationModal = ({ isOpen, onClose, onConfirm }) => {
     if (!isOpen) return null;
     
@@ -10,7 +11,7 @@ export const LogoutConfirmationModal = ({ isOpen, onClose, onConfirm }) => {
         onClose();
     };
 
-    return (
+    const modalContent = (
         <div className="fixed inset-0 flex items-center justify-center" style={{ zIndex: 9999 }}>
             <div 
                 className="fixed inset-0 bg-black bg-opacity-50"
@@ -46,7 +47,13 @@ export const LogoutConfirmationModal = ({ isOpen, onClose, onConfirm }) => {
             </div>
         </div>
     );
+
+    // Verifica se estamos no navegador antes de usar createPortal
+    if (typeof window === 'undefined') {
+        return null;
+    }
+
+    return createPortal(modalContent, document.body);
 };
 
 export default LogoutConfirmationModal;
-

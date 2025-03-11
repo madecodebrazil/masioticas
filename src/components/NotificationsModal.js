@@ -1,5 +1,6 @@
-// components/modals/NotificationsModal.js
 "use client";
+import { createPortal } from 'react-dom';
+
 export const NotificationsModal = ({ isOpen, onClose }) => {
     if (!isOpen) return null;
     
@@ -10,7 +11,7 @@ export const NotificationsModal = ({ isOpen, onClose }) => {
         onClose();
     };
 
-    return (
+    const modalContent = (
         <div className="fixed inset-0 flex items-center justify-center" style={{ zIndex: 9999 }}>
             <div 
                 className="fixed inset-0 bg-black bg-opacity-50"
@@ -46,6 +47,13 @@ export const NotificationsModal = ({ isOpen, onClose }) => {
             </div>
         </div>
     );
+
+    // Verifica se estamos no navegador antes de usar createPortal
+    if (typeof window === 'undefined') {
+        return null;
+    }
+
+    return createPortal(modalContent, document.body);
 };
 
 export default NotificationsModal;

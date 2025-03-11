@@ -75,12 +75,12 @@ export default function SidebarHomepage({ userPhotoURL, userData, userPermission
         }
         return (
             <>
-            <h3 className="text-white-600 text-lg font-normal">
-                {userData?.cargo}
-            </h3>
-            <h3>
-            Loja: {userData?.store}
-            </h3>
+                <h3 className="text-white-600 text-lg font-normal">
+                    {userData?.cargo}
+                </h3>
+                <h3>
+                    Loja: {userData?.store}
+                </h3>
             </>
         );
     };
@@ -159,22 +159,6 @@ export default function SidebarHomepage({ userPhotoURL, userData, userPermission
                             <button onClick={() => setIsLogoutOpen(true)}>
                                 <FontAwesomeIcon icon={faRightFromBracket} className="text-2xl pl-2" />
                             </button>
-
-                            <NotificationsModal
-                                isOpen={isNotificationsOpen}
-                                onClose={() => setIsNotificationsOpen(false)}
-                            />
-
-                            <ConfigurationsModal
-                                isOpen={isConfigOpen}
-                                onClose={() => setIsConfigOpen(false)}
-                            />
-
-                            <LogoutConfirmationModal
-                                isOpen={isLogoutOpen}
-                                onClose={() => setIsLogoutOpen(false)}
-                                onConfirm={handleLogout}
-                            />
                         </div>
                     </div>
 
@@ -289,6 +273,22 @@ export default function SidebarHomepage({ userPhotoURL, userData, userPermission
                     <span className="text-white text-lg font-medium">Sair</span>
                 </button> */}
             </aside>
+
+            <NotificationsModal
+                isOpen={isNotificationsOpen}
+                onClose={() => setIsNotificationsOpen(false)}
+            />
+
+            <ConfigurationsModal
+                isOpen={isConfigOpen}
+                onClose={() => setIsConfigOpen(false)}
+            />
+
+            <LogoutConfirmationModal
+                isOpen={isLogoutOpen}
+                onClose={() => setIsLogoutOpen(false)}
+                onConfirm={handleLogout}
+            />
         </>
     );
 }

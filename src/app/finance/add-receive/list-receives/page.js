@@ -9,7 +9,8 @@ import {
   faDollarSign,
   faClock,
   faExclamationTriangle,
-  faFilter
+  faFilter,
+  faX
 } from '@fortawesome/free-solid-svg-icons';
 import { collection, getDocs, doc, setDoc, deleteDoc } from 'firebase/firestore';
 import { useAuth } from '@/hooks/useAuth';
@@ -1027,183 +1028,191 @@ export default function ListaRecebimentos() {
             </div>
           )}
 
-          {/* Modal para detalhes da conta */}
+          {/* Modal de Detalhamento de Contas */}
           {isModalOpen && selectedConta && (
             <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-              <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md relative text-black overflow-y-auto max-h-[90vh]">
-                <h3 className="text-xl font-bold text-[#81059e] mb-4">
-                  Detalhes da Conta a Receber
-                </h3>
-                <p>
-                  <strong>Código:</strong> {selectedConta.numeroDocumento || 'N/A'}
-                </p>
-                <p>
-                  <strong>Cliente:</strong> {selectedConta.cliente || 'N/A'}
-                </p>
-                <p>
-                  <strong>Valor:</strong> R${' '}
-                  {parseFloat(selectedConta.valor || 0).toFixed(2)}
-                </p>
-                <p>
-                  <strong>Data de Registro:</strong> {formatFirestoreDate(selectedConta.dataRegistro)}
-                </p>
-                <p>
-                  <strong>Data de Cobrança:</strong>{' '}
-                  {formatFirestoreDate(selectedConta.dataCobranca)}
-                </p>
-                <p>
-                  <strong>Data de Pagamento:</strong>{' '}
-                  {formatFirestoreDate(selectedConta.dataPagamento) || 'Pendente'}
-                </p>
-                <p>
-                  <strong>Loja:</strong> {selectedConta.loja || 'Não especificada'}
-                </p>
-                <p>
-                  <strong>Origem:</strong> {selectedConta.origem || 'N/A'}
-                </p>
-                <p>
-                  <strong>Parcela:</strong> {selectedConta.parcela || 'N/A'}
-                </p>
-                <p>
-                  <strong>Total Pago:</strong> R$ {parseFloat(selectedConta.valorPago || 0).toFixed(2)}
-                </p>
-                <p>
-                  <strong>Juros:</strong> R$ {parseFloat(selectedConta.juros || 0).toFixed(2)}
-                </p>
-                {selectedConta.observacoes && (
-                  <p>
-                    <strong>Observações:</strong> {selectedConta.observacoes}
+              <div className="bg-white rounded-lg shadow-lg w-full max-w-md flex flex-col h-3/5 overflow-hidden">
+                <div className="bg-[#81059e] text-white p-4 flex justify-between items-center">
+                  <h3 className="text-xl font-bold">Detalhamento de Conta a Receber</h3>
+
+                  <FontAwesomeIcon
+                    icon={faX}
+                    className="h-5 w-5 text-white cursor-pointer hover:text-gray-200"
+                    onClick={() => setIsEditModalOpen(false)}
+                  />
+                </div>
+                <div className="space-y-3 p-4 overflow-y-auto flex-grow">
+                  <p><strong>
+                    Código:</strong> {selectedConta.numeroDocumento || 'N/A'}
                   </p>
-                )}
+                  <p>
+                    <strong>Cliente:</strong> {selectedConta.cliente || 'N/A'}
+                  </p>
+                  <p>
+                    <strong>Valor:</strong> R${' '}
+                    {parseFloat(selectedConta.valor || 0).toFixed(2)}
+                  </p>
+                  <p>
+                    <strong>Data de Registro:</strong> {formatFirestoreDate(selectedConta.dataRegistro)}
+                  </p>
+                  <p>
+                    <strong>Data de Cobrança:</strong>{' '}
+                    {formatFirestoreDate(selectedConta.dataCobranca)}
+                  </p>
+                  <p>
+                    <strong>Data de Pagamento:</strong>{' '}
+                    {formatFirestoreDate(selectedConta.dataPagamento) || 'Pendente'}
+                  </p>
+                  <p>
+                    <strong>Loja:</strong> {selectedConta.loja || 'Não especificada'}
+                  </p>
+                  <p>
+                    <strong>Origem:</strong> {selectedConta.origem || 'N/A'}
+                  </p>
+                  <p>
+                    <strong>Parcela:</strong> {selectedConta.parcela || 'N/A'}
+                  </p>
+                  <p>
+                    <strong>Total Pago:</strong> R$ {parseFloat(selectedConta.valorPago || 0).toFixed(2)}
+                  </p>
+                  <p>
+                    <strong>Juros:</strong> R$ {parseFloat(selectedConta.juros || 0).toFixed(2)}
+                  </p>
+                  {selectedConta.observacoes && (
+                    <p>
+                      <strong>Observações:</strong> {selectedConta.observacoes}
+                    </p>
+                  )}
 
-                {/* Seção para registrar o recebimento */}
-                <div className="mt-6">
-                  <label className="block text-[#81059e] mb-2">
-                    Forma de Recebimento
-                  </label>
-                  <select
-                    value={formaRecebimento}
-                    onChange={(e) => setFormaRecebimento(e.target.value)}
-                    className="w-full p-2 border border-gray-300 rounded-md text-black"
-                  >
-                    <option value="">Selecione</option>
-                    <option value="Dinheiro">Dinheiro</option>
-                    <option value="Cartão de Crédito">Cartão de Crédito</option>
-                    <option value="Cartão de Débito">Cartão de Débito</option>
-                    <option value="Pix">Pix</option>
-                    <option value="Cheque">Cheque</option>
-                    <option value="Boleto">Boleto</option>
-                  </select>
-                </div>
+                  {/* Seção para registrar o recebimento */}
+                  <div className="mt-6">
+                    <label className="block text-black font-bold mb-2">
+                      Forma de Recebimento
+                    </label>
+                    <select
+                      value={formaRecebimento}
+                      onChange={(e) => setFormaRecebimento(e.target.value)}
+                      className="w-full p-2 border border-gray-300 rounded-md text-black"
+                    >
+                      <option value="">Selecione</option>
+                      <option value="Dinheiro">Dinheiro</option>
+                      <option value="Cartão de Crédito">Cartão de Crédito</option>
+                      <option value="Cartão de Débito">Cartão de Débito</option>
+                      <option value="Pix">Pix</option>
+                      <option value="Cheque">Cheque</option>
+                      <option value="Boleto">Boleto</option>
+                    </select>
+                  </div>
 
-                {settleMessage && (
-                  <p className="text-green-600 mt-4">{settleMessage}</p>
-                )}
+                  {settleMessage && (
+                    <p className="text-green-600 mt-4">{settleMessage}</p>
+                  )}
 
-                <div className="flex justify-around mt-6">
+                  <div className="flex justify-around mt-6">
+                    <button
+                      onClick={generatePDF}
+                      className="bg-[#81059e] text-white px-4 py-2 rounded-md flex items-center"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                      </svg>
+                      Ver PDF
+                    </button>
+                    <button
+                      onClick={handlePrint}
+                      className="bg-[#81059e] text-white px-4 py-2 rounded-md flex items-center"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                      </svg>
+                      Imprimir
+                    </button>
+                  </div>
+
+                  <div className="flex justify-center mt-4">
+                    <button
+                      onClick={handleSettlePayment}
+                      className="bg-green-600 text-white px-4 py-2 rounded-md"
+                    >
+                      Registrar Recebimento
+                    </button>
+                  </div>
+
                   <button
-                    onClick={generatePDF}
-                    className="bg-[#81059e] text-white px-4 py-2 rounded-md flex items-center"
+                    onClick={closeModal}
+                    className="absolute top-2 right-2 text-gray-600 hover:text-gray-800"
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                    </svg>
-                    Ver PDF
-                  </button>
-                  <button
-                    onClick={handlePrint}
-                    className="bg-[#81059e] text-white px-4 py-2 rounded-md flex items-center"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-                    </svg>
-                    Imprimir
+                    &times;
                   </button>
                 </div>
-
-                <div className="flex justify-center mt-4">
-                  <button
-                    onClick={handleSettlePayment}
-                    className="bg-green-600 text-white px-4 py-2 rounded-md"
-                  >
-                    Registrar Recebimento
-                  </button>
-                </div>
-
-                <button
-                  onClick={closeModal}
-                  className="absolute top-2 right-2 text-gray-600 hover:text-gray-800"
-                >
-                  &times;
-                </button>
               </div>
             </div>
           )}
         </div>
       </div>
 
-      {/* Modal de Edição - ADICIONAR AQUI */}
+      {/* Modal de Edição de contas */}
       {isEditModalOpen && editingConta && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <h3 className="text-xl font-bold text-[#81059e] mb-4">Editar Conta a Receber</h3>
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-md flex flex-col h-3/5 overflow-hidden">
+            <div className="bg-[#81059e] text-white p-4 flex justify-between items-center">
+              <h3 className="text-xl font-bold">Editar Conta a Receber</h3>
 
-            <div className="space-y-3">
+              <FontAwesomeIcon
+                icon={faX}
+                className="h-5 w-5 text-white cursor-pointer hover:text-gray-200"
+                onClick={() => setIsEditModalOpen(false)}
+              />
+            </div>
+
+            <div className="space-y-3 p-4 overflow-y-auto flex-grow">
               <div>
-                <label className="block text-sm font-medium mb-1">Código:</label>
+                <label className="text-[#81059e] font-medium">Código:</label>
                 <input
                   type="text"
                   value={editingConta.numeroDocumento || ''}
                   onChange={(e) => setEditingConta({ ...editingConta, numeroDocumento: e.target.value })}
-                  className="w-full p-2 border border-gray-300 rounded-md"
+                  className="w-full p-2 border-2 border-[#81059e] rounded-sm"
                 />
               </div>
-
               <div>
-                <label className="block text-sm font-medium mb-1">Cliente:</label>
+                <label className="text-[#81059e] font-medium">Cliente:</label>
                 <input
                   type="text"
                   value={editingConta.cliente || ''}
                   onChange={(e) => setEditingConta({ ...editingConta, cliente: e.target.value })}
-                  className="w-full p-2 border border-gray-300 rounded-md"
+                  className="w-full p-2 border-2 border-[#81059e] rounded-sm"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1">Valor:</label>
+                <label className="text-[#81059e] font-medium">Valor:</label>
                 <input
                   type="number"
                   step="0.01"
                   value={editingConta.valor || 0}
                   onChange={(e) => setEditingConta({ ...editingConta, valor: parseFloat(e.target.value) || 0 })}
-                  className="w-full p-2 border border-gray-300 rounded-md"
+                  className="w-full p-2 border-2 border-[#81059e] rounded-sm"
                 />
               </div>
 
-              {/* Você pode adicionar mais campos aqui conforme necessário */}
 
-              <div className="flex justify-end space-x-2 mt-4">
-                <button
-                  onClick={() => setIsEditModalOpen(false)}
-                  className="bg-gray-500 text-white px-4 py-2 rounded-md"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={handleSaveEdit}
-                  className="bg-[#81059e] text-white px-4 py-2 rounded-md"
-                >
-                  Salvar
-                </button>
-              </div>
             </div>
 
-            <button
-              onClick={() => setIsEditModalOpen(false)}
-              className="absolute top-2 right-2 text-gray-600 hover:text-gray-800"
-            >
-              &times;
-            </button>
+            <div className="p-4 bg-gray-50 border-t flex justify-end space-x-2">
+              <button
+                onClick={() => setIsEditModalOpen(false)}
+                className="text-[#81059e] px-4 py-2 rounded-md"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSaveEdit}
+                className="bg-[#81059e] text-white px-4 py-2 rounded-sm"
+              >
+                Salvar
+              </button>
+            </div>
           </div>
         </div>
       )}
