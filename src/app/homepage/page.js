@@ -11,7 +11,7 @@ import { motion } from 'framer-motion';
 import SidebarHomepage from '../../components/SidebarHomepage';
 import Dashboard from '@/components/Dashboard';
 import CarrouselPromo from '../../components/CarrouselPromo';
-import MobileHeader from '@/components/MB_Homeheader';
+import MobileHeader from '@/components/MB_NavSidebar';
 import BottomMobileNav from '../../components/MB_BottomNav';
 
 export default function Home() {

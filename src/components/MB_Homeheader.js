@@ -145,7 +145,7 @@ export default function MobileNavSidebar({ userPhotoURL, userData }) {
                         </div>
 
                         <nav className="flex flex-col gap-4 w-full">
-                            <MenuItem icon="/images/sidebar_homepage/dashboard.png" label="DASHBOARD" href="/homepage" />
+                            <MenuItem icon="/images/sidebar_homepage/dashboard.png" label="cR" href="/homepage" />
                             <MenuItem icon="/images/sidebar_homepage/agenda.png" label="AGENDA" href="homepage/agenda" />
                         </nav>
 

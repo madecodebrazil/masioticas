@@ -1,3 +1,5 @@
+//list-receives.js
+
 "use client";
 
 import React, { useEffect, useState } from 'react';
@@ -10,7 +12,8 @@ import {
   faClock,
   faExclamationTriangle,
   faFilter,
-  faX
+  faX,
+  faCheck
 } from '@fortawesome/free-solid-svg-icons';
 import { collection, getDocs, doc, setDoc, deleteDoc } from 'firebase/firestore';
 import { useAuth } from '@/hooks/useAuth';
@@ -1134,6 +1137,11 @@ export default function ListaRecebimentos() {
                       onClick={handleSettlePayment}
                       className="bg-green-600 text-white px-4 py-2 rounded-md"
                     >
+                      <FontAwesomeIcon
+                        icon={faCheck}
+                        className="h-5 w-5 text-white cursor-pointer hover:text-gray-200 pr-2  justify-center"
+                      />
+
                       Registrar Recebimento
                     </button>
                   </div>
@@ -1156,7 +1164,7 @@ export default function ListaRecebimentos() {
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
           <div className="bg-white rounded-lg shadow-lg w-full max-w-md flex flex-col h-3/5 overflow-hidden">
             <div className="bg-[#81059e] text-white p-4 flex justify-between items-center">
-              <h3 className="text-xl font-bold">Editar Conta a Receber</h3>
+              <h3 className="text-xl font-bold">Editar Conta a Pagar</h3>
 
               <FontAwesomeIcon
                 icon={faX}
@@ -1170,17 +1178,17 @@ export default function ListaRecebimentos() {
                 <label className="text-[#81059e] font-medium">Código:</label>
                 <input
                   type="text"
-                  value={editingConta.numeroDocumento || ''}
-                  onChange={(e) => setEditingConta({ ...editingConta, numeroDocumento: e.target.value })}
+                  value={editingConta.documento || ''}
+                  onChange={(e) => setEditingConta({ ...editingConta, documento: e.target.value })}
                   className="w-full p-2 border-2 border-[#81059e] rounded-sm"
                 />
               </div>
               <div>
-                <label className="text-[#81059e] font-medium">Cliente:</label>
+                <label className="text-[#81059e] font-medium">Credor:</label>
                 <input
                   type="text"
-                  value={editingConta.cliente || ''}
-                  onChange={(e) => setEditingConta({ ...editingConta, cliente: e.target.value })}
+                  value={editingConta.credor || ''}
+                  onChange={(e) => setEditingConta({ ...editingConta, credor: e.target.value })}
                   className="w-full p-2 border-2 border-[#81059e] rounded-sm"
                 />
               </div>
@@ -1196,7 +1204,15 @@ export default function ListaRecebimentos() {
                 />
               </div>
 
-
+              <div>
+                <label className="text-[#81059e] font-medium">Categoria:</label>
+                <input
+                  type="text"
+                  value={editingConta.categoriaDespesa || ''}
+                  onChange={(e) => setEditingConta({ ...editingConta, categoriaDespesa: e.target.value })}
+                  className="w-full p-2 border-2 border-[#81059e] rounded-sm"
+                />
+              </div>
             </div>
 
             <div className="p-4 bg-gray-50 border-t flex justify-end space-x-2">

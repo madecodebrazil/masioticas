@@ -22,6 +22,14 @@ export default function ControleCaixa() {
   const [tipoMovimentacao, setTipoMovimentacao] = useState('entrada');
   const [filtroTipo, setFiltroTipo] = useState('todos');
   const [isLoading, setIsLoading] = useState(false);
+  // Estados para ordenação
+  const [sortField, setSortField] = useState('data');
+  const [sortDirection, setSortDirection] = useState('desc');
+  // Estados para paginação
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(15);
+  const [filteredMovimentacoes, setFilteredMovimentacoes] = useState([]);
+
   const [showFilters, setShowFilters] = useState(false);
   const [meiosPagamento, setMeiosPagamento] = useState({
     dinheiro: 0,
@@ -98,7 +106,7 @@ export default function ControleCaixa() {
 
       let movimentacoesQuery;
       const itemsRef = collection(firestore, `lojas/${selectedLoja}/financeiro/controle_caixa/items`);
-      
+
       // Configurar a query base
       let baseQuery = query(
         itemsRef,
@@ -151,6 +159,8 @@ export default function ControleCaixa() {
         }
       });
 
+
+
       setMeiosPagamento(meiosPagamentoTemp);
       setMovimentacoes(movimentacoesData);
 
@@ -179,6 +189,145 @@ export default function ControleCaixa() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Função para ordenar movimentações
+  const sortMovimentacoes = (movimentacoesToSort, field, direction) => {
+    return [...movimentacoesToSort].sort((a, b) => {
+      let aValue = a[field];
+      let bValue = b[field];
+
+      // Tratar datas
+      if (field === 'data') {
+        aValue = convertToDate(aValue);
+        bValue = convertToDate(bValue);
+      }
+      // Tratar números
+      else if (field === 'valor') {
+        aValue = parseFloat(aValue || 0);
+        bValue = parseFloat(bValue || 0);
+      }
+      // Tratar strings
+      else {
+        aValue = String(aValue || '').toLowerCase();
+        bValue = String(bValue || '').toLowerCase();
+      }
+
+      // Comparação
+      if (aValue < bValue) return direction === 'asc' ? -1 : 1;
+      if (aValue > bValue) return direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+  };
+
+  // Função para converter diferentes formatos de data para objeto Date
+  const convertToDate = (date) => {
+    if (!date) return new Date(0); // Valor mínimo para datas vazias
+
+    // Se for um timestamp do Firestore
+    if (typeof date === 'object' && date.seconds) {
+      return new Date(date.seconds * 1000);
+    }
+
+    // Se já for uma Date
+    if (date instanceof Date) {
+      return date;
+    }
+
+    // Se for uma string ou outro formato, tentar converter para Date
+    return new Date(date);
+  };
+
+  // Função para alternar a ordenação
+  const handleSort = (field) => {
+    const direction = field === sortField && sortDirection === 'asc' ? 'desc' : 'asc';
+    setSortField(field);
+    setSortDirection(direction);
+
+    // Reordenar as movimentações filtradas
+    const sorted = sortMovimentacoes(filteredMovimentacoes, field, direction);
+    setFilteredMovimentacoes(sorted);
+  };
+
+  // Renderizar seta de ordenação - apenas quando a coluna estiver selecionada
+  const renderSortArrow = (field) => {
+    if (sortField !== field) return null;
+    return sortDirection === 'asc' ?
+      <span className="ml-1">↑</span> :
+      <span className="ml-1">↓</span>;
+  };
+
+  // Função para marcar ou desmarcar movimentação para exclusão
+  const toggleDeletion = (e, movId) => {
+    e.stopPropagation(); // Evitar abrir o modal se houver
+
+    setSelectedForDeletion(prev => {
+      if (prev.includes(movId)) {
+        return prev.filter(id => id !== movId);
+      } else {
+        return [...prev, movId];
+      }
+    });
+  };
+
+  // Função para excluir as movimentações selecionadas
+  const handleDeleteSelected = async () => {
+    if (selectedForDeletion.length === 0) {
+      alert('Selecione pelo menos um registro para excluir.');
+      return;
+    }
+
+    if (confirm(`Deseja realmente excluir ${selectedForDeletion.length} registros selecionados?`)) {
+      try {
+        for (const movId of selectedForDeletion) {
+          // Encontrar a movimentação
+          const mov = movimentacoes.find(m => m.id === movId);
+          if (mov) {
+            // Atualizar saldo do caixa
+            const caixaDocRef = doc(firestore, `lojas/${selectedLoja}/financeiro/controle_caixa`);
+            const caixaSnap = await getDoc(caixaDocRef);
+            const caixaData = caixaSnap.exists() ? caixaSnap.data() : { saldoAtual: 0 };
+
+            let novoSaldo = caixaData.saldoAtual || 0;
+            if (mov.tipo === 'entrada') {
+              novoSaldo -= parseFloat(mov.valor || 0);
+            } else if (mov.tipo === 'saida') {
+              novoSaldo += parseFloat(mov.valor || 0);
+            }
+
+            // Atualizar saldo
+            await updateDoc(caixaDocRef, {
+              saldoAtual: novoSaldo,
+              ultimaAtualizacao: Timestamp.now()
+            });
+
+            // Excluir a movimentação
+            const movRef = doc(firestore, `lojas/${selectedLoja}/financeiro/controle_caixa/items`, movId);
+            await deleteDoc(movRef);
+          }
+        }
+
+        // Atualizar as listas
+        fetchMovimentacoes();
+        setSelectedForDeletion([]);
+
+        alert('Registros excluídos com sucesso!');
+      } catch (error) {
+        console.error('Erro ao excluir registros:', error);
+        alert('Erro ao excluir os registros selecionados.');
+      }
+    }
+  };
+
+  // Calcular movimentações para a página atual
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentMovimentacoes = filteredMovimentacoes.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredMovimentacoes.length / itemsPerPage);
+
+  // Funções de navegação
+  const goToPage = (pageNumber) => {
+    setCurrentPage(Math.max(1, Math.min(pageNumber, totalPages)));
   };
 
   const handleValorChange = (e) => {
@@ -498,7 +647,7 @@ export default function ControleCaixa() {
                 <FiArrowDown /> Nova Saída
               </button>
             </div>
-            
+
             <div className="flex items-center justify-center">
               <span className="text-[#81059e] text-base mr-1">Saldo Atual:</span>
               <span className="text-lg font-bold text-[#81059e]">R$ {(saldoAnterior + saldoPeriodo).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
@@ -510,33 +659,63 @@ export default function ControleCaixa() {
             <table className="min-w-full table-auto select-none">
               <thead className="bg-[#81059e] text-white">
                 <tr>
-                  <th className="px-4 py-3">Data</th>
-                  <th className="px-4 py-3">Descrição</th>
-                  <th className="px-4 py-3">Categoria</th>
-                  <th className="px-4 py-3">Método</th>
-                  <th className="px-4 py-3">Responsável</th>
-                  <th className="px-4 py-3">Valor</th>
-                  <th className="px-4 py-3">N° Documento</th>
-                  <th className="px-4 py-3">Caixa</th>
-                  <th className="px-4 py-3">O.S</th>
+                  <th className="px-4 py-3 w-12">
+                    <span className="sr-only">Selecionar</span>
+                  </th>
+                  <th className="px-4 py-3 cursor-pointer" onClick={() => handleSort('data')}>
+                    Data {renderSortArrow('data')}
+                  </th>
+                  <th className="px-4 py-3 cursor-pointer" onClick={() => handleSort('descricao')}>
+                    Descrição {renderSortArrow('descricao')}
+                  </th>
+                  <th className="px-4 py-3 cursor-pointer" onClick={() => handleSort('categoria')}>
+                    Categoria {renderSortArrow('categoria')}
+                  </th>
+                  <th className="px-4 py-3 cursor-pointer" onClick={() => handleSort('metodoPagamento')}>
+                    Método {renderSortArrow('metodoPagamento')}
+                  </th>
+                  <th className="px-4 py-3 cursor-pointer" onClick={() => handleSort('responsavel')}>
+                    Responsável {renderSortArrow('responsavel')}
+                  </th>
+                  <th className="px-4 py-3 cursor-pointer" onClick={() => handleSort('valor')}>
+                    Valor {renderSortArrow('valor')}
+                  </th>
+                  <th className="px-4 py-3 cursor-pointer" onClick={() => handleSort('numeroDocumento')}>
+                    N° Documento {renderSortArrow('numeroDocumento')}
+                  </th>
+                  <th className="px-4 py-3 cursor-pointer" onClick={() => handleSort('caixa')}>
+                    Caixa {renderSortArrow('caixa')}
+                  </th>
+                  <th className="px-4 py-3 cursor-pointer" onClick={() => handleSort('numeroOS')}>
+                    O.S {renderSortArrow('numeroOS')}
+                  </th>
                 </tr>
               </thead>
               <tbody className="text-black">
                 {loading ? (
                   <tr>
-                    <td colSpan="9" className="px-4 py-4 text-center">Carregando...</td>
+                    <td colSpan="10" className="px-4 py-4 text-center">Carregando...</td>
                   </tr>
-                ) : movimentacoes.length > 0 ? (
-                  movimentacoes.map((mov) => (
+                ) : currentMovimentacoes.length > 0 ? (
+                  currentMovimentacoes.map((mov) => (
                     <tr key={mov.id} className="border-b border-gray-100 hover:bg-gray-50">
+                      <td className="px-2 py-2 text-center">
+                        <input
+                          type="checkbox"
+                          checked={selectedForDeletion.includes(mov.id)}
+                          onChange={(e) => toggleDeletion(e, mov.id)}
+                          className="h-4 w-4 cursor-pointer"
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      </td>
                       <td className="px-4 py-3">{formatarDataExibicao(mov.data)}</td>
                       <td className="px-4 py-3 min-w-[150px]">{mov.descricao}</td>
                       <td className="px-4 py-3">{mov.categoria}</td>
                       <td className="px-4 py-3">{mov.metodoPagamento}</td>
                       <td className="px-4 py-3">{mov.responsavel}</td>
                       <td className="px-4 py-3 text-right font-medium">
-                        {mov.tipo === 'entrada' 
-                          ? <span className="text-green-600">+ R$ {parseFloat(mov.valor).toFixed(2)}</span> 
+                        {mov.tipo === 'entrada'
+                          ? <span className="text-green-600">+ R$ {parseFloat(mov.valor).toFixed(2)}</span>
                           : <span className="text-red-600">- R$ {parseFloat(mov.valor).toFixed(2)}</span>
                         }
                       </td>
@@ -547,11 +726,69 @@ export default function ControleCaixa() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="9" className="px-4 py-4 text-center">Nenhuma movimentação encontrada.</td>
+                    <td colSpan="10" className="px-4 py-4 text-center">Nenhuma movimentação encontrada.</td>
                   </tr>
                 )}
               </tbody>
             </table>
+
+            {/* Paginação */}
+            <div className="flex items-center justify-between mt-4">
+              <div className="text-sm text-gray-700">
+                Mostrando <span className="font-medium">{indexOfFirstItem + 1}</span> a{' '}
+                <span className="font-medium">
+                  {Math.min(indexOfLastItem, filteredMovimentacoes.length)}
+                </span>{' '}
+                de <span className="font-medium">{filteredMovimentacoes.length}</span> registros
+              </div>
+              <div className="flex space-x-1">
+                <button
+                  onClick={() => goToPage(1)}
+                  disabled={currentPage === 1}
+                  className={`px-3 py-1 rounded ${currentPage === 1
+                    ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                    : 'bg-[#81059e] text-white hover:bg-[#690480]'
+                    }`}
+                >
+                  &laquo;
+                </button>
+                <button
+                  onClick={() => goToPage(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className={`px-3 py-1 rounded ${currentPage === 1
+                    ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                    : 'bg-[#81059e] text-white hover:bg-[#690480]'
+                    }`}
+                >
+                  &lt;
+                </button>
+
+                <span className="px-3 py-1 text-gray-700">
+                  {currentPage} / {totalPages}
+                </span>
+
+                <button
+                  onClick={() => goToPage(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className={`px-3 py-1 rounded ${currentPage === totalPages
+                    ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                    : 'bg-[#81059e] text-white hover:bg-[#690480]'
+                    }`}
+                >
+                  &gt;
+                </button>
+                <button
+                  onClick={() => goToPage(totalPages)}
+                  disabled={currentPage === totalPages}
+                  className={`px-3 py-1 rounded ${currentPage === totalPages
+                    ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                    : 'bg-[#81059e] text-white hover:bg-[#690480]'
+                    }`}
+                >
+                  &raquo;
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -721,11 +958,10 @@ export default function ControleCaixa() {
                 </button>
                 <button
                   type="submit"
-                  className={`px-4 py-2 rounded text-white ${
-                    formData.tipo === 'entrada' 
-                      ? 'bg-green-500 hover:bg-green-600' 
-                      : 'bg-red-500 hover:bg-red-600'
-                  }`}
+                  className={`px-4 py-2 rounded text-white ${formData.tipo === 'entrada'
+                    ? 'bg-green-500 hover:bg-green-600'
+                    : 'bg-red-500 hover:bg-red-600'
+                    }`}
                   disabled={isLoading}
                 >
                   {isLoading ? 'Salvando...' : 'Confirmar'}
