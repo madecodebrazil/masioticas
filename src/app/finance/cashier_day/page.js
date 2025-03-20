@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Layout from '@/components/Layout';
-import { collection, getDocs, query, where, orderBy, addDoc, Timestamp, doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
+import { collection, getDocs, query, where, orderBy, addDoc, Timestamp, doc, getDoc, updateDoc, setDoc, deleteDoc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebaseConfig';
 import { useAuth } from '@/hooks/useAuth';
 import DatePicker from 'react-datepicker';
@@ -18,7 +18,10 @@ export default function ControleCaixa() {
   const [movimentacoes, setMovimentacoes] = useState([]);
   const [saldoAnterior, setSaldoAnterior] = useState(0);
   const [saldoAtual, setSaldoAtual] = useState(0);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingMovimentacao, setEditingMovimentacao] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [selectedForDeletion, setSelectedForDeletion] = useState([]);
   const [tipoMovimentacao, setTipoMovimentacao] = useState('entrada');
   const [filtroTipo, setFiltroTipo] = useState('todos');
   const [isLoading, setIsLoading] = useState(false);
@@ -73,6 +76,18 @@ export default function ControleCaixa() {
       fetchMovimentacoes();
     }
   }, [selectedLoja, dataInicio, dataFim, filtroTipo]);
+
+  useEffect(() => {
+    // Aplicar filtros e ordenação
+    if (movimentacoes.length > 0) {
+      // Ordenar as movimentações conforme o campo e direção atual
+      const sortedMovimentacoes = sortMovimentacoes(movimentacoes, sortField, sortDirection);
+      setFilteredMovimentacoes(sortedMovimentacoes);
+
+    } else {
+      setFilteredMovimentacoes([]);
+    }
+  }, [movimentacoes, sortField, sortDirection]);
 
   const formatarData = (data) => {
     return new Date(data.setHours(0, 0, 0, 0));
@@ -158,9 +173,7 @@ export default function ControleCaixa() {
           }
         }
       });
-
-
-
+      // Modificar o final da função fetchMovimentacoes
       setMeiosPagamento(meiosPagamentoTemp);
       setMovimentacoes(movimentacoesData);
 
@@ -247,6 +260,89 @@ export default function ControleCaixa() {
     // Reordenar as movimentações filtradas
     const sorted = sortMovimentacoes(filteredMovimentacoes, field, direction);
     setFilteredMovimentacoes(sorted);
+  };
+
+  const openEditModal = () => {
+    if (selectedForDeletion.length !== 1) return;
+
+    // Encontrar a movimentação selecionada
+    const movToEdit = movimentacoes.find(mov => mov.id === selectedForDeletion[0]);
+
+    if (movToEdit) {
+      setEditingMovimentacao({
+        ...movToEdit,
+        // Converter para formato de formulário se necessário
+        valor: parseFloat(movToEdit.valor || 0),
+        data: movToEdit.data instanceof Date ? movToEdit.data : new Date(movToEdit.data)
+      });
+      setIsEditModalOpen(true);
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    try {
+      if (!editingMovimentacao || !selectedLoja) return;
+
+      // Verificar o valor anterior para ajustar o saldo
+      const movimentacaoOriginal = movimentacoes.find(m => m.id === editingMovimentacao.id);
+      if (!movimentacaoOriginal) return;
+
+      // Calcular diferença de valor para ajustar o saldo
+      const valorOriginal = parseFloat(movimentacaoOriginal.valor || 0);
+      const novoValor = parseFloat(editingMovimentacao.valor || 0);
+      const diferencaValor = novoValor - valorOriginal;
+
+      // Ajustar saldo do caixa
+      const caixaDocRef = doc(firestore, `lojas/${selectedLoja}/financeiro/controle_caixa`);
+      const caixaSnap = await getDoc(caixaDocRef);
+      const caixaData = caixaSnap.exists() ? caixaSnap.data() : { saldoAtual: 0 };
+
+      let novoSaldo = caixaData.saldoAtual || 0;
+
+      // Ajustar saldo conforme o tipo e a diferença de valor
+      if (editingMovimentacao.tipo === 'entrada') {
+        novoSaldo += diferencaValor;
+      } else {
+        novoSaldo -= diferencaValor;
+      }
+
+      // Preparar dados para atualizar
+      const movimentacaoData = {
+        ...editingMovimentacao,
+        data: Timestamp.fromDate(editingMovimentacao.data),
+        valor: novoValor,
+        updatedAt: Timestamp.now()
+      };
+
+      // Referência ao documento
+      const movRef = doc(firestore, `lojas/${selectedLoja}/financeiro/controle_caixa/items`, editingMovimentacao.id);
+
+      // Atualizar o documento
+      await setDoc(movRef, movimentacaoData, { merge: true });
+
+      // Atualizar o saldo
+      await updateDoc(caixaDocRef, {
+        saldoAtual: novoSaldo,
+        ultimaAtualizacao: Timestamp.now()
+      });
+
+      // Atualizar estado local
+      setMovimentacoes(prevMovs =>
+        prevMovs.map(mov => mov.id === editingMovimentacao.id ? movimentacaoData : mov)
+      );
+
+      // Fechar modal e limpar seleção
+      setIsEditModalOpen(false);
+      setSelectedForDeletion([]);
+
+      // Recarregar dados para refletir as mudanças
+      fetchMovimentacoes();
+
+      alert('Movimentação atualizada com sucesso!');
+    } catch (error) {
+      console.error('Erro ao atualizar movimentação:', error);
+      alert('Erro ao atualizar a movimentação.');
+    }
   };
 
   // Renderizar seta de ordenação - apenas quando a coluna estiver selecionada
@@ -612,6 +708,31 @@ export default function ControleCaixa() {
             </div>
 
             <div className="flex gap-1">
+              {/* Botão Excluir */}
+              <button
+                onClick={handleDeleteSelected}
+                className={`${selectedForDeletion.length === 0 ? 'bg-red-300' : 'bg-red-500'} px-3 h-10 rounded-md text-white text-sm`}
+                disabled={selectedForDeletion.length === 0}
+                title="Excluir Selecionados"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
+
+              {/* Botão Editar */}
+              <button
+                onClick={openEditModal}
+                className={`${selectedForDeletion.length !== 1 ? 'bg-blue-300' : 'bg-blue-500'} px-3 h-10 rounded-md text-white text-sm`}
+                disabled={selectedForDeletion.length !== 1}
+                title="Editar Selecionado"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                </svg>
+              </button>
+
+              {/* Botão Atualizar (que já existe) */}
               <button
                 onClick={() => fetchMovimentacoes()}
                 className="bg-gray-600 px-3 h-10 rounded-md text-white text-sm"
@@ -620,6 +741,7 @@ export default function ControleCaixa() {
                 <FiRefreshCw />
               </button>
 
+              {/* Botão Imprimir (que já existe) */}
               <button
                 onClick={imprimirRelatorio}
                 className="bg-blue-600 px-3 h-10 rounded-md text-white text-sm"
@@ -655,38 +777,39 @@ export default function ControleCaixa() {
           </div>
 
           {/* Tabela de Movimentações - Colunas ajustadas para melhor visualização */}
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto mb-20">
             <table className="min-w-full table-auto select-none">
               <thead className="bg-[#81059e] text-white">
                 <tr>
-                  <th className="px-4 py-3 w-12">
+                  <th className="px-3 py-2 w-12">
                     <span className="sr-only">Selecionar</span>
                   </th>
-                  <th className="px-4 py-3 cursor-pointer" onClick={() => handleSort('data')}>
+                  <th className="px-3 py-2 cursor-pointer whitespace-nowrap" onClick={() => handleSort('data')}>
                     Data {renderSortArrow('data')}
                   </th>
-                  <th className="px-4 py-3 cursor-pointer" onClick={() => handleSort('descricao')}>
+                  <th className="px-3 py-2 cursor-pointer" onClick={() => handleSort('descricao')}>
                     Descrição {renderSortArrow('descricao')}
                   </th>
-                  <th className="px-4 py-3 cursor-pointer" onClick={() => handleSort('categoria')}>
-                    Categoria {renderSortArrow('categoria')}
-                  </th>
-                  <th className="px-4 py-3 cursor-pointer" onClick={() => handleSort('metodoPagamento')}>
-                    Método {renderSortArrow('metodoPagamento')}
-                  </th>
-                  <th className="px-4 py-3 cursor-pointer" onClick={() => handleSort('responsavel')}>
-                    Responsável {renderSortArrow('responsavel')}
-                  </th>
-                  <th className="px-4 py-3 cursor-pointer" onClick={() => handleSort('valor')}>
+                  <th className="px-3 py-2 cursor-pointer" onClick={() => handleSort('valor')}>
                     Valor {renderSortArrow('valor')}
                   </th>
-                  <th className="px-4 py-3 cursor-pointer" onClick={() => handleSort('numeroDocumento')}>
-                    N° Documento {renderSortArrow('numeroDocumento')}
+                  <th className="px-3 py-2 cursor-pointer" onClick={() => handleSort('categoria')}>
+                    Categoria {renderSortArrow('categoria')}
                   </th>
-                  <th className="px-4 py-3 cursor-pointer" onClick={() => handleSort('caixa')}>
+                  <th className="px-3 py-2 cursor-pointer whitespace-nowrap" onClick={() => handleSort('metodoPagamento')}>
+                    Método {renderSortArrow('metodoPagamento')}
+                  </th>
+                  <th className="px-3 py-2 cursor-pointer" onClick={() => handleSort('responsavel')}>
+                    Responsável {renderSortArrow('responsavel')}
+                  </th>
+                  
+                  <th className="px-3 py-2 cursor-pointer" onClick={() => handleSort('numeroDocumento')}>
+                   Documento {renderSortArrow('numeroDocumento')}
+                  </th>
+                  <th className="px-3 py-2 cursor-pointer whitespace-nowrap" onClick={() => handleSort('caixa')}>
                     Caixa {renderSortArrow('caixa')}
                   </th>
-                  <th className="px-4 py-3 cursor-pointer" onClick={() => handleSort('numeroOS')}>
+                  <th className="px-3 py-2 cursor-pointer" onClick={() => handleSort('numeroOS')}>
                     O.S {renderSortArrow('numeroOS')}
                   </th>
                 </tr>
@@ -698,8 +821,8 @@ export default function ControleCaixa() {
                   </tr>
                 ) : currentMovimentacoes.length > 0 ? (
                   currentMovimentacoes.map((mov) => (
-                    <tr key={mov.id} className="border-b border-gray-100 hover:bg-gray-50">
-                      <td className="px-2 py-2 text-center">
+                    <tr key={mov.id} className="text-black text-left hover:bg-gray-100 cursor-pointer">
+                      <td className="border px-2 py-2 text-center">
                         <input
                           type="checkbox"
                           checked={selectedForDeletion.includes(mov.id)}
@@ -708,25 +831,26 @@ export default function ControleCaixa() {
                           onClick={(e) => e.stopPropagation()}
                         />
                       </td>
-                      <td className="px-4 py-3">{formatarDataExibicao(mov.data)}</td>
-                      <td className="px-4 py-3 min-w-[150px]">{mov.descricao}</td>
-                      <td className="px-4 py-3">{mov.categoria}</td>
-                      <td className="px-4 py-3">{mov.metodoPagamento}</td>
-                      <td className="px-4 py-3">{mov.responsavel}</td>
-                      <td className="px-4 py-3 text-right font-medium">
+                      <td className="border px-3 py-2 whitespace-nowrap">{formatarDataExibicao(mov.data)}</td>
+                      <td className="border px-4 py-2 max-w-[300px] truncate">{mov.descricao}</td>
+                      <td className="border px-6 py-2 whitespace-nowrap text-right font-medium">
                         {mov.tipo === 'entrada'
                           ? <span className="text-green-600">+ R$ {parseFloat(mov.valor).toFixed(2)}</span>
                           : <span className="text-red-600">- R$ {parseFloat(mov.valor).toFixed(2)}</span>
                         }
                       </td>
-                      <td className="px-4 py-3">{mov.numeroDocumento || '-'}</td>
-                      <td className="px-4 py-3">{mov.caixa || 'Principal'}</td>
-                      <td className="px-4 py-3">{mov.numeroOS || '-'}</td>
+                      <td className="border px-3 py-2 whitespace-nowrap">{mov.categoria}</td>
+                      <td className="border px-3 py-2 whitespace-nowrap">{mov.metodoPagamento}</td>
+                      <td className="border px-3 py-2 whitespace-nowrap">{mov.responsavel}</td>
+                      
+                      <td className="border px-3 py-2 whitespace-nowrap">{mov.numeroDocumento || '-'}</td>
+                      <td className="border px-3 py-2 whitespace-nowrap">{mov.caixa || 'Principal'}</td>
+                      <td className="border px-3 py-2 whitespace-nowrap">{mov.numeroOS || '-'}</td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="10" className="px-4 py-4 text-center">Nenhuma movimentação encontrada.</td>
+                    <td colSpan="10" className="px-2 py-1 text-center">Nenhuma movimentação encontrada.</td>
                   </tr>
                 )}
               </tbody>
@@ -968,6 +1092,191 @@ export default function ControleCaixa() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+
+      {/* Modal de Edição de Movimentação */}
+      {isEditModalOpen && editingMovimentacao && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-md flex flex-col h-4/5 overflow-hidden text-black">
+            <div className="bg-[#81059e] text-white p-4 flex justify-between items-center">
+              <h3 className="text-xl font-bold">Editar Movimentação</h3>
+              <button
+                onClick={() => setIsEditModalOpen(false)}
+                className="text-white hover:text-gray-200"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="p-4 overflow-y-auto flex-grow">
+              <div className="space-y-3">
+                {/* Tipo de Movimentação (não editável) */}
+                <div>
+                  <label className="block text-[#81059e] font-medium">Tipo:</label>
+                  <input
+                    type="text"
+                    value={editingMovimentacao.tipo === 'entrada' ? 'Entrada' : 'Saída'}
+                    className="w-full p-2 border-2 border-gray-200 rounded-sm bg-gray-100"
+                    disabled
+                  />
+                </div>
+
+                {/* Valor */}
+                <div>
+                  <label className="block text-[#81059e] font-medium">Valor:</label>
+                  <div className="relative">
+                    <span className="absolute left-2 top-2.5 text-gray-600">R$</span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={editingMovimentacao.valor || 0}
+                      onChange={(e) => setEditingMovimentacao({
+                        ...editingMovimentacao,
+                        valor: parseFloat(e.target.value) || 0
+                      })}
+                      className="w-full p-2 pl-8 border-2 border-[#81059e] rounded-sm"
+                    />
+                  </div>
+                </div>
+
+                {/* Data */}
+                <div>
+                  <label className="block text-[#81059e] font-medium">Data:</label>
+                  <DatePicker
+                    selected={editingMovimentacao.data}
+                    onChange={(date) => setEditingMovimentacao({
+                      ...editingMovimentacao,
+                      data: date
+                    })}
+                    dateFormat="dd/MM/yyyy"
+                    className="w-full p-2 border-2 border-[#81059e] rounded-sm"
+                  />
+                </div>
+
+                {/* Categoria */}
+                <div>
+                  <label className="block text-[#81059e] font-medium">Categoria:</label>
+                  <select
+                    value={editingMovimentacao.categoria || ''}
+                    onChange={(e) => setEditingMovimentacao({
+                      ...editingMovimentacao,
+                      categoria: e.target.value
+                    })}
+                    className="w-full p-2 border-2 border-[#81059e] rounded-sm"
+                  >
+                    <option value="">Selecione</option>
+                    {getCategorias(editingMovimentacao.tipo).map((cat) => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Método de Pagamento */}
+                <div>
+                  <label className="block text-[#81059e] font-medium">Método de Pagamento:</label>
+                  <select
+                    value={editingMovimentacao.metodoPagamento || 'dinheiro'}
+                    onChange={(e) => setEditingMovimentacao({
+                      ...editingMovimentacao,
+                      metodoPagamento: e.target.value
+                    })}
+                    className="w-full p-2 border-2 border-[#81059e] rounded-sm"
+                  >
+                    <option value="dinheiro">Dinheiro</option>
+                    <option value="cartao_debito">Cartão de Débito</option>
+                    <option value="cartao_credito">Cartão de Crédito</option>
+                    <option value="pix">PIX</option>
+                    <option value="transferencia">Transferência</option>
+                    <option value="cheque">Cheque</option>
+                    <option value="boleto">Boleto</option>
+                  </select>
+                </div>
+
+                {/* Número do Documento */}
+                <div>
+                  <label className="block text-[#81059e] font-medium">N° do Documento:</label>
+                  <input
+                    type="text"
+                    value={editingMovimentacao.numeroDocumento || ''}
+                    onChange={(e) => setEditingMovimentacao({
+                      ...editingMovimentacao,
+                      numeroDocumento: e.target.value
+                    })}
+                    className="w-full p-2 border-2 border-[#81059e] rounded-sm"
+                    placeholder="Ex: NF12345"
+                  />
+                </div>
+
+                {/* Caixa */}
+                <div>
+                  <label className="block text-[#81059e] font-medium">Caixa:</label>
+                  <select
+                    value={editingMovimentacao.caixa || 'principal'}
+                    onChange={(e) => setEditingMovimentacao({
+                      ...editingMovimentacao,
+                      caixa: e.target.value
+                    })}
+                    className="w-full p-2 border-2 border-[#81059e] rounded-sm"
+                  >
+                    <option value="principal">Principal</option>
+                    <option value="secundario">Secundário</option>
+                    <option value="reserva">Reserva</option>
+                  </select>
+                </div>
+
+                {/* Número OS - Apenas para vendas */}
+                {(editingMovimentacao.tipo === 'entrada' &&
+                  editingMovimentacao.categoria === 'Venda') && (
+                    <div>
+                      <label className="block text-[#81059e] font-medium">Número da O.S:</label>
+                      <input
+                        type="text"
+                        value={editingMovimentacao.numeroOS || ''}
+                        onChange={(e) => setEditingMovimentacao({
+                          ...editingMovimentacao,
+                          numeroOS: e.target.value
+                        })}
+                        className="w-full p-2 border-2 border-[#81059e] rounded-sm"
+                        placeholder="Ex: OS-2025-001"
+                      />
+                    </div>
+                  )}
+
+                {/* Descrição */}
+                <div>
+                  <label className="block text-[#81059e] font-medium">Descrição:</label>
+                  <textarea
+                    value={editingMovimentacao.descricao || ''}
+                    onChange={(e) => setEditingMovimentacao({
+                      ...editingMovimentacao,
+                      descricao: e.target.value
+                    })}
+                    className="w-full p-2 border-2 border-[#81059e] rounded-sm h-20"
+                    placeholder="Descrição detalhada..."
+                  ></textarea>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 bg-gray-50 border-t flex justify-end space-x-2">
+              <button
+                onClick={() => setIsEditModalOpen(false)}
+                className="text-[#81059e] px-4 py-2 rounded-md"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSaveEdit}
+                className="bg-[#81059e] text-white px-4 py-2 rounded-sm"
+              >
+                Salvar
+              </button>
+            </div>
           </div>
         </div>
       )}
