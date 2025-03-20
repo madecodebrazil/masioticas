@@ -28,7 +28,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import Image from 'next/image';
 import Link from 'next/link';
-import Sidebar from './Sidebar'; // Importe o componente Sidebar
+import Sidebar from '../components/Sidebar'; // Importe o componente Sidebar
 
 // Componente MobileNavSidebar com userPhotoURL sendo passado como prop
 export default function MobileNavSidebar({ handleLogout, userPhotoURL, userData, userPermissions }) {
@@ -46,6 +46,11 @@ export default function MobileNavSidebar({ handleLogout, userPhotoURL, userData,
     // Alterna o menu hambúrguer (abre ou fecha o Sidebar)
     const toggleMenu = () => {
         setMenuOpen(!isMenuOpen);
+    };
+
+    // Função para fechar o sidebar
+    const hideSidebar = () => {
+        setMenuOpen(false);
     };
 
     // Configurações de animação para suavizar a abertura do menu
@@ -152,156 +157,11 @@ export default function MobileNavSidebar({ handleLogout, userPhotoURL, userData,
                 </div>
             </div>
 
-            {/* Menu lateral móvel que aparece ao clicar no ícone de hambúrguer */}
-            {isMenuOpen && (
-                <motion.div
-                    initial="hidden"
-                    animate="visible"
-                    exit="exit"
-                    variants={menuVariants}
-                    className="fixed top-0 left-0 h-full w-[250px] bg-[#81059e] z-50 p-4 overflow-y-auto"
-                >
-                    {/* Botão para fechar o menu */}
-                    <div className="flex justify-end mb-4">
-                        <button
-                            className="text-white"
-                            onClick={toggleMenu}
-                        >
-                            <FontAwesomeIcon icon={faX} className="text-xl" />
-                        </button>
-                    </div>
-
-                    {/* Seção de perfil do usuário - similar ao desktop */}
-                    <div className="flex flex-col items-center mb-6">
-                        {/* Ícones de notificação, configuração e logout */}
-                        <div className="flex justify-center mb-4 space-x-4">
-                            <button className="text-white">
-                                <FontAwesomeIcon icon={faBell} className="text-xl" />
-                            </button>
-                            <button className="text-white">
-                                <FontAwesomeIcon icon={faCog} className="text-xl" />
-                            </button>
-                            <button className="text-white">
-                                <FontAwesomeIcon icon={faRightFromBracket} className="text-xl" />
-                            </button>
-                        </div>
-
-                        {/* Foto do perfil grande */}
-                        <Image
-                            src={userPhotoURL}
-                            alt="User Avatar"
-                            width={80}
-                            height={80}
-                            className="rounded-full mb-4 border-2 border-white p-2"
-                        />
-
-                        {/* Nome do usuário e cargo */}
-                        <div className="text-center mb-6">
-                            <h2 className="text-white text-xl font-bold mb-1">
-                                {userData?.name || 'Dev Account'}
-                            </h2>
-                            {renderUserInfo()}
-                        </div>
-                    </div>
-
-                    {/* Menu de navegação */}
-                    <nav className="flex flex-col gap-2 w-full overflow-y-auto max-h-[calc(100vh-250px)]">
-                        <Link href="/homepage">
-                            <div className="bg-[#9b32b2] text-white rounded-lg py-2 px-3 w-full text-center shadow-lg flex items-center justify-start gap-3 hover:bg-[#D291BC] transition-colors duration-300">
-                                <FontAwesomeIcon icon={faChartSimple} className="w-5 h-5" />
-                                <span className="text-white font-medium">Dashboard</span>
-                            </div>
-                        </Link>
-
-                        <Link href="/homepage/agenda">
-                            <div className="bg-[#84207B] text-white rounded-lg py-2 px-3 w-full text-center shadow-lg flex items-center justify-start gap-3 hover:bg-[#9b32b2] transition-colors duration-300">
-                                <FontAwesomeIcon icon={faCalendarDay} className="w-5 h-5" />
-                                <span className="text-white font-medium">Agenda</span>
-                            </div>
-                        </Link>
-
-                        <Link href="/finance">
-                            <div className="bg-[#84207B] text-white rounded-lg py-2 px-3 w-full text-center shadow-lg flex items-center justify-start gap-3 hover:bg-[#9b32b2] transition-colors duration-300">
-                                <FontAwesomeIcon icon={faCoins} className="w-5 h-5" />
-                                <span className="text-white font-medium">Financeiro</span>
-                            </div>
-                        </Link>
-
-                        <Link href="/commercial/sales">
-                            <div className="bg-[#84207B] text-white rounded-lg py-2 px-3 w-full text-center shadow-lg flex items-center justify-start gap-3 hover:bg-[#9b32b2] transition-colors duration-300">
-                                <FontAwesomeIcon icon={faMoneyBillTransfer} className="w-5 h-5" />
-                                <span className="text-white font-medium">Vendas</span>
-                            </div>
-                        </Link>
-
-                        <Link href="/homepage/cadastros">
-                            <div className="bg-[#84207B] text-white rounded-lg py-2 px-3 w-full text-center shadow-lg flex items-center justify-start gap-3 hover:bg-[#9b32b2] transition-colors duration-300">
-                                <FontAwesomeIcon icon={faUserPlus} className="w-5 h-5" />
-                                <span className="text-white font-medium">Cadastros</span>
-                            </div>
-                        </Link>
-
-                        <Link href="/homepage/estoque">
-                            <div className="bg-[#84207B] text-white rounded-lg py-2 px-3 w-full text-center shadow-lg flex items-center justify-start gap-3 hover:bg-[#9b32b2] transition-colors duration-300">
-                                <FontAwesomeIcon icon={faCartFlatbed} className="w-5 h-5" />
-                                <span className="text-white font-medium">Estoque</span>
-                            </div>
-                        </Link>
-
-
-
-
-                        <Link href="/homepage/loja-online">
-                            <div className="bg-[#84207B] text-white rounded-lg py-2 px-3 w-full text-center shadow-lg flex items-center justify-start gap-3 hover:bg-[#9b32b2] transition-colors duration-300">
-                                <FontAwesomeIcon icon={faShop} className="w-5 h-5" />
-                                <span className="text-white font-medium">Loja Online</span>
-                            </div>
-                        </Link>
-
-                        <Link href="/homepage/contratos">
-                            <div className="bg-[#84207B] text-white rounded-lg py-2 px-3 w-full text-center shadow-lg flex items-center justify-start gap-3 hover:bg-[#9b32b2] transition-colors duration-300">
-                                <FontAwesomeIcon icon={faFileSignature} className="w-5 h-5" />
-                                <span className="text-white font-medium">Contratos</span>
-                            </div>
-                        </Link>
-
-                        <Link href="/homepage/crm">
-                            <div className="bg-[#84207B] text-white rounded-lg py-2 px-3 w-full text-center shadow-lg flex items-center justify-start gap-3 hover:bg-[#9b32b2] transition-colors duration-300">
-                                <FontAwesomeIcon icon={faPeopleRoof} className="w-5 h-5" />
-                                <span className="text-white font-medium">CRM</span>
-                            </div>
-                        </Link>
-
-                        <Link href="/homepage/rh">
-                            <div className="bg-[#84207B] text-white rounded-lg py-2 px-3 w-full text-center shadow-lg flex items-center justify-start gap-3 hover:bg-[#9b32b2] transition-colors duration-300">
-                                <FontAwesomeIcon icon={faIdBadge} className="w-5 h-5" />
-                                <span className="text-white font-medium">RH</span>
-                            </div>
-                        </Link>
-
-                        <Link href="/homepage/integracoes">
-                            <div className="bg-[#84207B] text-white rounded-lg py-2 px-3 w-full text-center shadow-lg flex items-center justify-start gap-3 hover:bg-[#9b32b2] transition-colors duration-300">
-                                <FontAwesomeIcon icon={faCode} className="w-5 h-5" />
-                                <span className="text-white font-medium">Integrações</span>
-                            </div>
-                        </Link>
-                    </nav>
-
-                    {/* Botões de configuração e logout */}
-                    <div className="mt-4 flex justify-center space-x-6">
-                        <button
-                            onClick={() => setIsConfigOpen(true)}
-                            className="bg-[#9b32b2] hover:bg-[#D4A017] rounded-full p-3 transition-colors duration-300">
-                            <FontAwesomeIcon icon={faCog} className="text-white w-5 h-5" />
-                        </button>
-                        <button
-                            onClick={handleLogout}
-                            className="bg-[#9b32b2] hover:bg-[#D4A017] rounded-full p-3 transition-colors duration-300">
-                            <FontAwesomeIcon icon={faRightFromBracket} className="text-white w-5 h-5" />
-                        </button>
-                    </div>
-                </motion.div>
-            )}
+            {/* Renderizando o componente Sidebar com as props necessárias */}
+            <Sidebar 
+                showSidebar={isMenuOpen} 
+                hideSidebar={hideSidebar}
+            />
 
             {/* Dropdown lateral que aparece ao clicar no avatar */}
             {isDropdownOpen && (

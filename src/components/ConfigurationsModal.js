@@ -13,7 +13,8 @@ import {
   faBox,
   faTimes,
   faSave,
-  faExclamationTriangle
+  faExclamationTriangle,
+  faGear
 } from '@fortawesome/free-solid-svg-icons';
 
 const ConfigurationsModal = ({ isOpen, onClose }) => {
@@ -385,7 +386,7 @@ const ConfigurationsModal = ({ isOpen, onClose }) => {
       >
         <div className="flex justify-between items-center p-4 border-b">
           <h3 className="text-xl font-bold text-white">
-            <FontAwesomeIcon icon={faClock} className="mr-2 text-white" /> Configurações do Sistema
+            <FontAwesomeIcon icon={faGear} className="mr-2 text-white" /> Configurações do Sistema
           </h3>
           <button 
             onClick={handleClose}

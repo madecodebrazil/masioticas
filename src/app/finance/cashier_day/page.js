@@ -5,6 +5,8 @@ import Layout from '@/components/Layout';
 import { collection, getDocs, query, where, orderBy, addDoc, Timestamp, doc, getDoc, updateDoc, setDoc, deleteDoc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebaseConfig';
 import { useAuth } from '@/hooks/useAuth';
+import CaixasModal from '@/components/CaixasModal';
+import { useCaixas } from '@/hooks/useCaixas';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 import { FiCalendar, FiDollarSign, FiArrowUp, FiArrowDown, FiPrinter, FiRefreshCw, FiHome, FiFilter } from 'react-icons/fi';
@@ -17,6 +19,8 @@ export default function ControleCaixa() {
   const [dataFim, setDataFim] = useState(new Date());
   const [movimentacoes, setMovimentacoes] = useState([]);
   const [saldoAnterior, setSaldoAnterior] = useState(0);
+  const [showCaixasModal, setShowCaixasModal] = useState(false);
+  const { caixas, loading: loadingCaixas, refreshCaixas } = useCaixas(selectedLoja);
   const [saldoAtual, setSaldoAtual] = useState(0);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingMovimentacao, setEditingMovimentacao] = useState(null);
@@ -25,10 +29,8 @@ export default function ControleCaixa() {
   const [tipoMovimentacao, setTipoMovimentacao] = useState('entrada');
   const [filtroTipo, setFiltroTipo] = useState('todos');
   const [isLoading, setIsLoading] = useState(false);
-  // Estados para ordenação
   const [sortField, setSortField] = useState('data');
   const [sortDirection, setSortDirection] = useState('desc');
-  // Estados para paginação
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(15);
   const [filteredMovimentacoes, setFilteredMovimentacoes] = useState([]);
@@ -42,7 +44,6 @@ export default function ControleCaixa() {
     outros: 0
   });
 
-  // Formulário de nova movimentação com os campos adicionais
   const [formData, setFormData] = useState({
     tipo: 'entrada',
     valor: '',
@@ -52,11 +53,9 @@ export default function ControleCaixa() {
     metodoPagamento: 'dinheiro',
     responsavel: userData?.nome || '',
     numeroDocumento: '', // Novo campo para N° do Documento
-    caixa: 'principal', // Novo campo para Caixa
+    caixa: '', // Novo campo para Caixa
     numeroOS: '', // Novo campo para OS
   });
-
-  // Definir loja inicial baseado nas permissões
   useEffect(() => {
     if (userPermissions) {
       // Se não for admin, usa a primeira loja que tem acesso
@@ -70,7 +69,6 @@ export default function ControleCaixa() {
     }
   }, [userPermissions]);
 
-  // Buscar movimentações quando selectedLoja ou datas mudarem
   useEffect(() => {
     if (selectedLoja) {
       fetchMovimentacoes();
@@ -442,7 +440,7 @@ export default function ControleCaixa() {
       data: new Date(),
       responsavel: userData?.nome || '',
       numeroDocumento: '',
-      caixa: 'principal',
+      caixa: '',
       numeroOS: '',
     }));
     setShowModal(true);
@@ -536,7 +534,7 @@ export default function ControleCaixa() {
         metodoPagamento: 'dinheiro',
         responsavel: userData?.nome || '',
         numeroDocumento: '',
-        caixa: 'principal',
+        caixa: '',
         numeroOS: '',
       });
 
@@ -618,7 +616,7 @@ export default function ControleCaixa() {
 
   return (
     <Layout>
-      <div className="min-h-screen">
+      <div className="min-h-screen mb-20">
         <div className="w-full max-w-6xl mx-auto rounded-lg">
           <h2 className="text-3xl font-bold text-[#81059e] mb-8 mt-8">CONTROLE DE CAIXA</h2>
 
@@ -640,36 +638,42 @@ export default function ControleCaixa() {
             </div>
           )}
 
-          {/* Dashboard mais compacto */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-4">
+          {/* Dashboard */}
+          <div className="flex flex-wrap gap-10 mb-4 overflow-x-auto">
             {/* Saldo Anterior */}
-            <div className="bg-white shadow-sm rounded-md p-2 border-l-4 border-blue-500">
-              <p className="text-gray-500 text-xs">Saldo Anterior</p>
-              <p className="text-lg font-bold">{formatarValor(saldoAnterior)}</p>
+            <div className="rounded-sm p-4 border-l-4 border-l-blue-500 flex-1 min-w-[130px]">
+              <p className="text-black text-sm font-bold">Saldo Anterior</p>
+              <p className="text-lg text-gray-500">{formatarValor(saldoAnterior)}</p>
             </div>
 
             {/* Entradas */}
-            <div className="bg-white shadow-sm rounded-md p-2 border-l-4 border-green-500">
-              <p className="text-gray-500 text-xs">Entradas</p>
-              <p className="text-lg font-bold text-green-600">{formatarValor(totalEntradas)}</p>
+            <div className="rounded-sm p-4 border-l-4 border-green-500 flex-1 min-w-[130px]">
+              <p className="text-black text-sm font-bold">Entradas</p>
+              <p className="text-lg text-green-600">{formatarValor(totalEntradas)}</p>
             </div>
 
             {/* Saídas */}
-            <div className="bg-white shadow-sm rounded-md p-2 border-l-4 border-red-500">
-              <p className="text-gray-500 text-xs">Saídas</p>
-              <p className="text-lg font-bold text-red-600">{formatarValor(totalSaidas)}</p>
+            <div className="rounded-sm p-4 border-l-4 border-red-500 flex-1 min-w-[130px]">
+              <p className="text-black text-sm font-bold">Saídas</p>
+              <p className="text-lg text-red-600">{formatarValor(totalSaidas)}</p>
             </div>
 
             {/* Dinheiro */}
-            <div className="bg-white shadow-sm rounded-md p-2 border-l-4 border-yellow-500">
-              <p className="text-gray-500 text-xs">Dinheiro</p>
-              <p className="text-lg font-bold">{formatarValor(meiosPagamento.dinheiro)}</p>
+            <div className="rounded-sm p-4 border-l-4 border-yellow-500 flex-1 min-w-[130px]">
+              <p className="text-black text-sm font-bold">Dinheiro</p>
+              <p className="text-lg text-gray-500">{formatarValor(meiosPagamento.dinheiro)}</p>
+            </div>
+
+            {/* Cartão */}
+            <div className="rounded-sm p-4 border-l-4 border-purple-500 flex-1 min-w-[130px]">
+              <p className="text-black text-sm font-bold">Cartão</p>
+              <p className="text-lg text-gray-500">{formatarValor(meiosPagamento.cartao_credito + meiosPagamento.cartao_debito)}</p>
             </div>
 
             {/* PIX */}
-            <div className="bg-white shadow-sm rounded-md p-2 border-l-4 border-indigo-500">
-              <p className="text-gray-500 text-xs">PIX</p>
-              <p className="text-lg font-bold">{formatarValor(meiosPagamento.pix)}</p>
+            <div className="rounded-sm p-4 border-l-4 border-indigo-500">
+              <p className="text-black text-sm font-bold">PIX</p>
+              <p className="text-lg text-gray-500">{formatarValor(meiosPagamento.pix)}</p>
             </div>
           </div>
 
@@ -711,7 +715,7 @@ export default function ControleCaixa() {
               {/* Botão Excluir */}
               <button
                 onClick={handleDeleteSelected}
-                className={`${selectedForDeletion.length === 0 ? 'bg-red-300' : 'bg-red-500'} px-3 h-10 rounded-md text-white text-sm`}
+                className={`${selectedForDeletion.length === 0 ? 'bg-red-300' : 'bg-red-500'} text-white h-10 w-10 rounded-md flex items-center justify-center`}
                 disabled={selectedForDeletion.length === 0}
                 title="Excluir Selecionados"
               >
@@ -723,11 +727,11 @@ export default function ControleCaixa() {
               {/* Botão Editar */}
               <button
                 onClick={openEditModal}
-                className={`${selectedForDeletion.length !== 1 ? 'bg-blue-300' : 'bg-blue-500'} px-3 h-10 rounded-md text-white text-sm`}
+                className={`${selectedForDeletion.length !== 1 ? 'bg-blue-300' : 'bg-blue-500'} text-white h-10 w-10 rounded-md flex items-center justify-center`}
                 disabled={selectedForDeletion.length !== 1}
                 title="Editar Selecionado"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                 </svg>
               </button>
@@ -735,19 +739,19 @@ export default function ControleCaixa() {
               {/* Botão Atualizar (que já existe) */}
               <button
                 onClick={() => fetchMovimentacoes()}
-                className="bg-gray-600 px-3 h-10 rounded-md text-white text-sm"
+                className="bg-gray-600 text-white h-10 w-10 rounded-md flex items-center justify-center"
                 title="Atualizar"
               >
-                <FiRefreshCw />
+                <FiRefreshCw className='h-5 w-5' />
               </button>
 
               {/* Botão Imprimir (que já existe) */}
               <button
                 onClick={imprimirRelatorio}
-                className="bg-blue-600 px-3 h-10 rounded-md text-white text-sm"
+                className="bg-blue-600 text-white h-10 w-10 rounded-md flex items-center justify-center"
                 title="Imprimir"
               >
-                <FiPrinter />
+                <FiPrinter className='h-5 w-5' />
               </button>
             </div>
           </div>
@@ -768,16 +772,24 @@ export default function ControleCaixa() {
               >
                 <FiArrowDown /> Nova Saída
               </button>
+
+              {/* Novo botão para gerenciar caixas */}
+              <button
+                onClick={() => setShowCaixasModal(true)}
+                className="bg-blue-500 hover:bg-blue-600 px-3 py-2 rounded-md text-white flex items-center gap-2 text-sm"
+              >
+                <FiDollarSign /> Caixas
+              </button>
             </div>
 
-            <div className="flex items-center justify-center">
+            <div className="flex item-end">
               <span className="text-[#81059e] text-base mr-1">Saldo Atual:</span>
               <span className="text-lg font-bold text-[#81059e]">R$ {(saldoAnterior + saldoPeriodo).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </div>
           </div>
 
           {/* Tabela de Movimentações - Colunas ajustadas para melhor visualização */}
-          <div className="overflow-x-auto mb-20">
+          <div className="overflow-x-auto">
             <table className="min-w-full table-auto select-none">
               <thead className="bg-[#81059e] text-white">
                 <tr>
@@ -802,9 +814,9 @@ export default function ControleCaixa() {
                   <th className="px-3 py-2 cursor-pointer" onClick={() => handleSort('responsavel')}>
                     Responsável {renderSortArrow('responsavel')}
                   </th>
-                  
+
                   <th className="px-3 py-2 cursor-pointer" onClick={() => handleSort('numeroDocumento')}>
-                   Documento {renderSortArrow('numeroDocumento')}
+                    Documento {renderSortArrow('numeroDocumento')}
                   </th>
                   <th className="px-3 py-2 cursor-pointer whitespace-nowrap" onClick={() => handleSort('caixa')}>
                     Caixa {renderSortArrow('caixa')}
@@ -842,7 +854,7 @@ export default function ControleCaixa() {
                       <td className="border px-3 py-2 whitespace-nowrap">{mov.categoria}</td>
                       <td className="border px-3 py-2 whitespace-nowrap">{mov.metodoPagamento}</td>
                       <td className="border px-3 py-2 whitespace-nowrap">{mov.responsavel}</td>
-                      
+
                       <td className="border px-3 py-2 whitespace-nowrap">{mov.numeroDocumento || '-'}</td>
                       <td className="border px-3 py-2 whitespace-nowrap">{mov.caixa || 'Principal'}</td>
                       <td className="border px-3 py-2 whitespace-nowrap">{mov.numeroOS || '-'}</td>
@@ -856,8 +868,10 @@ export default function ControleCaixa() {
               </tbody>
             </table>
 
-            {/* Paginação */}
-            <div className="flex items-center justify-between mt-4">
+            
+          </div>
+          {/* Paginação */}
+          <div className="flex items-center justify-between mt-4">
               <div className="text-sm text-gray-700">
                 Mostrando <span className="font-medium">{indexOfFirstItem + 1}</span> a{' '}
                 <span className="font-medium">
@@ -913,7 +927,6 @@ export default function ControleCaixa() {
                 </button>
               </div>
             </div>
-          </div>
         </div>
       </div>
 
@@ -1008,20 +1021,31 @@ export default function ControleCaixa() {
                   />
                 </div>
 
-                {/* Caixa - Novo Campo */}
+                {/* Caixa - Campo Modificado */}
                 <div className="mb-3">
                   <label className="block text-[#81059e] text-sm font-medium mb-1">Caixa</label>
-                  <select
-                    name="caixa"
-                    value={formData.caixa}
-                    onChange={handleInputChange}
-                    className="border border-[#81059e] p-2 rounded w-full text-black"
-                    required
-                  >
-                    <option value="principal">Principal</option>
-                    <option value="secundario">Secundário</option>
-                    <option value="reserva">Reserva</option>
-                  </select>
+                  <div className="flex items-center">
+                    <select
+                      name="caixa"
+                      value={formData.caixa}
+                      onChange={handleInputChange}
+                      className="border border-[#81059e] p-2 rounded w-full text-black"
+                      required
+                    >
+                      <option value="">Selecione um caixa</option>
+                      {loadingCaixas ? (
+                        <option value="" disabled>Carregando caixas...</option>
+                      ) : caixas.length > 0 ? (
+                        caixas.map(caixa => (
+                          <option key={caixa.id} value={caixa.id}>
+                            {caixa.nome}
+                          </option>
+                        ))
+                      ) : (
+                        <option value="" disabled>Nenhum caixa disponível</option>
+                      )}
+                    </select>
+                  </div>
                 </div>
 
                 {/* Número OS - Novo Campo (condicionalmente exibido) */}
@@ -1216,16 +1240,25 @@ export default function ControleCaixa() {
                 <div>
                   <label className="block text-[#81059e] font-medium">Caixa:</label>
                   <select
-                    value={editingMovimentacao.caixa || 'principal'}
+                    value={editingMovimentacao.caixa || ''}
                     onChange={(e) => setEditingMovimentacao({
                       ...editingMovimentacao,
                       caixa: e.target.value
                     })}
                     className="w-full p-2 border-2 border-[#81059e] rounded-sm"
                   >
-                    <option value="principal">Principal</option>
-                    <option value="secundario">Secundário</option>
-                    <option value="reserva">Reserva</option>
+                    <option value="">Selecione um caixa</option>
+                    {loadingCaixas ? (
+                      <option value="" disabled>Carregando caixas...</option>
+                    ) : caixas.length > 0 ? (
+                      caixas.map(caixa => (
+                        <option key={caixa.id} value={caixa.id}>
+                          {caixa.nome}
+                        </option>
+                      ))
+                    ) : (
+                      <option value="" disabled>Nenhum caixa disponível</option>
+                    )}
                   </select>
                 </div>
 
@@ -1280,6 +1313,14 @@ export default function ControleCaixa() {
           </div>
         </div>
       )}
+
+      {/* Modal de Caixas */}
+      <CaixasModal
+        isOpen={showCaixasModal}
+        onClose={() => setShowCaixasModal(false)}
+        selectedLoja={selectedLoja}
+        onCaixaUpdated={refreshCaixas}
+      />
     </Layout>
   );
 }

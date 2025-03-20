@@ -123,7 +123,7 @@ export default function SalesListPage() {
           <h1 className='text-4xl ml-0 md:ml-4 font-bold text-[#9a5fc7] text-center md:text-left'>Vendas</h1>
 
             <div className="flex w-full justify-around space-x-2 sm:space-x-4 mt-2 sm:mt-0">
-              <Link href="/commercial/sales/new_sale">
+              <Link href="/sales/new_sale">
                 <button className="bg-[#81059e] text-white w-full sm:w-auto px-3 py-1 sm:px-4 sm:py-2 rounded-full flex items-center justify-center space-x-1 sm:space-x-2 text-sm sm:text-base">
                   <span>Nova Venda</span>
                   <svg

@@ -57,13 +57,13 @@ export default function DisplayCardsPage() {
     <Layout>
       <div className="flex justify-center items-start min-h-screen p-4 sm:p-8">
         <div className=" w-full max-w-5xl mx-auto rounded-lg">
-          <h2 className="text-2xl font-bold text-[#81059e] mb-8">Lançamentos Registrados</h2>
+          <h2 className="text-3xl font-bold text-[#81059e] mb-8 mt-8">LANÇAMENTOS REGISTRADOS</h2>
 
           <div className="flex flex-col sm:flex-row justify-between mb-6">
             <input
               type="text"
               placeholder="Busque por código ou título"
-              className="border p-2 w-full sm:max-w-xs rounded mb-4 sm:mb-0 sm:mr-4"
+              className="p-2 h-10 flex-grow min-w-[200px] border-2 border-gray-200 rounded-lg text-black"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
