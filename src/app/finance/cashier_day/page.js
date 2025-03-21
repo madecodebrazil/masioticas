@@ -7,6 +7,8 @@ import { firestore } from '@/lib/firebaseConfig';
 import { useAuth } from '@/hooks/useAuth';
 import CaixasModal from '@/components/CaixasModal';
 import { useCaixas } from '@/hooks/useCaixas';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faX } from '@fortawesome/free-solid-svg-icons';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 import { FiCalendar, FiDollarSign, FiArrowUp, FiArrowDown, FiPrinter, FiRefreshCw, FiHome, FiFilter } from 'react-icons/fi';
@@ -101,26 +103,11 @@ export default function ControleCaixa() {
 
     setLoading(true);
     try {
-      // Verificar se o documento de caixa existe
-      const caixaDocRef = doc(firestore, `lojas/${selectedLoja}/financeiro/controle_caixa`);
-      const docSnap = await getDoc(caixaDocRef);
+      // Buscar todas as movimentações para o período filtrado
+      let itemsRef = collection(firestore, `lojas/${selectedLoja}/financeiro/controle_caixa/items`);
 
-      if (!docSnap.exists()) {
-        // Criar documento de caixa se não existir
-        await setDoc(caixaDocRef, {
-          saldoAtual: 0,
-          ultimaAtualizacao: Timestamp.now()
-        });
-      } else {
-        // Obter saldo atual
-        const caixaData = docSnap.data();
-        setSaldoAtual(caixaData.saldoAtual || 0);
-      }
-
+      // Query para movimentações no período selecionado
       let movimentacoesQuery;
-      const itemsRef = collection(firestore, `lojas/${selectedLoja}/financeiro/controle_caixa/items`);
-
-      // Configurar a query base
       let baseQuery = query(
         itemsRef,
         where('data', '>=', formatarData(new Date(dataInicio))),
@@ -152,6 +139,7 @@ export default function ControleCaixa() {
         outros: 0
       };
 
+      // Processa movimentações do período
       querySnapshot.forEach((doc) => {
         const movData = doc.data();
         const movItem = {
@@ -171,14 +159,14 @@ export default function ControleCaixa() {
           }
         }
       });
-      // Modificar o final da função fetchMovimentacoes
+
       setMeiosPagamento(meiosPagamentoTemp);
       setMovimentacoes(movimentacoesData);
 
-      // Calcular saldo anterior à data de início
+      // Calcular movimentações ANTES do período selecionado
       const saldoAnteriorQuery = query(
         collection(firestore, `lojas/${selectedLoja}/financeiro/controle_caixa/items`),
-        where('data', '<', formatarData(new Date(dataInicio))),
+        where('data', '<', formatarData(new Date(dataInicio)))
       );
 
       const saldoAnteriorSnapshot = await getDocs(saldoAnteriorQuery);
@@ -193,7 +181,26 @@ export default function ControleCaixa() {
         }
       });
 
+      // Atualizar o estado do saldo anterior
       setSaldoAnterior(saldoAnt);
+
+      // Calcular saldo do período atual
+      let totalEntradasPeriodo = 0;
+      let totalSaidasPeriodo = 0;
+
+      movimentacoesData.forEach(mov => {
+        if (mov.tipo === 'entrada') {
+          totalEntradasPeriodo += parseFloat(mov.valor || 0);
+        } else if (mov.tipo === 'saida') {
+          totalSaidasPeriodo += parseFloat(mov.valor || 0);
+        }
+      });
+
+      const saldoPeriodoCalc = totalEntradasPeriodo - totalSaidasPeriodo;
+
+      // Definir o saldo atual como a soma do saldo anterior e do período atual
+      // Não armazena mais no Firestore, apenas calcula para exibição
+      setSaldoAtual(saldoAnt + saldoPeriodoCalc);
 
     } catch (error) {
       console.error("Erro ao buscar movimentações:", error);
@@ -281,34 +288,11 @@ export default function ControleCaixa() {
     try {
       if (!editingMovimentacao || !selectedLoja) return;
 
-      // Verificar o valor anterior para ajustar o saldo
-      const movimentacaoOriginal = movimentacoes.find(m => m.id === editingMovimentacao.id);
-      if (!movimentacaoOriginal) return;
-
-      // Calcular diferença de valor para ajustar o saldo
-      const valorOriginal = parseFloat(movimentacaoOriginal.valor || 0);
-      const novoValor = parseFloat(editingMovimentacao.valor || 0);
-      const diferencaValor = novoValor - valorOriginal;
-
-      // Ajustar saldo do caixa
-      const caixaDocRef = doc(firestore, `lojas/${selectedLoja}/financeiro/controle_caixa`);
-      const caixaSnap = await getDoc(caixaDocRef);
-      const caixaData = caixaSnap.exists() ? caixaSnap.data() : { saldoAtual: 0 };
-
-      let novoSaldo = caixaData.saldoAtual || 0;
-
-      // Ajustar saldo conforme o tipo e a diferença de valor
-      if (editingMovimentacao.tipo === 'entrada') {
-        novoSaldo += diferencaValor;
-      } else {
-        novoSaldo -= diferencaValor;
-      }
-
       // Preparar dados para atualizar
       const movimentacaoData = {
         ...editingMovimentacao,
         data: Timestamp.fromDate(editingMovimentacao.data),
-        valor: novoValor,
+        valor: parseFloat(editingMovimentacao.valor) || 0,
         updatedAt: Timestamp.now()
       };
 
@@ -317,12 +301,6 @@ export default function ControleCaixa() {
 
       // Atualizar o documento
       await setDoc(movRef, movimentacaoData, { merge: true });
-
-      // Atualizar o saldo
-      await updateDoc(caixaDocRef, {
-        saldoAtual: novoSaldo,
-        ultimaAtualizacao: Timestamp.now()
-      });
 
       // Atualizar estado local
       setMovimentacoes(prevMovs =>
@@ -333,8 +311,8 @@ export default function ControleCaixa() {
       setIsEditModalOpen(false);
       setSelectedForDeletion([]);
 
-      // Recarregar dados para refletir as mudanças
-      fetchMovimentacoes();
+      // Recarregar dados para refletir as mudanças e recalcular o saldo
+      await fetchMovimentacoes();
 
       alert('Movimentação atualizada com sucesso!');
     } catch (error) {
@@ -374,35 +352,13 @@ export default function ControleCaixa() {
     if (confirm(`Deseja realmente excluir ${selectedForDeletion.length} registros selecionados?`)) {
       try {
         for (const movId of selectedForDeletion) {
-          // Encontrar a movimentação
-          const mov = movimentacoes.find(m => m.id === movId);
-          if (mov) {
-            // Atualizar saldo do caixa
-            const caixaDocRef = doc(firestore, `lojas/${selectedLoja}/financeiro/controle_caixa`);
-            const caixaSnap = await getDoc(caixaDocRef);
-            const caixaData = caixaSnap.exists() ? caixaSnap.data() : { saldoAtual: 0 };
-
-            let novoSaldo = caixaData.saldoAtual || 0;
-            if (mov.tipo === 'entrada') {
-              novoSaldo -= parseFloat(mov.valor || 0);
-            } else if (mov.tipo === 'saida') {
-              novoSaldo += parseFloat(mov.valor || 0);
-            }
-
-            // Atualizar saldo
-            await updateDoc(caixaDocRef, {
-              saldoAtual: novoSaldo,
-              ultimaAtualizacao: Timestamp.now()
-            });
-
-            // Excluir a movimentação
-            const movRef = doc(firestore, `lojas/${selectedLoja}/financeiro/controle_caixa/items`, movId);
-            await deleteDoc(movRef);
-          }
+          // Excluir a movimentação
+          const movRef = doc(firestore, `lojas/${selectedLoja}/financeiro/controle_caixa/items`, movId);
+          await deleteDoc(movRef);
         }
 
-        // Atualizar as listas
-        fetchMovimentacoes();
+        // Atualizar as listas e recalcular o saldo
+        await fetchMovimentacoes();
         setSelectedForDeletion([]);
 
         alert('Registros excluídos com sucesso!');
@@ -412,6 +368,7 @@ export default function ControleCaixa() {
       }
     }
   };
+
 
   // Calcular movimentações para a página atual
   const indexOfLastItem = currentPage * itemsPerPage;
@@ -475,21 +432,6 @@ export default function ControleCaixa() {
     setIsLoading(true);
 
     try {
-      // Criar referência ao documento do caixa
-      const caixaDocRef = doc(firestore, `lojas/${selectedLoja}/financeiro`, 'controle_caixa');
-
-      // Obter dados atuais do caixa
-      const caixaSnap = await getDoc(caixaDocRef);
-      const caixaData = caixaSnap.exists() ? caixaSnap.data() : { saldoAtual: 0 };
-
-      // Calcular novo saldo
-      let novoSaldo = caixaData.saldoAtual || 0;
-      if (formData.tipo === 'entrada') {
-        novoSaldo += Number(formData.valor);
-      } else {
-        novoSaldo -= Number(formData.valor);
-      }
-
       // Preparar dados para salvar, incluindo os novos campos
       const movimentacaoData = {
         tipo: formData.tipo,
@@ -502,26 +444,17 @@ export default function ControleCaixa() {
         registradoPor: userData?.nome || 'Sistema',
         loja: selectedLoja,
         createdAt: Timestamp.now(),
-        numeroDocumento: formData.numeroDocumento, // Novo campo
-        caixa: formData.caixa, // Novo campo
-        numeroOS: formData.numeroOS, // Novo campo
+        numeroDocumento: formData.numeroDocumento,
+        caixa: formData.caixa,
+        numeroOS: formData.numeroOS,
       };
 
       // Adicionar movimentação
       const movimentacoesCollectionRef = collection(firestore, `lojas/${selectedLoja}/financeiro/controle_caixa/items`);
       await addDoc(movimentacoesCollectionRef, movimentacaoData);
 
-      // Atualizar saldo do caixa
-      await updateDoc(caixaDocRef, {
-        saldoAtual: novoSaldo,
-        ultimaAtualizacao: Timestamp.now()
-      });
-
-      // Atualizar saldo na interface
-      setSaldoAtual(novoSaldo);
-
-      // Recarregar movimentações
-      fetchMovimentacoes();
+      // Recarregar movimentações para atualizar o saldo calculado
+      await fetchMovimentacoes();
 
       // Fechar modal e limpar formulário
       setShowModal(false);
@@ -567,6 +500,7 @@ export default function ControleCaixa() {
       saldoPeriodo
     };
   };
+
 
   const imprimirRelatorio = () => {
     window.print();
@@ -638,44 +572,50 @@ export default function ControleCaixa() {
             </div>
           )}
 
-          {/* Dashboard */}
-          <div className="flex flex-wrap gap-10 mb-4 overflow-x-auto">
+          {/* Dashboard responsivo - otimizado para caber em uma linha no PC */}
+          <div className="grid grid-cols-2 md:flex md:flex-nowrap md:space-x-4 mb-4 overflow-x-auto">
             {/* Saldo Anterior */}
-            <div className="rounded-sm p-4 border-l-4 border-l-blue-500 flex-1 min-w-[130px]">
-              <p className="text-black text-sm font-bold">Saldo Anterior</p>
-              <p className="text-lg text-gray-500">{formatarValor(saldoAnterior)}</p>
+            <div className="rounded-sm p-2 border-l-4 border-l-blue-500 md:flex-1 min-w-[100px] mb-2 md:mb-0">
+              <p className="text-black text-sm font-bold whitespace-nowrap">Saldo Anterior</p>
+              <p className={`text-base ${saldoAnterior >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {saldoAnterior >= 0
+                  ? formatarValor(saldoAnterior)
+                  : `- ${formatarValor(Math.abs(saldoAnterior))}`
+                }
+              </p>
             </div>
 
             {/* Entradas */}
-            <div className="rounded-sm p-4 border-l-4 border-green-500 flex-1 min-w-[130px]">
-              <p className="text-black text-sm font-bold">Entradas</p>
-              <p className="text-lg text-green-600">{formatarValor(totalEntradas)}</p>
+            <div className="rounded-sm p-2 border-l-4 border-green-500 md:flex-1 min-w-[100px] mb-2 md:mb-0">
+              <p className="text-black text-sm font-bold whitespace-nowrap">Entradas</p>
+              <p className="text-base text-green-600">{formatarValor(totalEntradas)}</p>
             </div>
 
             {/* Saídas */}
-            <div className="rounded-sm p-4 border-l-4 border-red-500 flex-1 min-w-[130px]">
-              <p className="text-black text-sm font-bold">Saídas</p>
-              <p className="text-lg text-red-600">{formatarValor(totalSaidas)}</p>
+            <div className="rounded-sm p-2 border-l-4 border-red-500 md:flex-1 min-w-[100px] mb-2 md:mb-0">
+              <p className="text-black text-sm font-bold whitespace-nowrap">Saídas</p>
+              <p className="text-base text-red-600">{formatarValor(totalSaidas)}</p>
             </div>
 
             {/* Dinheiro */}
-            <div className="rounded-sm p-4 border-l-4 border-yellow-500 flex-1 min-w-[130px]">
-              <p className="text-black text-sm font-bold">Dinheiro</p>
-              <p className="text-lg text-gray-500">{formatarValor(meiosPagamento.dinheiro)}</p>
+            <div className="rounded-sm p-2 border-l-4 border-yellow-500 md:flex-1 min-w-[100px] mb-2 md:mb-0">
+              <p className="text-black text-sm font-bold whitespace-nowrap">Dinheiro</p>
+              <p className="text-base text-gray-500">{formatarValor(meiosPagamento.dinheiro)}</p>
             </div>
 
             {/* Cartão */}
-            <div className="rounded-sm p-4 border-l-4 border-purple-500 flex-1 min-w-[130px]">
-              <p className="text-black text-sm font-bold">Cartão</p>
-              <p className="text-lg text-gray-500">{formatarValor(meiosPagamento.cartao_credito + meiosPagamento.cartao_debito)}</p>
+            <div className="rounded-sm p-2 border-l-4 border-purple-500 md:flex-1 min-w-[100px] mb-2 md:mb-0">
+              <p className="text-black text-sm font-bold whitespace-nowrap">Cartão</p>
+              <p className="text-base text-gray-500">{formatarValor(meiosPagamento.cartao_credito + meiosPagamento.cartao_debito)}</p>
             </div>
 
             {/* PIX */}
-            <div className="rounded-sm p-4 border-l-4 border-indigo-500">
-              <p className="text-black text-sm font-bold">PIX</p>
-              <p className="text-lg text-gray-500">{formatarValor(meiosPagamento.pix)}</p>
+            <div className="rounded-sm p-2 border-l-4 border-indigo-500 md:flex-1 min-w-[100px] mb-2 md:mb-0">
+              <p className="text-black text-sm font-bold whitespace-nowrap">PIX</p>
+              <p className="text-base text-gray-500">{formatarValor(meiosPagamento.pix)}</p>
             </div>
           </div>
+
 
           {/* Barra de filtros (compacta) */}
           <div className="flex flex-wrap gap-2 mb-4">
@@ -756,35 +696,40 @@ export default function ControleCaixa() {
             </div>
           </div>
 
-          {/* Botões de Ação com Saldo Atual */}
-          <div className="flex items-center mb-4">
-            <div className="flex gap-2 mr-4">
+          {/* Botões de Ação com Saldo Atual - Versão responsiva */}
+          <div className="flex flex-col md:flex-row md:items-center mb-4 gap-3">
+            <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => abrirModal('entrada')}
-                className="bg-green-500 hover:bg-green-600 px-3 py-2 rounded-md text-white flex items-center gap-2 text-sm"
+                className="bg-green-500 hover:bg-green-600 px-2 md:px-3 py-2 rounded-md text-white flex items-center gap-1 text-base md:text-sm flex-grow md:flex-grow-0"
               >
                 <FiArrowUp /> Nova Entrada
               </button>
 
               <button
                 onClick={() => abrirModal('saida')}
-                className="bg-red-500 hover:bg-red-600 px-3 py-2 rounded-md text-white flex items-center gap-2 text-sm"
+                className="bg-red-500 hover:bg-red-600 px-2 md:px-3 py-2 rounded-md text-white flex items-center gap-1 text-base md:text-sm flex-grow md:flex-grow-0"
               >
                 <FiArrowDown /> Nova Saída
               </button>
 
-              {/* Novo botão para gerenciar caixas */}
+              {/* Botão para gerenciar caixas */}
               <button
                 onClick={() => setShowCaixasModal(true)}
-                className="bg-blue-500 hover:bg-blue-600 px-3 py-2 rounded-md text-white flex items-center gap-2 text-sm"
+                className="bg-blue-500 hover:bg-blue-600 px-2 md:px-3 py-2 rounded-md text-white flex items-center gap-1 text-base md:text-sm flex-grow md:flex-grow-0"
               >
                 <FiDollarSign /> Caixas
               </button>
             </div>
 
-            <div className="flex item-end">
-              <span className="text-[#81059e] text-base mr-1">Saldo Atual:</span>
-              <span className="text-lg font-bold text-[#81059e]">R$ {(saldoAnterior + saldoPeriodo).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            <div className="flex items-center justify-start md:justify-end mt-2 md:mt-0 md:ml-auto">
+              <span className="text-base font-semibold md:text-base mr-1">Saldo Total:</span>
+              <span className={`text-base md:text-lg ${(saldoAnterior + saldoPeriodo) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {(saldoAnterior + saldoPeriodo) >= 0
+                  ? `R$ ${(saldoAnterior + saldoPeriodo).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                  : `- R$ ${Math.abs(saldoAnterior + saldoPeriodo).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                }
+              </span>
             </div>
           </div>
 
@@ -868,84 +813,94 @@ export default function ControleCaixa() {
               </tbody>
             </table>
 
-            
+
           </div>
-          {/* Paginação */}
-          <div className="flex items-center justify-between mt-4">
-              <div className="text-sm text-gray-700">
-                Mostrando <span className="font-medium">{indexOfFirstItem + 1}</span> a{' '}
-                <span className="font-medium">
-                  {Math.min(indexOfLastItem, filteredMovimentacoes.length)}
-                </span>{' '}
-                de <span className="font-medium">{filteredMovimentacoes.length}</span> registros
-              </div>
-              <div className="flex space-x-1">
-                <button
-                  onClick={() => goToPage(1)}
-                  disabled={currentPage === 1}
-                  className={`px-3 py-1 rounded ${currentPage === 1
-                    ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                    : 'bg-[#81059e] text-white hover:bg-[#690480]'
-                    }`}
-                >
-                  &laquo;
-                </button>
-                <button
-                  onClick={() => goToPage(currentPage - 1)}
-                  disabled={currentPage === 1}
-                  className={`px-3 py-1 rounded ${currentPage === 1
-                    ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                    : 'bg-[#81059e] text-white hover:bg-[#690480]'
-                    }`}
-                >
-                  &lt;
-                </button>
-
-                <span className="px-3 py-1 text-gray-700">
-                  {currentPage} / {totalPages}
-                </span>
-
-                <button
-                  onClick={() => goToPage(currentPage + 1)}
-                  disabled={currentPage === totalPages}
-                  className={`px-3 py-1 rounded ${currentPage === totalPages
-                    ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                    : 'bg-[#81059e] text-white hover:bg-[#690480]'
-                    }`}
-                >
-                  &gt;
-                </button>
-                <button
-                  onClick={() => goToPage(totalPages)}
-                  disabled={currentPage === totalPages}
-                  className={`px-3 py-1 rounded ${currentPage === totalPages
-                    ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                    : 'bg-[#81059e] text-white hover:bg-[#690480]'
-                    }`}
-                >
-                  &raquo;
-                </button>
-              </div>
+          {/* Paginação responsiva */}
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between mt-4 gap-2">
+            <div className="text-base md:text-sm text-gray-700">
+              Mostrando <span className="font-medium">{indexOfFirstItem + 1}</span> a{' '}
+              <span className="font-medium">
+                {Math.min(indexOfLastItem, filteredMovimentacoes.length)}
+              </span>{' '}
+              de <span className="font-medium">{filteredMovimentacoes.length}</span> registros
             </div>
+            <div className="flex space-x-1 self-end md:self-auto">
+              <button
+                onClick={() => goToPage(1)}
+                disabled={currentPage === 1}
+                className={`px-3 md:px-3 py-2 rounded text-base ${currentPage === 1
+                  ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                  : 'bg-[#81059e] text-white hover:bg-[#690480]'
+                  }`}
+                aria-label="Primeira página"
+              >
+                &laquo;
+              </button>
+              <button
+                onClick={() => goToPage(currentPage - 1)}
+                disabled={currentPage === 1}
+                className={`px-3 md:px-3 py-2 rounded text-sm ${currentPage === 1
+                  ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                  : 'bg-[#81059e] text-white hover:bg-[#690480]'
+                  }`}
+                aria-label="Página anterior"
+              >
+                &lt;
+              </button>
+
+              <span className="px-3 md:px-3 py-2 text-gray-700 text-sm">
+                {currentPage} / {totalPages}
+              </span>
+
+              <button
+                onClick={() => goToPage(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className={`px-3 md:px-3 py-2 rounded text-sm ${currentPage === totalPages
+                  ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                  : 'bg-[#81059e] text-white hover:bg-[#690480]'
+                  }`}
+                aria-label="Próxima página"
+              >
+                &gt;
+              </button>
+              <button
+                onClick={() => goToPage(totalPages)}
+                disabled={currentPage === totalPages}
+                className={`px-3 md:px-3 py-2 rounded text-sm ${currentPage === totalPages
+                  ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                  : 'bg-[#81059e] text-white hover:bg-[#690480]'
+                  }`}
+                aria-label="Última página"
+              >
+                &raquo;
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Modal para Nova Movimentação - Com os novos campos */}
       {showModal && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-          <div className="bg-white rounded-lg shadow-lg w-full max-w-md text-black overflow-y-auto max-h-[90vh]">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-md flex flex-col h-3/5 overflow-hidden">
             {/* Cabeçalho do Modal */}
-            <div className="bg-[#81059e] text-white py-2 px-4">
-              <h3 className="text-lg font-bold">
+            <div className="bg-[#81059e] text-white p-4 flex justify-between items-center">
+              <h3 className="text-xl font-bold">
                 {tipoMovimentacao === 'entrada' ? 'Nova Entrada de Caixa' : 'Nova Saída de Caixa'}
               </h3>
+
+              <FontAwesomeIcon
+                icon={faX}
+                className="h-5 w-5 text-white cursor-pointer hover:text-gray-200"
+                onClick={fecharModal}
+              />
             </div>
 
-            <form onSubmit={handleSubmit} className="p-4">
-              <div className="space-y-3">
+            <form onSubmit={handleSubmit} className="space-y-3 overflow-y-auto flex-grow">
+              <div className="space-y-3 p-4">
                 {/* Valor */}
                 <div className="mb-3">
-                  <label className="block text-[#81059e] text-sm font-medium mb-1">Valor</label>
+                  <label className="text-[#81059e] font-medium">Valor</label>
                   <div className="relative">
                     <span className="absolute left-2 top-2.5 text-gray-600">R$</span>
                     <input
@@ -953,7 +908,7 @@ export default function ControleCaixa() {
                       name="valor"
                       value={formData.valor ? formatarValor(formData.valor).replace('R$', '').trim() : ''}
                       onChange={handleValorChange}
-                      className="border border-[#81059e] p-2 pl-8 rounded w-full text-black"
+                      className="w-full border-2 border-[#81059e] rounded-sm p-2 pl-8  text-black"
                       placeholder="0,00"
                       required
                     />
@@ -962,23 +917,23 @@ export default function ControleCaixa() {
 
                 {/* Data */}
                 <div className="mb-3">
-                  <label className="block text-[#81059e] text-sm font-medium mb-1">Data</label>
+                  <label className="block text-[#81059e] font-medium mb-1">Data</label>
                   <DatePicker
                     selected={formData.data}
                     onChange={handleDataChange}
                     dateFormat="dd/MM/yyyy"
-                    className="border border-[#81059e] p-2 rounded w-full text-black"
+                    className="w-full border-2 border-[#81059e] rounded-sm p-2 text-black"
                   />
                 </div>
 
                 {/* Categoria */}
                 <div className="mb-3">
-                  <label className="block text-[#81059e] text-sm font-medium mb-1">Categoria</label>
+                  <label className="block text-[#81059e] font-medium mb-1">Categoria</label>
                   <select
                     name="categoria"
                     value={formData.categoria}
                     onChange={handleInputChange}
-                    className="border border-[#81059e] p-2 rounded w-full text-black"
+                    className="w-full border-2 border-[#81059e] rounded-sm p-2 text-black"
                     required
                   >
                     <option value="">Selecione</option>
@@ -990,12 +945,12 @@ export default function ControleCaixa() {
 
                 {/* Método de Pagamento */}
                 <div className="mb-3">
-                  <label className="block text-[#81059e] text-sm font-medium mb-1">Método de Pagamento</label>
+                  <label className="block text-[#81059e] font-medium mb-1">Método de Pagamento</label>
                   <select
                     name="metodoPagamento"
                     value={formData.metodoPagamento}
                     onChange={handleInputChange}
-                    className="border border-[#81059e] p-2 rounded w-full text-black"
+                    className="w-full border-2 border-[#81059e] rounded-sm p-2 text-black"
                     required
                   >
                     <option value="dinheiro">Dinheiro</option>
@@ -1010,26 +965,26 @@ export default function ControleCaixa() {
 
                 {/* Número do Documento - Novo Campo */}
                 <div className="mb-3">
-                  <label className="block text-[#81059e] text-sm font-medium mb-1">N° do Documento</label>
+                  <label className="block text-[#81059e] font-medium mb-1">N° do Documento</label>
                   <input
                     type="text"
                     name="numeroDocumento"
                     value={formData.numeroDocumento}
                     onChange={handleInputChange}
-                    className="border border-[#81059e] p-2 rounded w-full text-black"
+                    className="w-full border-2 border-[#81059e] rounded-sm p-2 text-black"
                     placeholder="Ex: NF12345"
                   />
                 </div>
 
                 {/* Caixa - Campo Modificado */}
                 <div className="mb-3">
-                  <label className="block text-[#81059e] text-sm font-medium mb-1">Caixa</label>
+                  <label className="block text-[#81059e] font-medium mb-1">Caixa</label>
                   <div className="flex items-center">
                     <select
                       name="caixa"
                       value={formData.caixa}
                       onChange={handleInputChange}
-                      className="border border-[#81059e] p-2 rounded w-full text-black"
+                      className="w-full border-2 border-[#81059e] rounded-sm p-2 text-black"
                       required
                     >
                       <option value="">Selecione um caixa</option>
@@ -1051,7 +1006,7 @@ export default function ControleCaixa() {
                 {/* Número OS - Novo Campo (condicionalmente exibido) */}
                 {(formData.tipo === 'entrada' && formData.categoria === 'Venda') && (
                   <div className="mb-3">
-                    <label className="block text-[#81059e] text-sm font-medium mb-1">
+                    <label className="block text-[#81059e] font-medium mb-1">
                       Número da O.S
                       <span className="text-xs text-gray-500 ml-1">(Apenas para vendas)</span>
                     </label>
@@ -1060,7 +1015,7 @@ export default function ControleCaixa() {
                       name="numeroOS"
                       value={formData.numeroOS}
                       onChange={handleInputChange}
-                      className="border border-[#81059e] p-2 rounded w-full text-black"
+                      className="w-full border-2 border-[#81059e] rounded-sm p-2 text-black"
                       placeholder="Ex: OS-2025-001"
                     />
                   </div>
@@ -1068,13 +1023,13 @@ export default function ControleCaixa() {
 
                 {/* Responsável */}
                 <div className="mb-3">
-                  <label className="block text-[#81059e] text-sm font-medium mb-1">Responsável</label>
+                  <label className="block text-[#81059e] font-medium mb-1">Responsável</label>
                   <input
                     type="text"
                     name="responsavel"
                     value={formData.responsavel}
                     onChange={handleInputChange}
-                    className="border border-[#81059e] p-2 rounded w-full text-black bg-gray-100"
+                    className="w-full border-2 border-[#81059e] rounded-sm p-2 text-black"
                     required
                     readOnly
                   />
@@ -1082,12 +1037,12 @@ export default function ControleCaixa() {
 
                 {/* Descrição */}
                 <div className="mb-3">
-                  <label className="block text-[#81059e] text-sm font-medium mb-1">Descrição</label>
+                  <label className="block text-[#81059e] font-medium mb-1">Descrição</label>
                   <textarea
                     name="descricao"
                     value={formData.descricao}
                     onChange={handleInputChange}
-                    className="border border-[#81059e] p-2 rounded w-full text-black h-20"
+                    className="w-full border-2 border-[#81059e] rounded-sm p-2 text-black"
                     placeholder="Adicione uma descrição detalhada..."
                     required
                   ></textarea>
@@ -1095,18 +1050,18 @@ export default function ControleCaixa() {
               </div>
 
               {/* Botões do Modal */}
-              <div className="flex justify-between mt-4 pt-2 border-t border-gray-200">
+              <div className="p-4 bg-gray-50 border-t flex justify-end space-x-2">
                 <button
                   type="button"
                   onClick={fecharModal}
-                  className="px-4 py-2 border border-gray-300 rounded text-gray-700 bg-white hover:bg-gray-50"
+                  className="text-gray-500 px-4 py-2 rounded-md"
                   disabled={isLoading}
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className={`px-4 py-2 rounded text-white ${formData.tipo === 'entrada'
+                  className={`text-white px-4 py-2 rounded-sm ${formData.tipo === 'entrada'
                     ? 'bg-green-500 hover:bg-green-600'
                     : 'bg-red-500 hover:bg-red-600'
                     }`}
