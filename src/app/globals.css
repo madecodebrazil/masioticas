@@ -93,3 +93,35 @@ select.custom-input:focus {
     --radius: 0.5rem;
   }
 }
+
+.datepicker-wrapper {
+  position: relative;
+}
+
+.custom-calendar {
+  font-size: 0.875rem;
+  width: 100%;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  z-index: 50;
+}
+
+/* Responsividade para telas menores */
+@media (max-width: 768px) {
+  .custom-calendar {
+    font-size: 1rem; /* Fonte maior em dispositivos móveis */
+    width: 100%;
+    max-width: 320px;
+  }
+  
+  .custom-calendar .react-datepicker__month-container {
+    width: 100%;
+  }
+  
+  .custom-calendar .react-datepicker__day {
+    width: 2.5rem;
+    height: 2.5rem;
+    line-height: 2.5rem;
+    margin: 0.2rem;
+  }
+}

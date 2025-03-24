@@ -67,7 +67,7 @@ export default function FinancesPage() {
         {
             icon: '/images/financeiro/vendas.png',
             label: 'Vendas',
-            route: '/commercial/sales'
+            route: '/sales'
         },
     ];
 
@@ -124,7 +124,7 @@ export default function FinancesPage() {
                             </div>
                         </div>
                     </main>
-                </div>  
+                </div>
                 <ContasPagarModal
                     isOpen={isContasPagarOpen}
                     onClose={() => setIsContasPagarOpen(false)}
