@@ -1,0 +1,43 @@
+{items.map((item, index) => (
+                        <div key={index} className="flex justify-center">
+                            <Link href={item.href} className="w-full max-w-[180px]">
+                                <motion.div
+                                    className="relative flex justify-center items-center bg-gradient-to-r from-[#81059e] to-[#B7328C] text-white w-full h-[100px] md:h-[80px] lg:h-[100px] rounded-xl transition-transform transform hover:scale-105 hover:shadow-2xl cursor-pointer p-6"
+                                    style={{
+                                        boxShadow: '0px 10px 25px rgba(0, 0, 0, 0.5)',
+                                        boxSizing: 'border-box'
+                                    }}
+                                    initial={{ opacity: 0, scale: 0.9 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    whileHover={{ scale: 1.1, boxShadow: "0px 15px 30px rgba(0, 0, 0, 0.6)" }} // Aumenta a escala e adiciona uma sombra mais intensa ao passar o mouse
+                                    transition={{ duration: 0.3 }}
+                                >
+                                    <div
+                                        className="absolute inset-0 opacity-10 pointer-events-none"
+                                        style={{
+                                            backgroundImage: `url('/images/fundo.png')`,
+                                            backgroundSize: 'cover',
+                                            backgroundRepeat: 'no-repeat',
+                                            backgroundPosition: 'center'
+                                        }}
+                                    ></div>
+
+                                    <div className="relative z-10 flex flex-row justify-between items-center w-full h-full p-0 m-0">
+                                        <span className="text-white font-medium text-lg flex-grow text-center pointer-events-none p-0 m-0">
+                                            {item.label}
+                                        </span>
+                                        <Image
+                                            src={item.img}
+                                            alt={item.label}
+                                            width={70}
+                                            height={70}
+                                            className=" object-contain pointer-events-none p-0 m-0"
+
+                                            style={{ width: 'auto', height: 'auto' }}
+                                        />
+                                    </div>
+                                </motion.div>
+
+                            </Link>
+                        </div>
+                    ))}
