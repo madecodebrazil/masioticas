@@ -4,11 +4,6 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-    faFileInvoice,
-    faDollarSign,
-    faClock,
-    faExclamationTriangle,
-    faFilter,
     faX,
     faChartSimple,
     faMoneyBillTransfer,
@@ -24,7 +19,8 @@ import {
     faSignOutAlt,
     faBell,
     faCog,
-    faRightFromBracket
+    faRightFromBracket,
+    faBars
 } from '@fortawesome/free-solid-svg-icons';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -95,64 +91,36 @@ export default function MobileNavSidebar({ handleLogout, userPhotoURL, userData,
 
     return (
         <>
-            {/* Barra superior com logo centralizada e menu de hambúrguer à esquerda (mobile apenas) */}
-            <div className="bg-[#81059e] w-full p-4 flex justify-between items-center lg:hidden z-50">
-                {/* Ícone de menu de hambúrguer à esquerda */}
+            {/* Navbar Superior */}
+            <div className="flex justify-between bg-[#81059e] p-4 ">
+                {/* Menu Sanduíche*/}
                 <button className="text-white focus:outline-none" onClick={toggleMenu}>
-                    <svg
-                        className="w-8 h-8"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                        xmlns="http://www.w3.org/2000/svg"
-                    >
-                        <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth="2"
-                            d={isMenuOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"}
-                        ></path>
-                    </svg>
+                    <FontAwesomeIcon icon={faBars} className="text-3xl"/>
                 </button>
+
                 {/* Logo centralizada */}
-                <Link href="/homepage" className="mx-auto">
+                <div  className='flex items-center justify-center ml-12'>
+                <Link href="/homepage">
                     <Image
-                        src="/images/logomasi_branca.png"
+                        src="/images/masioticas.png"
                         alt="Logo"
                         width={100}
                         height={50}
-                        className="object-contain transition-all duration-300 hover:drop-shadow-[0_0_10px_rgba(255,255,0,0.8)]"
                     />
-                </Link>
+                </Link></div>
 
-                {/* Ícone de sino e foto do usuário no lado direito */}
-                <div className="flex items-center space-x-4">
-                    {/* Ícone de sino */}
+                {/* Notificações e perfil */}
+                <div className="flex">
                     <button className="text-white focus:outline-none">
-                        <svg
-                            className="w-10 h-10"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                            xmlns="http://www.w3.org/2000/svg"
-                        >
-                            <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth="2"
-                                d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-                            ></path>
-                        </svg>
-                    </button>
+                    <FontAwesomeIcon icon={faBell} className="text-2xl pr-4" /></button>
 
-                    {/* Foto do usuário com a função de abrir o dropdown lateral ao clicar */}
                     <Image
                         src={userPhotoURL}
                         alt="User Avatar"
                         width={50}
                         height={50}
-                        className="rounded-full border-2 border-white cursor-pointer"
-                        onClick={toggleDropdown} // Abre o dropdown lateral ao clicar no avatar
+                        className="rounded-full border-2 border-white cursor-pointer w-10 h-10"
+                        onClick={toggleDropdown}
                     />
                 </div>
             </div>
@@ -177,7 +145,7 @@ export default function MobileNavSidebar({ handleLogout, userPhotoURL, userData,
                         className="absolute top-4 right-4 text-white"
                         onClick={toggleDropdown}
                     >
-                        <FontAwesomeIcon icon={faX}>
+                        <FontAwesomeIcon icon={faX} className='text-2xl'>
                         </FontAwesomeIcon>
                     </button>
 

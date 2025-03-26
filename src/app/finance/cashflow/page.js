@@ -633,7 +633,7 @@ export default function FluxoCaixa() {
             </div>
 
             {/* Saldo do Período */}
-            <div className="rounded-sm p-2 border-l-4 border-purple-500 md:flex-1 min-w-[100px] mb-2 md:mb-0">
+            <div className="rounded-sm p-2 border-l-4 border-indigo-500 md:flex-1 min-w-[100px] mb-2 md:mb-0">
               <p className="text-black text-sm font-bold whitespace-nowrap">Saldo do Período</p>
               <p className={`text-base ${saldoPeriodo >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                 {saldoPeriodo >= 0
@@ -644,9 +644,9 @@ export default function FluxoCaixa() {
             </div>
 
             {/* Saldo Final */}
-            <div className="rounded-sm p-2 border-l-4 border-indigo-500 md:flex-1 min-w-[100px] mb-2 md:mb-0">
-              <p className="text-black text-sm font-bold whitespace-nowrap">Saldo Final</p>
-              <p className={`text-base ${(saldoAnterior + saldoPeriodo) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            <div className="rounded-sm p-2 border-l-4  bg-purple-500 md:flex-1 min-w-[100px] mb-2 md:mb-0">
+              <p className="text-white text-sm font-bold whitespace-nowrap">SALDO TOTAL</p>
+              <p className={`text-base ${(saldoAnterior + saldoPeriodo) >= 0 ? 'text-white' : 'text-red-600'}`}>
                 {(saldoAnterior + saldoPeriodo) >= 0
                   ? formatarValor(saldoAnterior + saldoPeriodo)
                   : `- ${formatarValor(Math.abs(saldoAnterior + saldoPeriodo))}`
@@ -711,13 +711,13 @@ export default function FluxoCaixa() {
                 className="bg-[#81059e] text-white h-10 px-3 rounded-md flex items-center justify-center text-sm"
                 title={visaoAtual === 'grafico' ? 'Mostrar Tabela' : 'Mostrar Gráfico'}
               >
-                {visaoAtual === 'grafico' ? 'Tabela' : 'Gráfico'}
+                {visaoAtual === 'grafico' ? 'Exibir Tabelas' : 'Exibir Gráficos'}
               </button>
               
               {/* Botão Filtro */}
               <button
                 onClick={() => setShowFilters(!showFilters)}
-                className="bg-gray-600 text-white h-10 w-10 rounded-md flex items-center justify-center"
+                className="border-2 text-purple-600 h-10 w-10 rounded-md flex items-center justify-center"
                 title="Filtros"
               >
                 <FiFilter className='h-5 w-5' />
@@ -726,7 +726,7 @@ export default function FluxoCaixa() {
               {/* Botão Atualizar */}
               <button
                 onClick={() => fetchMovimentacoes()}
-                className="bg-gray-600 text-white h-10 w-10 rounded-md flex items-center justify-center"
+                className="border-2 text-purple-600 h-10 w-10 rounded-md flex items-center justify-center"
                 title="Atualizar"
               >
                 <FiRefreshCw className='h-5 w-5' />
@@ -735,7 +735,7 @@ export default function FluxoCaixa() {
               {/* Botão Exportar */}
               <button
                 onClick={exportarCSV}
-                className="bg-green-600 text-white h-10 w-10 rounded-md flex items-center justify-center"
+                className="border-2 text-purple-600 h-10 w-10 rounded-md flex items-center justify-center"
                 title="Exportar CSV"
               >
                 <FiDownload className='h-5 w-5' />
@@ -744,7 +744,7 @@ export default function FluxoCaixa() {
               {/* Botão Imprimir */}
               <button
                 onClick={imprimirRelatorio}
-                className="bg-blue-600 text-white h-10 w-10 rounded-md flex items-center justify-center"
+                className="border-2 text-purple-600 h-10 w-10 rounded-md flex items-center justify-center"
                 title="Imprimir"
               >
                 <FiPrinter className='h-5 w-5' />

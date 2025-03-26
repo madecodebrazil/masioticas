@@ -13,6 +13,7 @@ import Dashboard from '@/components/Dashboard';
 import CarrouselPromo from '../../components/CarrouselPromo';
 import MobileHeader from '@/components/MB_NavSidebar';
 import BottomMobileNav from '../../components/MB_BottomNav';
+import SimpleSpinner from '@/components/SimpleSpinner';
 
 export default function Home() {
     const { user, userData, loading: authLoading, userPermissions } = useAuth();
@@ -213,7 +214,7 @@ export default function Home() {
     if (authLoading) {
         return (
             <div className="flex justify-center items-center w-full h-screen">
-                <p>Carregando...</p>
+               <SimpleSpinner />
             </div>
         );
     }
@@ -248,7 +249,7 @@ export default function Home() {
             <div className="flex-1 flex flex-col bg-white p-0 md:p-4 overflow-auto shadow-xl rounded-tl-xl rounded-bl-xl md:ml-[300px] lg:ml-[350px]">
                 {/* Feedback de carregamento */}
                 {(loadingOS || loadingVendas) && (
-                    <div className="flex justify-center items-center mb-8">
+                    <div className="flex justify-center items-center  bg-[#81059e] text-white rounded-xl">
                         <p>Carregando...</p>
                     </div>
                 )}

@@ -1,34 +1,52 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Layout from "@/components/Layout";
 import { motion } from "framer-motion";
+import ModalNovaVenda from "@/components/ModalNovaVenda";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function SalesPage() {
   const router = useRouter();
+  const { userPermissions } = useAuth();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedLoja, setSelectedLoja] = useState(
+    userPermissions?.lojas?.[0] || "loja1"
+  );
 
   // Opções de vendas com ícones e rotas
   const salesOptions = [
     {
       icon: "/images/financeiro/vendas.png",
-      label: "Venda Simples",
-      route: "/sales/simple_sale"
-    },
-    {
-      icon: "/images/financeiro/vendas.png",
-      label: "Venda Detalhada",
-      route: "/sales/detailed_sale"
+      label: "Nova Venda",
+      action: () => setIsModalOpen(true)
     },
     {
       icon: "/images/financeiro/receber.png",
-      label: "Orçamentos",
+      label: "Novo orçamento",
       route: "/sales/estimates"
     },
     {
       icon: "/images/financeiro/receber.png",
-      label: "Novo Orçamento",
-      route: "/sales/new_estimate"
+      label: "Histórico de Vendas",
+      route: "/sales/history"
+    },
+    {
+      icon: "/images/financeiro/receber.png",
+      label: "Histórico de Orçamentos",
+      route: "/sales/estimates-history"
+    },
+    {
+      icon: "/images/financeiro/receber.png",
+      label: "Relatórios",
+      route: "/sales/reports"
+    },
+    {
+      icon: "/images/financeiro/receber.png",
+      label: "NF-e & NFC-e",
+      route: "/sales/invoices"
     }
   ];
 
@@ -41,7 +59,7 @@ export default function SalesPage() {
           {salesOptions.map((item, index) => (
             <div
               key={index}
-              onClick={() => router.push(item.route)}
+              onClick={() => item.action ? item.action() : router.push(item.route)}
               className="cursor-pointer"
             >
               <motion.div
@@ -79,6 +97,13 @@ export default function SalesPage() {
             </div>
           ))}
         </div>
+
+        {/* Modal de Nova Venda */}
+        <ModalNovaVenda 
+          isOpen={isModalOpen} 
+          onClose={() => setIsModalOpen(false)} 
+          selectedLoja={selectedLoja} 
+        />
       </div>
     </Layout>
   );

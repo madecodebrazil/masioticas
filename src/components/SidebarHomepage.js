@@ -208,7 +208,7 @@ export default function SidebarHomepage({ userPhotoURL, userData, userPermission
                         </div>
                     </Link>
 
-                    <Link href="/commercial/sales">
+                    <Link href="/sales">
                         <div className={`${getLinkStyle('agenda')} text-white rounded-lg py-2 px-4 w-full text-center shadow-lg flex items-center justify-start gap-4 hover:bg-[#9b32b2] transition-colors duration-300`}>
                             <FontAwesomeIcon icon={faMoneyBillTransfer} />
                             <span className="text-white text-lg font-medium">Vendas</span>

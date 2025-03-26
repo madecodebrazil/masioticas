@@ -11,7 +11,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faX } from '@fortawesome/free-solid-svg-icons';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
-import { FiCalendar, FiDollarSign, FiArrowUp, FiArrowDown, FiPrinter, FiRefreshCw, FiHome, FiFilter } from 'react-icons/fi';
+import { FiCalendar, FiDollarSign, FiArrowUp, FiArrowDown, FiPrinter, FiRefreshCw, FiHome, FiFilter, FiTrash2, FiCodepen, FiEdit, FiEdit2, FiEdit3 } from 'react-icons/fi';
 
 export default function ControleCaixa() {
   const { userPermissions, userData } = useAuth();
@@ -655,31 +655,27 @@ export default function ControleCaixa() {
               {/* Botão Excluir */}
               <button
                 onClick={handleDeleteSelected}
-                className={`${selectedForDeletion.length === 0 ? 'bg-red-300' : 'bg-red-500'} text-white h-10 w-10 rounded-md flex items-center justify-center`}
+                className={`${selectedForDeletion.length === 0 ? 'text-red-300' : 'text-red-500'} text-red-500 border-2 h-10 w-10 rounded-md flex items-center justify-center`}
                 disabled={selectedForDeletion.length === 0}
                 title="Excluir Selecionados"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
+                <FiTrash2 className='h-6 w-6' />
               </button>
 
               {/* Botão Editar */}
               <button
                 onClick={openEditModal}
-                className={`${selectedForDeletion.length !== 1 ? 'bg-blue-300' : 'bg-blue-500'} text-white h-10 w-10 rounded-md flex items-center justify-center`}
+                className={`${selectedForDeletion.length !== 1 ? 'text-purple-300' : 'text-purple-500'} text-purple-500 border-2 h-10 w-10 rounded-md flex items-center justify-center`}
                 disabled={selectedForDeletion.length !== 1}
                 title="Editar Selecionado"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                </svg>
+                <FiEdit3 className='h-6 w-6' />
               </button>
 
               {/* Botão Atualizar (que já existe) */}
               <button
                 onClick={() => fetchMovimentacoes()}
-                className="bg-gray-600 text-white h-10 w-10 rounded-md flex items-center justify-center"
+                className="border-2 text-purple-600 h-10 w-10 rounded-md flex items-center justify-center"
                 title="Atualizar"
               >
                 <FiRefreshCw className='h-5 w-5' />
@@ -688,7 +684,7 @@ export default function ControleCaixa() {
               {/* Botão Imprimir (que já existe) */}
               <button
                 onClick={imprimirRelatorio}
-                className="bg-blue-600 text-white h-10 w-10 rounded-md flex items-center justify-center"
+                className="border-2 text-purple-600 h-10 w-10 rounded-md flex items-center justify-center"
                 title="Imprimir"
               >
                 <FiPrinter className='h-5 w-5' />
@@ -723,7 +719,7 @@ export default function ControleCaixa() {
             </div>
 
             <div className="flex items-center justify-start md:justify-end mt-2 md:mt-0 md:ml-auto">
-              <span className="text-base font-semibold md:text-base mr-1">Saldo Total:</span>
+              <span className="text-xl md:text-base mr-1 text-gray-400">SALDO TOTAL:</span>
               <span className={`text-base md:text-lg ${(saldoAnterior + saldoPeriodo) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                 {(saldoAnterior + saldoPeriodo) >= 0
                   ? `R$ ${(saldoAnterior + saldoPeriodo).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`

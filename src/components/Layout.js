@@ -1,102 +1,102 @@
-// components/Layout.js
-"use client";
+    // components/Layout.js
+    "use client";
 
-import { useEffect } from 'react';
-import { useAuth } from '@/hooks/useAuth';
-import { usePathname, useRouter } from 'next/navigation';
-import Sidebar from '@/components/Sidebar';
-import MobileNavSidebar from '@/components/MB_NavSidebar';
-import BottomMobileNav from '@/components/MB_BottomNav';
-import Image from 'next/image';
+    import { useEffect } from 'react';
+    import { useAuth } from '@/hooks/useAuth';
+    import { usePathname, useRouter } from 'next/navigation';
+    import Sidebar from '@/components/Sidebar';
+    import MobileNavSidebar from '@/components/MB_NavSidebar';
+    import BottomMobileNav from '@/components/MB_BottomNav';
+    import Image from 'next/image';
 
-const Layout = ({ children }) => {
-    const { user, userData, loading, userPermissions, hasAccessToLoja } = useAuth();
-    const router = useRouter();
-    const pathname = usePathname();
+    const Layout = ({ children }) => {
+        const { user, userData, loading, userPermissions, hasAccessToLoja } = useAuth();
+        const router = useRouter();
+        const pathname = usePathname();
 
-    useEffect(() => {
-        if (!loading) {
-            // Se não estiver logado e não estiver na página de login
-            if (!user && !pathname.includes('/login')) {
-                router.push('/login');
-                return;
+        useEffect(() => {
+            if (!loading) {
+                // Se não estiver logado e não estiver na página de login
+                if (!user && !pathname.includes('/login')) {
+                    router.push('/login');
+                    return;
+                }
+
+                // Se estiver logado
+                if (user && userPermissions) {
+                    // Verifica se é admin tentando acessar registro de usuários
+                    if (pathname.includes('/login_register') && !userPermissions.isAdmin) {
+                        router.push('/acesso-negado');
+                        return;
+                    }
+
+                    // Verifica acesso às lojas
+                    if (pathname.includes('/loja1') && !hasAccessToLoja('loja1')) {
+                        router.push('/acesso-negado');
+                        return;
+                    }
+
+                    if (pathname.includes('/loja2') && !hasAccessToLoja('loja2')) {
+                        router.push('/acesso-negado');
+                        return;
+                    }
+                }
             }
+        }, [loading, user, pathname, userPermissions, hasAccessToLoja, router]);
 
-            // Se estiver logado
-            if (user && userPermissions) {
-                // Verifica se é admin tentando acessar registro de usuários
-                if (pathname.includes('/login_register') && !userPermissions.isAdmin) {
-                    router.push('/acesso-negado');
-                    return;
-                }
-
-                // Verifica acesso às lojas
-                if (pathname.includes('/loja1') && !hasAccessToLoja('loja1')) {
-                    router.push('/acesso-negado');
-                    return;
-                }
-
-                if (pathname.includes('/loja2') && !hasAccessToLoja('loja2')) {
-                    router.push('/acesso-negado');
-                    return;
-                }
-            }
+        if (loading) {
+            return (
+                <div className="flex justify-center items-center h-screen">
+                    <p>Carregando...</p>
+                </div>
+            );
         }
-    }, [loading, user, pathname, userPermissions, hasAccessToLoja, router]);
 
-    if (loading) {
         return (
-            <div className="flex justify-center items-center h-screen">
-                <p>Carregando...</p>
-            </div>
-        );
-    }
+            <>
+                <head>
+                    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+                </head>
+                <div className={`${
+                    'lg:fixed lg:inset-0 lg:bg-[#81059e] lg:overflow-hidden'
+                    } min-h-screen`}>
+                    <div className="flex flex-col lg:flex-row h-full">
+                        <div className="hidden lg:block w-64 flex-shrink-0 z-10">
+                            <Sidebar userPermissions={userPermissions} />
+                        </div>
 
-    return (
-        <>
-            <head>
-                <link rel="icon" type="image/x-icon" href="/favicon.ico" />
-            </head>
-            <div className={`${
-                'lg:fixed lg:inset-0 lg:bg-[#81059e] lg:overflow-hidden'
-                } min-h-screen`}>
-                <div className="flex flex-col lg:flex-row h-full">
-                    <div className="hidden lg:block w-64 flex-shrink-0 z-10">
-                        <Sidebar userPermissions={userPermissions} />
-                    </div>
+                        <div className="lg:hidden flex-shrink-0 bg-[#81059e]">
+                            <MobileNavSidebar
+                                userPhotoURL={userData?.imageUrl || '/images/default-avatar.png'}
+                                userData={userData}
+                                userPermissions={userPermissions}
+                            />
+                        </div>
 
-                    <div className="lg:hidden flex-shrink-0 bg-[#81059e]">
-                        <MobileNavSidebar
-                            userPhotoURL={userData?.imageUrl || '/images/default-avatar.png'}
-                            userData={userData}
-                            userPermissions={userPermissions}
-                        />
-                    </div>
+                        <div className="absolute top-2 right-8 z-30 hidden lg:block">
+                            <Image
+                                src={userData?.imageUrl || '/images/default-avatar.png'}
+                                alt="User Avatar"
+                                width={60}
+                                height={60}
+                                className="rounded-full object-cover border-2 border-purple-400 shadow-md bg-white"
+                            />
+                        </div>
 
-                    <div className="absolute top-2 right-8 z-30 hidden lg:block">
-                        <Image
-                            src={userData?.imageUrl || '/images/default-avatar.png'}
-                            alt="User Avatar"
-                            width={60}
-                            height={60}
-                            className="rounded-full object-cover border-2 border-purple-400 shadow-md bg-white"
-                        />
-                    </div>
-
-                    <div className="flex-1 relative">
-                        <main className={`
-                            lg:absolute lg:inset-0 lg:overflow-auto lg:bg-white lg:rounded-[25px] 
-                            lg:p-6 lg:m-10 lg:ml-14 lg:mt-20 overflow-y-auto custom-scroll
-                            p-4 bg-white min-h-screen pb-10
-                        `}>
-                            {children}
-                        </main>
-                        <BottomMobileNav/>
+                        <div className="flex-1 relative">
+                            <main className={`
+                                lg:absolute lg:inset-0 lg:overflow-auto lg:bg-white lg:rounded-[25px] 
+                                lg:p-6 lg:m-10 lg:ml-14 lg:mt-20 overflow-y-auto custom-scroll
+                                p-4 bg-white min-h-screen pb-10
+                            `}>
+                                {children}
+                            </main>
+                            <BottomMobileNav/>
+                        </div>
                     </div>
                 </div>
-            </div>
-        </>
-    );
-};
+            </>
+        );
+    };
 
-export default Layout;
+    export default Layout;
