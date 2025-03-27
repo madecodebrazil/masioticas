@@ -16,11 +16,11 @@ export default function FluxoCaixa() {
   const { userPermissions, userData } = useAuth();
   const [selectedLoja, setSelectedLoja] = useState(null);
   const [loading, setLoading] = useState(true);
-  
+
   // Período padrão: mês atual
   const [dataInicio, setDataInicio] = useState(startOfMonth(new Date()));
   const [dataFim, setDataFim] = useState(endOfMonth(new Date()));
-  
+
   const [movimentacoes, setMovimentacoes] = useState([]);
   const [saldoAnterior, setSaldoAnterior] = useState(0);
   const [agrupamento, setAgrupamento] = useState('dia'); // dia, semana, mes
@@ -29,7 +29,7 @@ export default function FluxoCaixa() {
   const [dadosAgrupados, setDadosAgrupados] = useState([]);
   const [categoriasFiltradas, setCategoriasFiltradas] = useState([]);
   const [showFilters, setShowFilters] = useState(false);
-  
+
   // Dados para os gráficos
   const [dadosGraficoLinha, setDadosGraficoLinha] = useState([]);
   const [dadosGraficoBarra, setDadosGraficoBarra] = useState([]);
@@ -38,18 +38,22 @@ export default function FluxoCaixa() {
     saida: []
   });
 
-  useEffect(() => {
-    if (userPermissions) {
-      // Se não for admin, usa a primeira loja que tem acesso
-      if (!userPermissions.isAdmin && userPermissions.lojas.length > 0) {
-        setSelectedLoja(userPermissions.lojas[0]);
-      }
-      // Se for admin, usa a primeira loja da lista
-      else if (userPermissions.isAdmin && userPermissions.lojas.length > 0) {
-        setSelectedLoja(userPermissions.lojas[0]);
-      }
+  // Substitua o useEffect existente que lida com userPermissions
+useEffect(() => {
+  if (userPermissions) {
+    console.log("userPermissions mudou:", userPermissions);
+    // Se não for admin, usa a primeira loja que tem acesso
+    if (!userPermissions.isAdmin && userPermissions.lojas.length > 0) {
+      setSelectedLoja(userPermissions.lojas[0]);
+      console.log("Definindo loja para usuário normal:", userPermissions.lojas[0]);
     }
-  }, [userPermissions]);
+    // Se for admin, usa a primeira loja da lista
+    else if (userPermissions.isAdmin && userPermissions.lojas.length > 0) {
+      setSelectedLoja(userPermissions.lojas[0]);
+      console.log("Definindo loja para admin:", userPermissions.lojas[0]);
+    }
+  }
+}, [userPermissions]);
 
   useEffect(() => {
     if (selectedLoja) {
@@ -61,13 +65,13 @@ export default function FluxoCaixa() {
     if (movimentacoes.length > 0) {
       // Processar dados conforme o agrupamento selecionado
       agruparDados();
-      
+
       // Preparar dados para os gráficos
       prepararDadosGraficos();
-      
+
       // Extrair categorias únicas
       extrairCategorias();
-      
+
       // Gerar comparativo com mês anterior
       if (agrupamento === 'mes') {
         gerarComparativoMesAnterior();
@@ -147,13 +151,13 @@ export default function FluxoCaixa() {
   const agruparDados = () => {
     let dados = [];
     let agrupados = {};
-    
+
     // Cópia das movimentações para manipulação
     const movs = [...movimentacoes];
-    
+
     // Calculando saldo inicial para o primeiro dia
     let saldoAcumulado = saldoAnterior;
-    
+
     // Agrupamento por dia
     if (agrupamento === 'dia') {
       // Criar objeto para cada dia no intervalo
@@ -161,7 +165,7 @@ export default function FluxoCaixa() {
         start: new Date(dataInicio),
         end: new Date(dataFim)
       });
-      
+
       datas.forEach(data => {
         const dataStr = format(data, 'yyyy-MM-dd');
         agrupados[dataStr] = {
@@ -173,26 +177,26 @@ export default function FluxoCaixa() {
           movs: []
         };
       });
-      
+
       // Preencher com movimentações reais
       movs.forEach(mov => {
         const dataStr = format(mov.data, 'yyyy-MM-dd');
-        
+
         if (!agrupados[dataStr]) {
           // Não deveria acontecer devido ao intervalo criado acima
           return;
         }
-        
+
         if (mov.tipo === 'entrada') {
           agrupados[dataStr].entradas += parseFloat(mov.valor || 0);
         } else if (mov.tipo === 'saida') {
           agrupados[dataStr].saidas += parseFloat(mov.valor || 0);
         }
-        
+
         agrupados[dataStr].saldo = agrupados[dataStr].entradas - agrupados[dataStr].saidas;
         agrupados[dataStr].movs.push(mov);
       });
-      
+
       // Calcular saldo acumulado
       Object.keys(agrupados).sort().forEach((dataStr, index, array) => {
         if (index > 0) {
@@ -202,18 +206,18 @@ export default function FluxoCaixa() {
           agrupados[dataStr].saldoAcumulado = saldoAcumulado + agrupados[dataStr].saldo;
         }
       });
-      
+
       // Converter para array
       dados = Object.values(agrupados);
     }
-    
+
     // Agrupamento por semana
     else if (agrupamento === 'semana') {
       movs.forEach(mov => {
         const inicioSemana = startOfWeek(mov.data, { weekStartsOn: 0 }); // 0 = domingo
         const fimSemana = endOfWeek(mov.data, { weekStartsOn: 0 });
         const semanaKey = `${format(inicioSemana, 'yyyy-MM-dd')}_${format(fimSemana, 'yyyy-MM-dd')}`;
-        
+
         if (!agrupados[semanaKey]) {
           agrupados[semanaKey] = {
             inicioSemana,
@@ -226,19 +230,19 @@ export default function FluxoCaixa() {
             movs: []
           };
         }
-        
+
         if (mov.tipo === 'entrada') {
           agrupados[semanaKey].entradas += parseFloat(mov.valor || 0);
         } else if (mov.tipo === 'saida') {
           agrupados[semanaKey].saidas += parseFloat(mov.valor || 0);
         }
-        
+
         agrupados[semanaKey].movs.push(mov);
       });
-      
+
       // Ordenar semanas cronologicamente
       const semanasOrdenadas = Object.keys(agrupados).sort();
-      
+
       // Calcular saldo e acumulado para cada semana
       let acumulado = saldoAnterior;
       semanasOrdenadas.forEach(semanaKey => {
@@ -246,19 +250,19 @@ export default function FluxoCaixa() {
         acumulado += agrupados[semanaKey].saldo;
         agrupados[semanaKey].saldoAcumulado = acumulado;
       });
-      
+
       // Converter para array
       semanasOrdenadas.forEach(key => {
         dados.push(agrupados[key]);
       });
     }
-    
+
     // Agrupamento por mês
     else if (agrupamento === 'mes') {
       movs.forEach(mov => {
         const mesKey = format(mov.data, 'yyyy-MM');
         const nomeMes = format(mov.data, 'MMMM yyyy', { locale: ptBR });
-        
+
         if (!agrupados[mesKey]) {
           agrupados[mesKey] = {
             data: new Date(mov.data.getFullYear(), mov.data.getMonth(), 1),
@@ -274,20 +278,20 @@ export default function FluxoCaixa() {
             movs: []
           };
         }
-        
+
         if (mov.tipo === 'entrada') {
           agrupados[mesKey].entradas += parseFloat(mov.valor || 0);
-          
+
           // Agrupar por categoria
           const categoria = mov.categoria || 'Sem categoria';
           if (!agrupados[mesKey].categorias.entradas[categoria]) {
             agrupados[mesKey].categorias.entradas[categoria] = 0;
           }
           agrupados[mesKey].categorias.entradas[categoria] += parseFloat(mov.valor || 0);
-          
+
         } else if (mov.tipo === 'saida') {
           agrupados[mesKey].saidas += parseFloat(mov.valor || 0);
-          
+
           // Agrupar por categoria
           const categoria = mov.categoria || 'Sem categoria';
           if (!agrupados[mesKey].categorias.saidas[categoria]) {
@@ -295,13 +299,13 @@ export default function FluxoCaixa() {
           }
           agrupados[mesKey].categorias.saidas[categoria] += parseFloat(mov.valor || 0);
         }
-        
+
         agrupados[mesKey].movs.push(mov);
       });
-      
+
       // Ordenar meses cronologicamente
       const mesesOrdenados = Object.keys(agrupados).sort();
-      
+
       // Calcular saldo e acumulado para cada mês
       let acumulado = saldoAnterior;
       mesesOrdenados.forEach(mesKey => {
@@ -309,13 +313,13 @@ export default function FluxoCaixa() {
         acumulado += agrupados[mesKey].saldo;
         agrupados[mesKey].saldoAcumulado = acumulado;
       });
-      
+
       // Converter para array
       mesesOrdenados.forEach(key => {
         dados.push(agrupados[key]);
       });
     }
-    
+
     setDadosAgrupados(dados);
   };
 
@@ -325,11 +329,17 @@ export default function FluxoCaixa() {
       let label = '';
       
       if (agrupamento === 'dia') {
-        label = format(item.data, 'dd/MM');
+        // Verifica se a data é válida antes de formatar
+        label = item.data instanceof Date && !isNaN(item.data.getTime()) 
+          ? format(item.data, 'dd/MM') 
+          : 'Data inválida';
       } else if (agrupamento === 'semana') {
         label = item.label;
       } else if (agrupamento === 'mes') {
-        label = format(item.data, 'MMM/yy', { locale: ptBR });
+        // Verifica se a data é válida antes de formatar
+        label = item.data instanceof Date && !isNaN(item.data.getTime()) 
+          ? format(item.data, 'MMM/yy', { locale: ptBR }) 
+          : 'Data inválida';
       }
       
       return {
@@ -345,13 +355,13 @@ export default function FluxoCaixa() {
     
     // Preparar dados para o gráfico de barras (entradas x saídas)
     setDadosGraficoBarra(dadosLinha);
-  };
+  };  
 
   const extrairCategorias = () => {
     // Extrair categorias únicas de entradas e saídas
     const categoriasEntrada = new Set();
     const categoriasSaida = new Set();
-    
+
     movimentacoes.forEach(mov => {
       if (mov.categoria) {
         if (mov.tipo === 'entrada') {
@@ -361,7 +371,7 @@ export default function FluxoCaixa() {
         }
       }
     });
-    
+
     setCategorias({
       entrada: Array.from(categoriasEntrada),
       saida: Array.from(categoriasSaida)
@@ -376,11 +386,11 @@ export default function FluxoCaixa() {
         setComparativoMesAnterior([]);
         return;
       }
-      
+
       // Pegar último mês disponível e seu anterior
       const mesAtual = dadosAgrupados[dadosAgrupados.length - 1];
       const mesAnterior = dadosAgrupados[dadosAgrupados.length - 2];
-      
+
       // Preparar comparativo por categoria
       const comparativo = {
         mes: {
@@ -409,17 +419,17 @@ export default function FluxoCaixa() {
           saidas: []
         }
       };
-      
+
       // Comparar categorias de entradas
       const todasCategoriasEntrada = new Set([
         ...Object.keys(mesAtual.categorias.entradas),
         ...Object.keys(mesAnterior.categorias.entradas)
       ]);
-      
+
       todasCategoriasEntrada.forEach(categoria => {
         const valorAtual = mesAtual.categorias.entradas[categoria] || 0;
         const valorAnterior = mesAnterior.categorias.entradas[categoria] || 0;
-        
+
         comparativo.categorias.entradas.push({
           categoria,
           atual: valorAtual,
@@ -427,17 +437,17 @@ export default function FluxoCaixa() {
           variacao: calcularVariacao(valorAtual, valorAnterior)
         });
       });
-      
+
       // Comparar categorias de saídas
       const todasCategoriasSaida = new Set([
         ...Object.keys(mesAtual.categorias.saidas),
         ...Object.keys(mesAnterior.categorias.saidas)
       ]);
-      
+
       todasCategoriasSaida.forEach(categoria => {
         const valorAtual = mesAtual.categorias.saidas[categoria] || 0;
         const valorAnterior = mesAnterior.categorias.saidas[categoria] || 0;
-        
+
         comparativo.categorias.saidas.push({
           categoria,
           atual: valorAtual,
@@ -445,13 +455,13 @@ export default function FluxoCaixa() {
           variacao: calcularVariacao(valorAtual, valorAnterior)
         });
       });
-      
+
       // Ordenar por maior valor atual
       comparativo.categorias.entradas.sort((a, b) => b.atual - a.atual);
       comparativo.categorias.saidas.sort((a, b) => b.atual - a.atual);
-      
+
       setComparativoMesAnterior(comparativo);
-      
+
     } catch (error) {
       console.error("Erro ao gerar comparativo:", error);
       setComparativoMesAnterior([]);
@@ -473,9 +483,9 @@ export default function FluxoCaixa() {
 
   const exportarCSV = () => {
     if (dadosAgrupados.length === 0) return;
-    
+
     let csvContent = 'data:text/csv;charset=utf-8,';
-    
+
     // Cabeçalho
     let header = '';
     if (agrupamento === 'dia') {
@@ -485,13 +495,13 @@ export default function FluxoCaixa() {
     } else if (agrupamento === 'mes') {
       header = 'Mês,Entradas,Saídas,Saldo,Saldo Acumulado\n';
     }
-    
+
     csvContent += header;
-    
+
     // Dados
     dadosAgrupados.forEach(item => {
       let linha = '';
-      
+
       if (agrupamento === 'dia') {
         linha += `"${format(item.data, 'dd/MM/yyyy')}",`;
       } else if (agrupamento === 'semana') {
@@ -499,24 +509,24 @@ export default function FluxoCaixa() {
       } else if (agrupamento === 'mes') {
         linha += `"${item.mes}",`;
       }
-      
+
       linha += `${item.entradas.toFixed(2)},`;
       linha += `${item.saidas.toFixed(2)},`;
       linha += `${item.saldo.toFixed(2)},`;
       linha += `${item.saldoAcumulado.toFixed(2)}\n`;
-      
+
       csvContent += linha;
     });
-    
+
     // Criar link temporário para download
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
     link.setAttribute('download', `fluxo_caixa_${agrupamento}_${format(new Date(), 'yyyy-MM-dd')}.csv`);
     document.body.appendChild(link);
-    
+
     link.click();
-    
+
     document.body.removeChild(link);
   };
 
@@ -559,7 +569,7 @@ export default function FluxoCaixa() {
   // Configurar períodos pré-definidos
   const selecionarPeriodo = (periodo) => {
     const hoje = new Date();
-    
+
     switch (periodo) {
       case 'mes_atual':
         setDataInicio(startOfMonth(hoje));
@@ -713,7 +723,7 @@ export default function FluxoCaixa() {
               >
                 {visaoAtual === 'grafico' ? 'Exibir Tabelas' : 'Exibir Gráficos'}
               </button>
-              
+
               {/* Botão Filtro */}
               <button
                 onClick={() => setShowFilters(!showFilters)}
@@ -756,19 +766,19 @@ export default function FluxoCaixa() {
           {showFilters && (
             <div className="bg-gray-100 p-4 rounded-lg mb-4">
               <h3 className="text-lg font-semibold text-[#81059e] mb-2">Filtros Avançados</h3>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <h4 className="font-medium mb-1">Categorias de Entrada</h4>
                   <div className="flex flex-wrap gap-2">
                     {categorias.entrada.map(cat => (
                       <label key={`entrada-${cat}`} className="flex items-center space-x-1 cursor-pointer">
-                        <input 
-                          type="checkbox" 
+                        <input
+                          type="checkbox"
                           checked={categoriasFiltradas.includes(`entrada-${cat}`)}
                           onChange={() => {
-                            setCategoriasFiltradas(prev => 
-                              prev.includes(`entrada-${cat}`) 
+                            setCategoriasFiltradas(prev =>
+                              prev.includes(`entrada-${cat}`)
                                 ? prev.filter(c => c !== `entrada-${cat}`)
                                 : [...prev, `entrada-${cat}`]
                             )
@@ -780,18 +790,18 @@ export default function FluxoCaixa() {
                     ))}
                   </div>
                 </div>
-                
+
                 <div>
                   <h4 className="font-medium mb-1">Categorias de Saída</h4>
                   <div className="flex flex-wrap gap-2">
                     {categorias.saida.map(cat => (
                       <label key={`saida-${cat}`} className="flex items-center space-x-1 cursor-pointer">
-                        <input 
-                          type="checkbox" 
+                        <input
+                          type="checkbox"
                           checked={categoriasFiltradas.includes(`saida-${cat}`)}
                           onChange={() => {
-                            setCategoriasFiltradas(prev => 
-                              prev.includes(`saida-${cat}`) 
+                            setCategoriasFiltradas(prev =>
+                              prev.includes(`saida-${cat}`)
                                 ? prev.filter(c => c !== `saida-${cat}`)
                                 : [...prev, `saida-${cat}`]
                             )
@@ -804,16 +814,16 @@ export default function FluxoCaixa() {
                   </div>
                 </div>
               </div>
-              
+
               <div className="flex justify-end mt-3">
-                <button 
-                  onClick={() => setCategoriasFiltradas([])} 
+                <button
+                  onClick={() => setCategoriasFiltradas([])}
                   className="text-[#81059e] text-sm mr-3"
                 >
                   Limpar Filtros
                 </button>
-                <button 
-                  onClick={() => setShowFilters(false)} 
+                <button
+                  onClick={() => setShowFilters(false)}
                   className="bg-[#81059e] text-white px-4 py-1 rounded-sm text-sm"
                 >
                   Aplicar
@@ -892,7 +902,7 @@ export default function FluxoCaixa() {
                       <h3 className="text-lg font-semibold text-[#81059e] mb-4">
                         Comparativo: {comparativoMesAnterior.mes.atual} vs {comparativoMesAnterior.mes.anterior}
                       </h3>
-                      
+
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         {/* Total de Entradas */}
                         <div className="border rounded-md p-3">
@@ -911,7 +921,7 @@ export default function FluxoCaixa() {
                             </div>
                           </div>
                         </div>
-                        
+
                         {/* Total de Saídas */}
                         <div className="border rounded-md p-3">
                           <h4 className="font-medium text-[#81059e]">Saídas</h4>
@@ -929,7 +939,7 @@ export default function FluxoCaixa() {
                             </div>
                           </div>
                         </div>
-                        
+
                         {/* Saldo */}
                         <div className="border rounded-md p-3">
                           <h4 className="font-medium text-[#81059e]">Saldo</h4>
@@ -977,7 +987,7 @@ export default function FluxoCaixa() {
                         {dadosAgrupados.map((item, index) => (
                           <tr key={index} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
                             <td className="px-4 py-3 border-b">
-                              {agrupamento === 'dia' 
+                              {agrupamento === 'dia'
                                 ? format(item.data, 'dd/MM/yyyy')
                                 : agrupamento === 'semana'
                                   ? item.label

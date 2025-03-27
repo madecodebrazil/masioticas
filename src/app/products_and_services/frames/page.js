@@ -1,633 +1,989 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import Layout from "@/components/Layout";
-import { useRouter } from "next/navigation";
+import React, { useEffect, useState } from 'react';
+import Layout from '@/components/Layout';
+import Link from 'next/link';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  getDocs,
-  collection,
-  deleteDoc,
-  doc,
-  updateDoc,
-} from "firebase/firestore";
-import { firestore, storage } from "../../../lib/firebaseConfig";
-import {
-  ref as firebaseStorageRef,
-  uploadBytes,
-  getDownloadURL,
-} from "firebase/storage";
+  faGlasses,
+  faDollarSign,
+  faBoxes,
+  faTags,
+  faFilter,
+  faX,
+  faEdit,
+  faTrash
+} from '@fortawesome/free-solid-svg-icons';
+import { collection, getDocs, doc, deleteDoc, getDoc } from 'firebase/firestore';
+import { useAuth } from '@/hooks/useAuth';
+import { firestore } from '@/lib/firebaseConfig';
+import jsPDF from 'jspdf';
+import { useRouter } from 'next/navigation';
 
-const ArmacoesRegistradas = () => {
-  const [armacoes, setArmacoes] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [isRemoving, setIsRemoving] = useState(false);
-  const [armacaoToRemove, setArmacaoToRemove] = useState(null);
-  const [selectedArmacao, setSelectedArmacao] = useState(null);
-  const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState({
-    codigo: "",
-    valor: "",
-    data: "",
-    hora: "",
-    cor: "",
-    marca: "",
-    material: "",
-    genero: "",
-    imagem: "",
-  });
-  const [newImageFile, setNewImageFile] = useState(null);
-  const [newImagePreview, setNewImagePreview] = useState(null);
-
+export default function ListaArmacoes() {
   const router = useRouter();
-
-  // Função para buscar as armações de ambas as lojas
-  const fetchArmacoes = async () => {
-    try {
-      setIsLoading(true);
-      const loja1Snapshot = await getDocs(
-        collection(firestore, "loja1_armacoes")
-      );
-      const loja2Snapshot = await getDocs(
-        collection(firestore, "loja2_armacoes")
-      );
-
-      const loja1Armacoes = loja1Snapshot.docs.map((doc) => ({
-        id: doc.id,
-        loja: "Loja 1",
-        ...doc.data(),
-      }));
-      const loja2Armacoes = loja2Snapshot.docs.map((doc) => ({
-        id: doc.id,
-        loja: "Loja 2",
-        ...doc.data(),
-      }));
-
-      const combinedArmacoes = [...loja1Armacoes, ...loja2Armacoes];
-      console.log("Armações carregadas:", combinedArmacoes);
-      setArmacoes(combinedArmacoes);
-      setIsLoading(false);
-    } catch (err) {
-      console.error("Erro ao carregar as armações:", err);
-      setError("Erro ao carregar os dados das armações.");
-      setIsLoading(false);
-    }
-  };
+  const { userPermissions, userData } = useAuth();
+  const [armacoes, setArmacoes] = useState([]);
+  const [filteredArmacoes, setFilteredArmacoes] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedLoja, setSelectedLoja] = useState('Ambas');
+  const [selectedArmacao, setSelectedArmacao] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [totalArmacoes, setTotalArmacoes] = useState(0);
+  const [selectedForDeletion, setSelectedForDeletion] = useState([]);
+  const [sortField, setSortField] = useState('codigo');
+  const [sortDirection, setSortDirection] = useState('asc');
+  const [marcaFilter, setMarcaFilter] = useState('Todas');
+  const [generoFilter, setGeneroFilter] = useState('Todos');
+  const [materialFilter, setMaterialFilter] = useState('Todos');
+  const [availableMarcas, setAvailableMarcas] = useState(['Todas']);
+  const generos = ['Todos', 'Masculino', 'Feminino', 'Unissex'];
+  const [availableMateriais, setAvailableMateriais] = useState(['Todos']);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(15);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingArmacao, setEditingArmacao] = useState(null);
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
 
   useEffect(() => {
-    fetchArmacoes();
-  }, []);
+    const fetchArmacoes = async () => {
+      try {
+        setLoading(true);
+        const fetchedArmacoes = [];
 
-  // Função para filtrar as armações com base no termo de busca
-  const filterArmacoes = () => {
-    return armacoes.filter((armacao) => {
-      const searchLower = searchTerm.toLowerCase();
-      return (
-        (armacao.codigo &&
-          armacao.codigo.toLowerCase().includes(searchLower)) ||
-        (armacao.cor && armacao.cor.toLowerCase().includes(searchLower)) ||
-        (armacao.marca && armacao.marca.toLowerCase().includes(searchLower)) ||
-        (armacao.data && armacao.data.includes(searchLower))
-      );
+        // Usar o caminho correto para lojas específicas
+        if (selectedLoja !== 'Ambas') {
+          // Caminho para uma loja específica
+          const armacoesDocRef = collection(firestore, `lojas/estoque/${selectedLoja}/armacoes/items`);
+          const armacoesSnapshot = await getDocs(armacoesDocRef);
+
+          armacoesSnapshot.docs.forEach((docItem) => {
+            const armacaoData = docItem.data();
+            fetchedArmacoes.push({
+              id: docItem.id,
+              ...armacaoData,
+              loja: selectedLoja // Garantir que a loja seja definida corretamente
+            });
+          });
+        } else {
+          // Se for "Ambas", buscar de todas as lojas que o usuário tem acesso
+          const lojas = userPermissions?.lojas || [];
+
+          for (const loja of lojas) {
+            const armacoesDocRef = collection(firestore, `lojas/estoque/${loja}/armacoes/items`);
+            const armacoesSnapshot = await getDocs(armacoesDocRef);
+
+            armacoesSnapshot.docs.forEach((docItem) => {
+              const armacaoData = docItem.data();
+              fetchedArmacoes.push({
+                id: docItem.id,
+                ...armacaoData,
+                loja: loja
+              });
+            });
+          }
+        }
+
+        // Extrair marcas e materiais disponíveis para filtros
+        const marcas = ['Todas'];
+        const materiais = ['Todos'];
+        
+        fetchedArmacoes.forEach(armacao => {
+          if (armacao.marca && !marcas.includes(armacao.marca)) {
+            marcas.push(armacao.marca);
+          }
+          if (armacao.material && !materiais.includes(armacao.material)) {
+            materiais.push(armacao.material);
+          }
+        });
+        
+        setAvailableMarcas(marcas);
+        setAvailableMateriais(materiais);
+
+        // Aplicar ordenação inicial
+        const sortedArmacoes = sortArmacoes(fetchedArmacoes, sortField, sortDirection);
+        setArmacoes(sortedArmacoes);
+        setFilteredArmacoes(sortedArmacoes);
+        setTotalArmacoes(sortedArmacoes.length); // Atualizar o contador total de armações
+        setLoading(false);
+      } catch (err) {
+        console.error('Erro ao carregar as armações:', err);
+        setError(`Erro ao carregar os dados das armações: ${err.message}`);
+        setLoading(false);
+      }
+    };
+
+    fetchArmacoes();
+  }, [selectedLoja, userPermissions]);
+
+  // Função para filtrar armações com base na busca e loja
+  useEffect(() => {
+    const filterBySearchAndLojaAndFilters = () => {
+      let filtered = armacoes;
+
+      // Filtro por loja
+      if (selectedLoja !== 'Ambas') {
+        filtered = filtered.filter((armacao) => armacao.loja === selectedLoja);
+      }
+
+      // Filtro por busca
+      if (searchQuery !== '') {
+        filtered = filtered.filter(
+          (armacao) =>
+            (armacao.codigo?.toLowerCase().includes(searchQuery.toLowerCase()) || '') ||
+            (armacao.marca?.toLowerCase().includes(searchQuery.toLowerCase()) || '') ||
+            (armacao.codigoBarras?.toLowerCase().includes(searchQuery.toLowerCase()) || '') ||
+            (armacao.codigoFabricante?.toLowerCase().includes(searchQuery.toLowerCase()) || '')
+        );
+      }
+
+      // Filtro por marca
+      if (marcaFilter !== 'Todas') {
+        filtered = filtered.filter(armacao => 
+          armacao.marca === marcaFilter
+        );
+      }
+
+      // Filtro por gênero
+      if (generoFilter !== 'Todos') {
+        filtered = filtered.filter(armacao => 
+          armacao.genero === generoFilter
+        );
+      }
+
+      // Filtro por material
+      if (materialFilter !== 'Todos') {
+        filtered = filtered.filter(armacao => 
+          armacao.material === materialFilter
+        );
+      }
+
+      // Aplicar ordenação
+      filtered = sortArmacoes(filtered, sortField, sortDirection);
+      setFilteredArmacoes(filtered);
+    };
+
+    filterBySearchAndLojaAndFilters();
+  }, [searchQuery, selectedLoja, armacoes, sortField, sortDirection, marcaFilter, generoFilter, materialFilter]);
+
+  // Função para ordenar armações
+  const sortArmacoes = (armacoesToSort, field, direction) => {
+    return [...armacoesToSort].sort((a, b) => {
+      let aValue = a[field];
+      let bValue = b[field];
+
+      // Tratar datas
+      if (field === 'data') {
+        aValue = new Date(aValue || '');
+        bValue = new Date(bValue || '');
+      }
+      // Tratar números
+      else if (field === 'valor' || field === 'custo' || field === 'quantidade') {
+        aValue = parseFloat(aValue || 0);
+        bValue = parseFloat(bValue || 0);
+      }
+      // Tratar strings
+      else {
+        aValue = String(aValue || '').toLowerCase();
+        bValue = String(bValue || '').toLowerCase();
+      }
+
+      // Comparação
+      if (aValue < bValue) return direction === 'asc' ? -1 : 1;
+      if (aValue > bValue) return direction === 'asc' ? 1 : -1;
+      return 0;
     });
   };
 
-  // Função para remover uma armação
-  const handleRemoveArmacao = async (id, loja) => {
+  // Função para alternar a ordenação
+  const handleSort = (field) => {
+    const direction = field === sortField && sortDirection === 'asc' ? 'desc' : 'asc';
+    setSortField(field);
+    setSortDirection(direction);
+
+    // Reordenar as armações filtradas
+    const sorted = sortArmacoes(filteredArmacoes, field, direction);
+    setFilteredArmacoes(sorted);
+  };
+
+  // Renderizar seta de ordenação - apenas quando a coluna estiver selecionada
+  const renderSortArrow = (field) => {
+    if (sortField !== field) return null;
+    return sortDirection === 'asc' ?
+      <span className="ml-1">↑</span> :
+      <span className="ml-1">↓</span>;
+  };
+
+  const getEstoqueColor = (quantidade) => {
+    if (!quantidade) return 'bg-gray-200 text-gray-800';
+
+    const qtd = parseInt(quantidade);
+    if (qtd <= 3) return 'bg-red-200 text-red-800'; // Crítico
+    if (qtd <= 10) return 'bg-yellow-200 text-yellow-800'; // Atenção
+    return 'bg-green-200 text-green-800'; // Normal
+  };
+
+  // Função para formatar data
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    
     try {
-      console.log("Tentando remover armação com ID:", id, "da loja:", loja);
-
-      const collectionName =
-        loja === "Loja 1" ? "loja1_armacoes" : "loja2_armacoes";
-
-      await deleteDoc(doc(firestore, collectionName, id));
-      console.log("Documento deletado com sucesso:", id);
-
-      // Atualiza a lista de armações após a exclusão
-      setArmacoes((prev) => prev.filter((armacao) => armacao.id !== id));
-      setArmacaoToRemove(null);
-    } catch (err) {
-      console.error("Erro ao remover a armação:", err);
+      const date = new Date(dateString);
+      return date.toLocaleDateString('pt-BR');
+    } catch (error) {
+      return dateString;
     }
   };
 
-  // Função para exibir o pop-up de confirmação de exclusão
-  const confirmRemove = (armacao) => {
-    setArmacaoToRemove(armacao);
-  };
-
-  // Função para abrir o modal exibindo detalhes da armação
+  // Função para abrir o modal e definir a armação selecionada
   const openModal = (armacao) => {
     setSelectedArmacao(armacao);
-    setFormData({
-      codigo: armacao.codigo || "",
-      valor: armacao.valor || "",
-      data: armacao.data || "",
-      hora: armacao.hora || "",
-      cor: armacao.cor || "",
-      marca: armacao.marca || "",
-      material: armacao.material || "",
-      genero: armacao.genero || "",
-      imagem: armacao.imagem || "",
-    });
-    setNewImageFile(null);
-    setNewImagePreview(null);
-    setIsEditing(false);
+    setIsModalOpen(true);
   };
 
   // Função para fechar o modal
   const closeModal = () => {
     setSelectedArmacao(null);
+    setIsModalOpen(false);
   };
 
-  // Função para lidar com a mudança nos inputs
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+  // Função para gerar PDF
+  const generatePDF = () => {
+    if (!selectedArmacao) return;
+
+    const doc = new jsPDF();
+    doc.text(`Detalhes da Armação`, 10, 10);
+    doc.text(`Código: ${selectedArmacao.codigo || 'N/A'}`, 10, 20);
+    doc.text(`SKU: ${selectedArmacao.sku || 'N/A'}`, 10, 30);
+    doc.text(`Marca: ${selectedArmacao.marca || 'N/A'}`, 10, 40);
+    doc.text(`Valor: R$ ${parseFloat(selectedArmacao.valor || 0).toFixed(2)}`, 10, 50);
+    doc.text(`Custo: R$ ${parseFloat(selectedArmacao.custo || 0).toFixed(2)}`, 10, 60);
+    doc.text(`Quantidade: ${selectedArmacao.quantidade || 0}`, 10, 70);
+    doc.text(`Data de Cadastro: ${formatDate(selectedArmacao.data)}`, 10, 80);
+    doc.text(`Loja: ${selectedArmacao.loja || 'N/A'}`, 10, 90);
+    doc.text(`Material: ${selectedArmacao.material || 'N/A'}`, 10, 100);
+    doc.text(`Gênero: ${selectedArmacao.genero || 'N/A'}`, 10, 110);
+    doc.text(`Cor: ${selectedArmacao.cor || 'N/A'}`, 10, 120);
+    doc.text(`Formato: ${selectedArmacao.formato || 'N/A'}`, 10, 130);
+
+    doc.save(`Armacao_${selectedArmacao.codigo || selectedArmacao.id}.pdf`);
   };
 
-  // Função para lidar com a seleção de uma nova imagem
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setNewImageFile(file);
-      setNewImagePreview(URL.createObjectURL(file));
-    }
+  // Função para lidar com a impressão
+  const handlePrint = () => {
+    window.print();
   };
 
-  // Função para atualizar a armação
-  const handleUpdateArmacao = async (e) => {
-    e.preventDefault();
+  // Função para marcar ou desmarcar armação para exclusão
+  const toggleDeletion = (e, armacaoId) => {
+    e.stopPropagation(); // Evitar abrir o modal
 
-    try {
-      let imagem = formData.imagem;
-
-      if (newImageFile) {
-        // Upload da nova imagem para o Firebase Storage
-        const storageRef = firebaseStorageRef(
-          storage,
-          `armacoes/${selectedArmacao.id}/${newImageFile.name}`
-        );
-        await uploadBytes(storageRef, newImageFile);
-        imagem = await getDownloadURL(storageRef);
+    setSelectedForDeletion(prev => {
+      if (prev.includes(armacaoId)) {
+        return prev.filter(id => id !== armacaoId);
+      } else {
+        return [...prev, armacaoId];
       }
-
-      // Atualiza o documento no Firestore
-      const docRef = doc(
-        firestore,
-        selectedArmacao.loja === "Loja 1"
-          ? "loja1_armacoes"
-          : "loja2_armacoes",
-        selectedArmacao.id
-      );
-      await updateDoc(docRef, {
-        ...formData,
-        imagem,
-      });
-
-      // Atualiza o estado armacoes
-      setArmacoes((prev) =>
-        prev.map((armacao) =>
-          armacao.id === selectedArmacao.id
-            ? { ...armacao, ...formData, imagem }
-            : armacao
-        )
-      );
-
-      closeModal();
-    } catch (err) {
-      console.error("Erro ao atualizar a armação:", err);
-    }
-  };
-
-  // Função para clonar a armação, passando dados via URL
-  const handleClone = () => {
-    if (selectedArmacao) {
-      // Fecha o modal
-      closeModal();
-      // Redireciona para a página de criação com os parâmetros cloneId e loja
-      router.push(
-        `/products_and_services/frames/add-frame?cloneId=${selectedArmacao.id}&loja=${encodeURIComponent(
-          selectedArmacao.loja
-        )}`
-      );
-    }
-  };
-
-  // Renderiza as linhas da tabela
-  const renderTableRows = () => {
-    const filteredArmacoes = filterArmacoes();
-
-    return filteredArmacoes.map((armacao) => {
-      return (
-        <tr
-          key={`${armacao.loja}-${armacao.id}`} // Chave única
-          className="border-t border-gray-300 cursor-pointer hover:bg-gray-100"
-          onClick={() => openModal(armacao)}
-        >
-          <td className="p-2 sm:p-4 text-black">{armacao.codigo}</td>
-          <td className="p-2 sm:p-4 text-black">{armacao.valor}</td>
-          <td className="p-2 sm:p-4 text-black">{armacao.data}</td>
-          <td className="p-2 sm:p-4 text-black">{armacao.hora}</td>
-          <td className="p-2 sm:p-4 text-black">{armacao.cor}</td>
-          <td className="p-2 sm:p-4 text-black">{armacao.marca}</td>
-          <td className="p-2 sm:p-4 text-black">{armacao.material}</td>
-          <td className="p-2 sm:p-4 text-black">{armacao.genero}</td>
-          <td className="p-2 sm:p-4 text-black">
-            <div className="flex items-center justify-between">
-              <span>{armacao.loja}</span>
-              {isRemoving && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    confirmRemove(armacao);
-                  }}
-                  className="text-red-600"
-                >
-                  🗑️
-                </button>
-              )}
-            </div>
-          </td>
-        </tr>
-      );
     });
   };
 
-  if (isLoading) {
+  // Função para navegar para página de edição
+  const handleEdit = () => {
+    if (selectedForDeletion.length !== 1) {
+      alert('Selecione apenas uma armação para editar.');
+      return;
+    }
+
+    // Encontrar a armação selecionada
+    const armacaoToEdit = armacoes.find(armacao => armacao.id === selectedForDeletion[0]);
+    
+    if (armacaoToEdit) {
+      // Navegar para a página de formulário passando os dados da armação
+      router.push(`/products_and_services/frames/add?cloneId=${armacaoToEdit.codigo}&loja=${armacaoToEdit.loja}`);
+    }
+  };
+
+  // Função para excluir as armações selecionadas
+  const handleDeleteSelected = async () => {
+    if (selectedForDeletion.length === 0) {
+      alert('Selecione pelo menos uma armação para excluir.');
+      return;
+    }
+
+    if (confirm(`Deseja realmente excluir ${selectedForDeletion.length} armações selecionadas?`)) {
+      try {
+        for (const armacaoId of selectedForDeletion) {
+          // Encontrar a loja da armação
+          const armacao = armacoes.find(a => a.id === armacaoId);
+          if (armacao && armacao.loja) {
+            // Excluir a armação
+            const armacaoRef = doc(firestore, `lojas/estoque/${armacao.loja}/armacoes/items`, armacaoId);
+            await deleteDoc(armacaoRef);
+          }
+        }
+
+        // Atualizar as listas de armações
+        const updatedArmacoes = armacoes.filter(armacao => !selectedForDeletion.includes(armacao.id));
+        setArmacoes(updatedArmacoes);
+        setFilteredArmacoes(updatedArmacoes.filter(a =>
+          (selectedLoja === 'Ambas' || a.loja === selectedLoja) &&
+          (!searchQuery ||
+            a.codigo?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            a.marca?.toLowerCase().includes(searchQuery.toLowerCase()))
+        ));
+        setTotalArmacoes(updatedArmacoes.length);
+        setSelectedForDeletion([]);
+
+        alert('Armações excluídas com sucesso!');
+      } catch (error) {
+        console.error('Erro ao excluir armações:', error);
+        alert('Erro ao excluir as armações selecionadas.');
+      }
+    }
+  };
+
+  // Calcular armações para a página atual
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentArmacoes = filteredArmacoes.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredArmacoes.length / itemsPerPage);
+
+  // Funções de navegação
+  const goToPage = (pageNumber) => {
+    setCurrentPage(Math.max(1, Math.min(pageNumber, totalPages)));
+  };
+
+  useEffect(() => {
+    if (showFilterDropdown) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [showFilterDropdown]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      const dropdownElement = document.getElementById('filter-dropdown');
+      const filterToggleElement = document.querySelector('button[data-filter-toggle="true"]');
+
+      if (showFilterDropdown &&
+        dropdownElement &&
+        !dropdownElement.contains(event.target) &&
+        filterToggleElement &&
+        !filterToggleElement.contains(event.target)) {
+        setShowFilterDropdown(false);
+      }
+    };
+
+    // Adicionar manipulador de cliques
+    document.addEventListener('mousedown', handleClickOutside);
+
+    // Adicionar manipulador para fechar ao pressionar ESC
+    const handleEscKey = (event) => {
+      if (event.key === 'Escape' && showFilterDropdown) {
+        setShowFilterDropdown(false);
+      }
+    };
+
+    document.addEventListener('keydown', handleEscKey);
+
+    // Limpar os event listeners ao desmontar o componente
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscKey);
+    };
+  }, [showFilterDropdown]);
+
+  const FilterActiveBadges = () => {
+    const activeFilters = [];
+
+    if (marcaFilter !== 'Todas') {
+      activeFilters.push({ type: 'Marca', value: marcaFilter });
+    }
+
+    if (generoFilter !== 'Todos') {
+      activeFilters.push({ type: 'Gênero', value: generoFilter });
+    }
+
+    if (materialFilter !== 'Todos') {
+      activeFilters.push({ type: 'Material', value: materialFilter });
+    }
+
+    if (activeFilters.length === 0) return null;
+
     return (
-      <div className="text-center text-xl text-[#800080]">
-        Carregando dados...
+      <div className="flex flex-wrap gap-1 mt-2">
+        {activeFilters.map((filter, index) => (
+          <span
+            key={index}
+            className="inline-flex items-center px-2 py-1 rounded text-xs bg-purple-100 text-[#81059e]"
+          >
+            <span>{filter.type}: {filter.value}</span>
+            <button
+              className="ml-1 text-[#81059e] hover:text-[#690480]"
+              onClick={() => {
+                if (filter.type === 'Marca') setMarcaFilter('Todas');
+                if (filter.type === 'Gênero') setGeneroFilter('Todos');
+                if (filter.type === 'Material') setMaterialFilter('Todos');
+              }}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+              </svg>
+            </button>
+          </span>
+        ))}
+        <button
+          className="text-xs text-[#81059e] hover:underline px-2 py-1"
+          onClick={() => {
+            setMarcaFilter('Todas');
+            setGeneroFilter('Todos');
+            setMaterialFilter('Todos');
+          }}
+        >
+          Limpar todos
+        </button>
       </div>
     );
-  }
+  };
 
-  if (error) {
-    return <div className="text-center text-xl text-red-600">{error}</div>;
-  }
+  // Renderiza nome da loja formatado
+  const renderLojaName = (lojaId) => {
+    const lojaNames = {
+      'loja1': 'Loja 1 - Centro',
+      'loja2': 'Loja 2 - Caramuru'
+    };
+
+    return lojaNames[lojaId] || lojaId;
+  };
 
   return (
     <Layout>
-      <div className="p-4 sm:p-6">
-        <h1 className="text-2xl font-bold text-[#800080] mb-4">
-          ARMAÇÕES REGISTRADAS
-        </h1>
-        <div className="flex flex-col sm:flex-row justify-between items-center mb-4 space-y-4 sm:space-y-0">
-          <input
-            type="text"
-            placeholder="Busque por código, título, cor ou data"
-            className="border-2 border-gray-300 rounded-lg px-4 py-2 w-full sm:w-1/3 text-black"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-          <div className="flex space-x-4">
-            <button
-              className="bg-[#81059e] text-white font-bold py-2 px-6 rounded-lg w-full sm:w-auto"
-              onClick={() =>
-                router.push("/products_and_services/frames/add-frame")
-              }
-            >
-              ADICIONAR
-            </button>
-
-            <button
-              className={`${isRemoving ? "bg-yellow-500" : "bg-red-600"
-                } text-white font-bold py-2 px-6 rounded-lg w-full sm:w-auto`}
-              onClick={() => setIsRemoving(!isRemoving)}
-            >
-              {isRemoving ? "CANCELAR REMOÇÃO" : "REMOVER"}
-            </button>
+      <div className="min-h-screen p-0 md:p-2 mb-20">
+        <div className="w-full max-w-5xl mx-auto rounded-lg">
+          <div className="mb-4">
+            <h2 className="text-3xl font-bold text-[#81059e] mb-8 mt-8">ARMAÇÕES REGISTRADAS</h2>
           </div>
-        </div>
 
-        {/* Tabela com scroll horizontal para dispositivos móveis */}
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse min-w-[700px]">
-            <thead>
-              <tr className="bg-gray-200 text-left">
-                <th className="p-2 sm:p-4 text-black">Código</th>
-                <th className="p-2 sm:p-4 text-black">Preço</th>
-                <th className="p-2 sm:p-4 text-black">Data</th>
-                <th className="p-2 sm:p-4 text-black">Hora</th>
-                <th className="p-2 sm:p-4 text-black">Cor</th>
-                <th className="p-2 sm:p-4 text-black">Marca</th>
-                <th className="p-2 sm:p-4 text-black">Material</th>
-                <th className="p-2 sm:p-4 text-black">Gênero</th>
-                <th className="p-2 sm:p-4 text-black">Loja</th>
-              </tr>
-            </thead>
-            <tbody>{renderTableRows()}</tbody>
-          </table>
-        </div>
+          {/* Dashboard compacto com estatísticas essenciais */}
+          <div className="mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
+              {/* Card - Total de Armações */}
+              <div className="border-2 rounded-lg p-4 border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                <div className="flex items-center justify-between mb-3">
+                  <FontAwesomeIcon
+                    icon={faGlasses}
+                    className="h-8 w-8 text-[#81059e] bg-purple-300 p-2 rounded-2xl"
+                  />
+                  <span className="text-lg font-medium text-gray-700 flex-grow ml-3">Total de Armações</span>
+                </div>
+                <p className="text-2xl font-semibold text-center mt-2">{totalArmacoes}</p>
+              </div>
 
-        {/* Pop-up de confirmação de remoção */}
-        {armacaoToRemove && (
-          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center">
-            <div className="bg-white p-6 rounded-lg shadow-lg">
-              <h2 className="text-xl font-bold mb-4">Confirmação</h2>
-              <p>
-                Tem certeza de que deseja remover esta armação da{" "}
-                {armacaoToRemove.loja}?
-              </p>
-              <div className="mt-4 flex space-x-4">
-                <button
-                  className="bg-red-600 text-white font-bold py-2 px-4 rounded-lg"
-                  onClick={() =>
-                    handleRemoveArmacao(
-                      armacaoToRemove.id,
-                      armacaoToRemove.loja
-                    )
-                  }
-                >
-                  Sim, remover
-                </button>
-                <button
-                  className="bg-gray-400 text-white font-bold py-2 px-4 rounded-lg"
-                  onClick={() => setArmacaoToRemove(null)}
-                >
-                  Cancelar
-                </button>
+              {/* Card - Valor Total do Estoque */}
+              <div className="border-2 rounded-lg p-4 border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                <div className="flex items-center justify-between mb-3">
+                  <FontAwesomeIcon
+                    icon={faDollarSign}
+                    className="h-8 w-8 text-[#81059e] bg-purple-300 p-2 rounded-2xl"
+                  />
+                  <span className="text-lg font-medium text-gray-700 flex-grow ml-3">Valor do Estoque</span>
+                </div>
+                <p className="text-2xl font-semibold text-center mt-2">
+                  R$ {armacoes.reduce((total, armacao) => 
+                    total + (parseFloat(armacao.valor || 0) * parseInt(armacao.quantidade || 0)), 0).toFixed(2)}
+                </p>
+              </div>
+
+              {/* Card - Estoque Crítico */}
+              <div className="border-2 rounded-lg p-4 border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                <div className="flex items-center justify-between mb-3">
+                  <FontAwesomeIcon
+                    icon={faBoxes}
+                    className="h-8 w-8 text-[#81059e] bg-purple-300 p-2 rounded-2xl"
+                  />
+                  <span className="text-lg font-medium text-gray-700 flex-grow ml-3">Estoque Crítico</span>
+                </div>
+                <p className="text-2xl font-semibold text-center mt-2">
+                  {armacoes.filter(armacao => parseInt(armacao.quantidade || 0) <= 3).length}
+                </p>
+                <p className="text-sm text-gray-500 text-center mt-1">
+                  Repor urgentemente
+                </p>
+              </div>
+
+              {/* Card - Categorias */}
+              <div className="border-2 rounded-lg p-4 border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                <div className="flex items-center justify-between mb-3">
+                  <FontAwesomeIcon
+                    icon={faTags}
+                    className="h-8 w-8 text-[#81059e] bg-purple-300 p-2 rounded-2xl"
+                  />
+                  <span className="text-lg font-medium text-gray-700 flex-grow ml-3">Marcas</span>
+                </div>
+                <p className="text-2xl font-semibold text-center mt-2">
+                  {availableMarcas.length - 1} {/* -1 para desconsiderar "Todas" */}
+                </p>
+                <p className="text-sm text-gray-500 text-center mt-1">
+                  Diferentes marcas
+                </p>
               </div>
             </div>
           </div>
-        )}
 
-        {/* Modal de visualização e edição */}
-        {selectedArmacao && (
-          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-start justify-center pt-24">
-            {" "}
-            {/* Alterei `pt-24` para aumentar o espaçamento superior */}
-            <div className="bg-white p-4 sm:p-6 md:p-8 rounded-lg shadow-lg w-full max-w-xs sm:max-w-md md:max-w-lg lg:max-w-2xl overflow-y-auto max-h-[90vh]">
-              {isEditing ? (
-                <>
-                  <h2 className="text-lg sm:text-xl md:text-2xl font-bold mb-4 text-purple-900 text-center sm:text-left">
-                    Editar Armação
-                  </h2>
-                  <form onSubmit={handleUpdateArmacao}>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="col-span-1">
-                        <label className="block text-xs md:text-sm font-medium text-red-700">
-                          Código
-                        </label>
-                        <input
-                          type="text"
-                          name="codigo"
-                          value={formData.codigo}
-                          onChange={handleInputChange}
-                          className="mt-1 text-black block w-full border-gray-300 rounded-md shadow-sm"
-                        />
-                      </div>
-                      <div className="col-span-1">
-                        <label className="block text-xs md:text-sm font-medium text-red-700">
-                          Preço
-                        </label>
-                        <input
-                          type="text"
-                          name="valor"
-                          value={formData.valor}
-                          onChange={handleInputChange}
-                          className="text-black mt-1 block w-full border-gray-300 rounded-md shadow-sm"
-                        />
-                      </div>
-                      <div className="col-span-1">
-                        <label className="block text-xs md:text-sm font-medium text-red-700">
-                          Data
-                        </label>
-                        <input
-                          type="date"
-                          name="data"
-                          value={formData.data}
-                          onChange={handleInputChange}
-                          className="text-black mt-1 block w-full border-gray-300 rounded-md shadow-sm"
-                        />
-                      </div>
-                      <div className="col-span-1">
-                        <label className="block text-xs md:text-sm font-medium text-red-700">
-                          Hora
-                        </label>
-                        <input
-                          type="time"
-                          name="hora"
-                          value={formData.hora}
-                          onChange={handleInputChange}
-                          className="text-black mt-1 block w-full border-gray-300 rounded-md shadow-sm"
-                        />
-                      </div>
-                      <div className="col-span-1">
-                        <label className="block text-xs md:text-sm font-medium text-red-700">
-                          Cor
-                        </label>
-                        <input
-                          type="text"
-                          name="cor"
-                          value={formData.cor}
-                          onChange={handleInputChange}
-                          className="text-black mt-1 block w-full border-gray-300 rounded-md shadow-sm"
-                        />
-                      </div>
-                      <div className="col-span-1">
-                        <label className="block text-xs md:text-sm font-medium text-red-700">
-                          Marca
-                        </label>
-                        <input
-                          type="text"
-                          name="marca"
-                          value={formData.marca}
-                          onChange={handleInputChange}
-                          className="text-black mt-1 block w-full border-gray-300 rounded-md shadow-sm"
-                        />
-                      </div>
-                      <div className="col-span-1">
-                        <label className="block text-xs md:text-sm font-medium text-red-700">
-                          Material
-                        </label>
-                        <input
-                          type="text"
-                          name="material"
-                          value={formData.material}
-                          onChange={handleInputChange}
-                          className="text-black mt-1 block w-full border-gray-300 rounded-md shadow-sm"
-                        />
-                      </div>
-                      <div className="col-span-1">
-                        <label className="block text-xs md:text-sm font-medium text-red-700">
-                          Gênero
-                        </label>
-                        <input
-                          type="text"
-                          name="genero"
-                          value={formData.genero}
-                          onChange={handleInputChange}
-                          className="text-black mt-1 block w-full border-gray-300 rounded-md shadow-sm"
-                        />
-                      </div>
-                      <div className="col-span-1 md:col-span-2">
-                        <label className="block text-xs md:text-sm font-medium text-red-700">
-                          Imagem
-                        </label>
-                        <div className="mt-2 flex justify-center">
-                          {newImagePreview ? (
-                            <img
-                              src={newImagePreview}
-                              alt="Nova Imagem"
-                              className="h-auto w-full md:max-w-md object-contain rounded-md"
-                            />
-                          ) : formData.imagem ? (
-                            <img
-                              src={formData.imagem}
-                              alt="Imagem Atual"
-                              className="h-auto w-full md:max-w-md object-contain rounded-md"
-                            />
-                          ) : (
-                            <div className="h-48 w-full md:max-w-md bg-gray-200 flex items-center justify-center rounded-md">
-                              Sem Imagem
-                            </div>
-                          )}
-                        </div>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handleImageChange}
-                          className="mt-2 block w-full text-sm"
-                        />
-                        <p className="mt-1 text-xs text-gray-700">
-                          Nenhum ficheiro selecionado
-                        </p>
-                      </div>
-                    </div>
-                    <div className="mt-4 flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-4">
-                      <button
-                        type="submit"
-                        className="bg-green-600 text-white font-bold py-2 px-4 rounded-lg w-full md:w-auto"
+          {/* Barra de busca e filtros com dropdown */}
+          <div className="flex flex-wrap gap-2 items-center mb-4">
+            {/* Barra de busca */}
+            <input
+              type="text"
+              placeholder="Busque por código, marca ou barras"
+              className="p-2 h-10 flex-grow min-w-[200px] border-2 border-gray-200 rounded-lg text-black"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+
+            {/* Filtro por loja */}
+            <select
+              value={selectedLoja}
+              onChange={(e) => setSelectedLoja(e.target.value)}
+              className="p-2 h-10 border-2 border-gray-200 rounded-lg text-gray-800 w-24"
+            >
+              {userPermissions?.isAdmin && <option value="Ambas">Ambas</option>}
+              {userPermissions?.lojas?.includes('loja1') && <option value="loja1">Loja 1</option>}
+              {userPermissions?.lojas?.includes('loja2') && <option value="loja2">Loja 2</option>}
+            </select>
+
+            {/* Dropdown de filtros */}
+            <div className="relative">
+              <button
+                data-filter-toggle="true"
+                onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+                className="p-2 h-10 border-2 border-gray-200 rounded-lg bg-white flex items-center gap-1 text-[#81059e]"
+              >
+                <FontAwesomeIcon icon={faFilter} className="h-4 w-4" />
+                <span className="hidden sm:inline">Filtrar</span>
+                {(marcaFilter !== 'Todas' || generoFilter !== 'Todos' || materialFilter !== 'Todos') && (
+                  <span className="ml-1 bg-[#81059e] text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
+                    {(marcaFilter !== 'Todas' ? 1 : 0) + (generoFilter !== 'Todos' ? 1 : 0) + (materialFilter !== 'Todos' ? 1 : 0)}
+                  </span>
+                )}
+              </button>
+
+              {showFilterDropdown && (
+                <div
+                  id="filter-dropdown"
+                  className="fixed z-30 inset-x-4 top-24 sm:absolute sm:inset-x-auto sm:top-full sm:right-0 sm:mt-1 bg-white shadow-lg rounded-lg border p-4 w-auto sm:w-64 max-w-[calc(100vw-32px)] max-h-[80vh] overflow-y-auto"
+                >
+                  <div className="flex justify-between items-center mb-2">
+                    <h3 className="text-sm font-semibold text-gray-700">Filtros</h3>
+                    <button
+                      onClick={() => {
+                        setMarcaFilter('Todas');
+                        setGeneroFilter('Todos');
+                        setMaterialFilter('Todos');
+                      }}
+                      className="text-xs text-[#81059e] hover:underline"
+                    >
+                      Limpar Filtros
+                    </button>
+                  </div>
+
+                  <div className="space-y-3">
+                    {/* Filtro de marca */}
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">Marca</label>
+                      <select
+                        value={marcaFilter}
+                        onChange={(e) => setMarcaFilter(e.target.value)}
+                        className="p-2 h-9 w-full border border-gray-200 rounded-lg text-gray-800 text-sm"
                       >
-                        Salvar
-                      </button>
-                      <button
-                        type="button"
-                        className="bg-gray-400 text-white font-bold py-2 px-4 rounded-lg w-full md:w-auto"
-                        onClick={() => setIsEditing(false)}
+                        {availableMarcas.map(marca => (
+                          <option key={marca} value={marca}>{marca}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Filtro de gênero */}
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">Gênero</label>
+                      <select
+                        value={generoFilter}
+                        onChange={(e) => setGeneroFilter(e.target.value)}
+                        className="p-2 h-9 w-full border border-gray-200 rounded-lg text-gray-800 text-sm"
                       >
-                        Cancelar
+                        {generos.map(genero => (
+                          <option key={genero} value={genero}>{genero}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Filtro de material */}
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">Material</label>
+                      <select
+                        value={materialFilter}
+                        onChange={(e) => setMaterialFilter(e.target.value)}
+                        className="p-2 h-9 w-full border border-gray-200 rounded-lg text-gray-800 text-sm"
+                      >
+                        {availableMateriais.map(material => (
+                          <option key={material} value={material}>{material}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="pt-2">
+                      <button
+                        onClick={() => setShowFilterDropdown(false)}
+                        className="w-full bg-[#81059e] text-white rounded-lg p-2 text-sm hover:bg-[#690480]"
+                      >
+                        Fechar
                       </button>
-                    </div>
-                  </form>
-                </>
-              ) : (
-                <>
-                  <h2 className="text-xl text-purple-900 font-bold mb-4">
-                    Detalhes da Armação
-                  </h2>
-                  <div className="grid grid-cols-1 gap-4">
-                    <div>
-                      <span className="text-purple-700 font-semibold">
-                        Código:
-                      </span>{" "}
-                      <span className="text-black">
-                        {selectedArmacao.codigo}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-purple-700 font-semibold">
-                        Preço:
-                      </span>{" "}
-                      <span className="text-black">
-                        {selectedArmacao.valor}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-purple-700 font-semibold">
-                        Data:
-                      </span>{" "}
-                      <span className="text-black">
-                        {selectedArmacao.data}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-purple-700 font-semibold">
-                        Hora:
-                      </span>{" "}
-                      <span className="text-black">
-                        {selectedArmacao.hora}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-purple-700 font-semibold">
-                        Cor:
-                      </span>{" "}
-                      <span className="text-black">
-                        {selectedArmacao.cor}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-purple-700 font-semibold">
-                        Marca:
-                      </span>{" "}
-                      <span className="text-black">
-                        {selectedArmacao.marca}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-purple-700 font-semibold">
-                        Material:
-                      </span>{" "}
-                      <span className="text-black">
-                        {selectedArmacao.material}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-purple-700 font-semibold">
-                        Gênero:
-                      </span>{" "}
-                      <span className="text-black">
-                        {selectedArmacao.genero}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-purple-700 font-semibold">
-                        Imagem:
-                      </span>
-                      {selectedArmacao.imagem ? (
-                        <img
-                          src={selectedArmacao.imagem}
-                          alt="Imagem da Armação"
-                          className="h-32 w-32 object-cover mt-2"
-                        />
-                      ) : (
-                        <div className="h-32 w-32 bg-gray-200 flex items-center justify-center mt-2">
-                          Sem Imagem
-                        </div>
-                      )}
                     </div>
                   </div>
-                  <div className="mt-4 flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-4">
-                    <button
-                      onClick={() => setIsEditing(true)}
-                      className="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg w-full md:w-auto"
-                    >
-                      Editar
-                    </button>
-                    <button
-                      onClick={handleClone}
-                      className="bg-yellow-500 text-white font-bold py-2 px-4 rounded-lg w-full md:w-auto"
-                    >
-                      Clonar
-                    </button>
-                    <button
-                      onClick={closeModal}
-                      className="bg-gray-400 text-white font-bold py-2 px-4 rounded-lg w-full md:w-auto"
-                    >
-                      Fechar
-                    </button>
+                </div>
+              )}
+            </div>
+
+            {/* Botões de ação */}
+            <div className="flex gap-2">
+              {/* Botão Adicionar */}
+              <Link href="/products_and_services/frames/add-frame">
+                <button className="bg-green-400 text-white h-10 w-10 rounded-md flex items-center justify-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                </button>
+              </Link>
+
+              {/* Botão Editar - aparece apenas quando há armações selecionadas */}
+              <button
+                onClick={() => handleEdit()}
+                className={`${selectedForDeletion.length !== 1 ? 'bg-blue-300' : 'bg-blue-500'} text-white h-10 w-10 rounded-md flex items-center justify-center`}
+                disabled={selectedForDeletion.length !== 1}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                </svg>
+              </button>
+
+              {/* Botão Excluir */}
+              <button
+                onClick={handleDeleteSelected}
+                className={`${selectedForDeletion.length === 0 ? 'bg-red-400' : 'bg-red-400'} text-white h-10 w-10 rounded-md flex items-center justify-center`}
+                disabled={selectedForDeletion.length === 0}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <FilterActiveBadges />
+
+          {/* Tabela de armações */}
+          {loading ? (
+            <p>Carregando...</p>
+          ) : error ? (
+            <p>{error}</p>
+          ) : (
+            <div className="w-full overflow-x-auto">
+              {filteredArmacoes.length === 0 ? (
+                <p>Nenhuma armação encontrada.</p>
+              ) : (
+                <>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full table-auto select-none">
+                      <thead>
+                        <tr className="bg-[#81059e] text-white">
+                          <th className="px-3 py-2 w-12">
+                            <span className="sr-only">Selecionar</span>
+                          </th>
+                          <th className="px-3 py-2 cursor-pointer whitespace-nowrap" onClick={() => handleSort('codigo')}>
+                            Código {renderSortArrow('codigo')}
+                          </th>
+                          <th className="px-3 py-2 cursor-pointer" onClick={() => handleSort('marca')}>
+                            Marca {renderSortArrow('marca')}
+                          </th>
+                          <th className="px-3 py-2 cursor-pointer" onClick={() => handleSort('genero')}>
+                            Gênero {renderSortArrow('genero')}
+                          </th>
+                          <th className="px-3 py-2 cursor-pointer" onClick={() => handleSort('cor')}>
+                            Cor {renderSortArrow('cor')}
+                          </th>
+                          <th className="px-3 py-2 cursor-pointer" onClick={() => handleSort('valor')}>
+                            Valor {renderSortArrow('valor')}
+                          </th>
+                          <th className="px-3 py-2 cursor-pointer whitespace-nowrap" onClick={() => handleSort('custo')}>
+                            Custo {renderSortArrow('custo')}
+                          </th>
+                          <th className="px-3 py-2 cursor-pointer whitespace-nowrap" onClick={() => handleSort('quantidade')}>
+                            Estoque {renderSortArrow('quantidade')}
+                          </th>
+                          <th className="px-3 py-2">Loja</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {currentArmacoes.map((armacao) => (
+                          <tr
+                            key={armacao.id}
+                            className="text-black text-left hover:bg-gray-100 cursor-pointer"
+                          >
+                            <td className="border px-2 py-2 text-center">
+                              <input
+                                type="checkbox"
+                                checked={selectedForDeletion.includes(armacao.id)}
+                                onChange={(e) => toggleDeletion(e, armacao.id)}
+                                className="h-4 w-4 cursor-pointer"
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                            </td>
+                            <td className="border px-3 py-2 whitespace-nowrap" onClick={() => openModal(armacao)}>
+                              {armacao.codigo || 'N/A'}
+                            </td>
+                            <td className="border px-4 py-2 max-w-[300px] truncate" onClick={() => openModal(armacao)}>
+                              {armacao.marca || 'N/A'}
+                            </td>
+                            <td className="border px-3 py-2" onClick={() => openModal(armacao)}>
+                              {armacao.genero || 'N/A'}
+                            </td>
+                            <td className="border px-3 py-2" onClick={() => openModal(armacao)}>
+                              {armacao.cor || 'N/A'}
+                            </td>
+                            <td className="border px-3 py-2 whitespace-nowrap" onClick={() => openModal(armacao)}>
+                              R$ {parseFloat(armacao.valor || 0).toFixed(2)}
+                            </td>
+                            <td className="border px-3 py-2 whitespace-nowrap" onClick={() => openModal(armacao)}>
+                              R$ {parseFloat(armacao.custo || 0).toFixed(2)}
+                            </td>
+                            <td className={`border px-3 py-2 whitespace-nowrap text-center ${getEstoqueColor(armacao.quantidade)}`} onClick={() => openModal(armacao)}>
+                              {armacao.quantidade || '0'}
+                            </td>
+                            <td className="border px-3 py-2 whitespace-nowrap" onClick={() => openModal(armacao)}>
+                              {renderLojaName(armacao.loja)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Paginação */}
+                  <div className="flex items-center justify-between mt-4">
+                    <div className="text-sm text-gray-700">
+                      Mostrando <span className="font-medium">{indexOfFirstItem + 1}</span> a{' '}
+                      <span className="font-medium">
+                        {Math.min(indexOfLastItem, filteredArmacoes.length)}
+                      </span>{' '}
+                      de <span className="font-medium">{filteredArmacoes.length}</span> registros
+                    </div>
+                    <div className="flex space-x-1">
+                      <button
+                        onClick={() => goToPage(1)}
+                        disabled={currentPage === 1}
+                        className={`px-3 py-1 rounded ${currentPage === 1
+                          ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                          : 'bg-[#81059e] text-white hover:bg-[#690480]'
+                          }`}
+                      >
+                        &laquo;
+                      </button>
+                      <button
+                        onClick={() => goToPage(currentPage - 1)}
+                        disabled={currentPage === 1}
+                        className={`px-3 py-1 rounded ${currentPage === 1
+                          ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                          : 'bg-[#81059e] text-white hover:bg-[#690480]'
+                          }`}
+                      >
+                        &lt;
+                      </button>
+
+                      <span className="px-3 py-1 text-gray-700">
+                        {currentPage} / {totalPages}
+                      </span>
+
+                      <button
+                        onClick={() => goToPage(currentPage + 1)}
+                        disabled={currentPage === totalPages}
+                        className={`px-3 py-1 rounded ${currentPage === totalPages
+                          ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                          : 'bg-[#81059e] text-white hover:bg-[#690480]'
+                          }`}
+                      >
+                        &gt;
+                      </button>
+                      <button
+                        onClick={() => goToPage(totalPages)}
+                        disabled={currentPage === totalPages}
+                        className={`px-3 py-1 rounded ${currentPage === totalPages
+                          ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                          : 'bg-[#81059e] text-white hover:bg-[#690480]'
+                          }`}
+                      >
+                        &raquo;
+                      </button>
+                    </div>
                   </div>
                 </>
               )}
             </div>
-          </div>
-        )}
+          )}
+
+          {/* Modal de Detalhamento de Armação */}
+          {isModalOpen && selectedArmacao && (
+            <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+              <div className="bg-white rounded-lg shadow-lg w-full max-w-md flex flex-col h-3/5 overflow-hidden">
+                <div className="bg-[#81059e] text-white p-4 flex justify-between items-center">
+                  <h3 className="text-xl font-bold">Detalhes da Armação</h3>
+
+                  <FontAwesomeIcon
+                    icon={faX}
+                    className="h-5 w-5 text-white cursor-pointer hover:text-gray-200"
+                    onClick={closeModal}
+                  />
+                </div>
+                <div className="space-y-3 p-4 overflow-y-auto flex-grow">
+                  {selectedArmacao.imagem && (
+                    <div className="flex justify-center mb-4">
+                      <img 
+                        src={selectedArmacao.imagem} 
+                        alt={`Imagem de ${selectedArmacao.marca}`} 
+                        className="max-h-32 object-contain rounded"
+                      />
+                    </div>
+                  )}
+                  
+                  <p><strong>
+                    Código:</strong> {selectedArmacao.codigo || 'N/A'}
+                  </p>
+                  <p>
+                    <strong>SKU:</strong> {selectedArmacao.sku || 'N/A'}
+                  </p>
+                  <p>
+                    <strong>Marca:</strong> {selectedArmacao.marca || 'N/A'}
+                  </p>
+                  <p>
+                    <strong>Gênero:</strong> {selectedArmacao.genero || 'N/A'}
+                  </p>
+                  <p>
+                    <strong>Material:</strong> {selectedArmacao.material || 'N/A'}
+                  </p>
+                  <p>
+                    <strong>Cor:</strong> {selectedArmacao.cor || 'N/A'}
+                  </p>
+                  <p>
+                    <strong>Formato:</strong> {selectedArmacao.formato || 'N/A'}
+                  </p>
+                  <p>
+                    <strong>Valor:</strong> R$ {parseFloat(selectedArmacao.valor || 0).toFixed(2)}
+                  </p>
+                  <p>
+                    <strong>Custo:</strong> R$ {parseFloat(selectedArmacao.custo || 0).toFixed(2)}
+                  </p>
+                  <p>
+                    <strong>Margem:</strong> {selectedArmacao.percentual_lucro || '0'}%
+                  </p>
+                  <p>
+                    <strong>Quantidade:</strong> {selectedArmacao.quantidade || '0'}
+                  </p>
+                  <p>
+                    <strong>Data de Cadastro:</strong> {formatDate(selectedArmacao.data)}
+                  </p>
+                  <p>
+                    <strong>Loja:</strong> {renderLojaName(selectedArmacao.loja)}
+                  </p>
+                  
+                  {/* Dimensões */}
+                  <div className="mt-4 pt-2 border-t border-gray-200">
+                    <h4 className="font-semibold text-[#81059e]">Dimensões</h4>
+                    <div className="grid grid-cols-3 gap-2 mt-2">
+                      <div>
+                        <p className="text-sm text-gray-600">Lente</p>
+                        <p className="font-medium">{selectedArmacao.lente || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600">Ponte</p>
+                        <p className="font-medium">{selectedArmacao.ponte || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600">Haste</p>
+                        <p className="font-medium">{selectedArmacao.haste || 'N/A'}</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Dados Fiscais */}
+                  <div className="mt-4 pt-2 border-t border-gray-200">
+                    <h4 className="font-semibold text-[#81059e]">Informações Fiscais</h4>
+                    <p className="mt-2">
+                      <strong>NCM:</strong> {selectedArmacao.NCM || 'N/A'}
+                    </p>
+                    <p>
+                      <strong>Código de Barras:</strong> {selectedArmacao.codigoBarras || 'N/A'}
+                    </p>
+                  </div>
+
+                  <div className="flex justify-around mt-6">
+                    <button
+                      onClick={generatePDF}
+                      className="bg-[#81059e] text-white px-4 py-2 rounded-md flex items-center"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                      </svg>
+                      Gerar PDF
+                    </button>
+                    <button
+                      onClick={handlePrint}
+                      className="bg-[#81059e] text-white px-4 py-2 rounded-md flex items-center"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                      </svg>
+                      Imprimir
+                    </button>
+                  </div>
+
+                  <div className="flex justify-around mt-4">
+                    <Link href={`/products_and_services/frames/add?cloneId=${selectedArmacao.codigo}&loja=${selectedArmacao.loja}`}>
+                      <button className="bg-blue-500 text-white px-4 py-2 rounded-md flex items-center">
+                        <FontAwesomeIcon
+                          icon={faEdit}
+                          className="h-5 w-5 mr-2"
+                        />
+                        Editar
+                      </button>
+                    </Link>
+                    
+                    <button
+                      onClick={() => {
+                        if (confirm('Tem certeza que deseja excluir esta armação?')) {
+                          handleDeleteSelected([selectedArmacao.id]);
+                          closeModal();
+                        }
+                      }}
+                      className="bg-red-500 text-white px-4 py-2 rounded-md flex items-center"
+                    >
+                      <FontAwesomeIcon
+                        icon={faTrash}
+                        className="h-5 w-5 mr-2"
+                      />
+                      Excluir
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </Layout>
   );
-};
-
-export default ArmacoesRegistradas;
+}

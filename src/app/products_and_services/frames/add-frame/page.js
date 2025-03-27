@@ -1,16 +1,108 @@
 "use client";
 import React, { Suspense, useEffect, useState } from "react";
 import Layout from "@/components/Layout";
-import { doc, setDoc, getDocs, getDoc, collection } from "firebase/firestore";
+import { doc, setDoc, getDocs, getDoc, collection, addDoc, query, where } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { firestore } from "../../../../lib/firebaseConfig";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
+import { useAuth } from "@/hooks/useAuth";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+import { FiPlus, FiChevronDown } from 'react-icons/fi';
+
+const SelectWithAddOption = ({ label, options, value, onChange, collectionName, addNewOption, canAddNew = true }) => {
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [newItemValue, setNewItemValue] = useState("");
+  const [showAddInput, setShowAddInput] = useState(false);
+
+
+  const handleAddItem = async () => {
+    if (!newItemValue.trim()) return;
+
+    try {
+      await addNewOption(newItemValue);
+      setNewItemValue("");
+      setShowAddInput(false);
+    } catch (error) {
+      console.error("Erro ao adicionar novo item:", error);
+    }
+  };
+
+  return (
+    <div className="space-y-2 relative">
+      <h3 className="text-lg font-semibold text-[#81059e]">{label}:</h3>
+
+      {!showAddInput ? (
+        <div className="relative">
+          <select
+            value={value || ""}
+            onChange={(e) => {
+              if (e.target.value === "add_new") {
+                setShowAddInput(true);
+              } else {
+                onChange(e.target.value);
+              }
+            }}
+            className="bg-gray-100 w-full px-4 py-3 border-2 border-[#81059e] rounded-lg text-black focus:outline-none focus:border-[#81059e] focus:ring-1 focus:ring-[#81059e]"
+          >
+            <option value="">Selecione uma opção</option>
+            {options.map((option) => (
+              <option key={option} value={option}>
+                {option ? (typeof option === 'object' ? option.nome : option.toUpperCase()) : ""}
+              </option>
+            ))}
+            {canAddNew && <option value="add_new">+ ADICIONAR NOVO</option>}
+          </select>
+          <div className="absolute right-4 top-1/2 transform -translate-y-1/2 pointer-events-none">
+            <FiChevronDown className="text-[#81059e]" />
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            value={newItemValue}
+            onChange={(e) => setNewItemValue(e.target.value)}
+            className="bg-gray-100 w-full px-4 py-3 border-2 border-[#81059e] rounded-lg text-black focus:outline-none focus:border-[#81059e] focus:ring-1 focus:ring-[#81059e]"
+            placeholder={`Adicionar novo ${label.toLowerCase()}`}
+          />
+          <button
+            type="button"
+            onClick={handleAddItem}
+            className="bg-[#81059e] text-white p-3 rounded-lg"
+          >
+            <FiPlus />
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowAddInput(false)}
+            className="border-2 border-[#81059e] text-[#81059e] p-3 rounded-lg"
+          >
+            Cancelar
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
 
 export function FormularioLoja() {
   const searchParams = useSearchParams();
+  const { userPermissions, userData } = useAuth();
   const [ncm, setNcm] = useState([]);
+  const [selectedLoja, setSelectedLoja] = useState(null);
+
+  const renderLojaName = (lojaId) => {
+    const lojaNames = {
+      'loja1': 'Loja 1 - Centro',
+      'loja2': 'Loja 2 - Caramuru'
+    };
+
+    return lojaNames[lojaId] || lojaId;
+  };
+
   const fetchCloneData = async (cloneId, loja) => {
     try {
       const collectionName =
@@ -33,6 +125,7 @@ export function FormularioLoja() {
       console.error("Erro ao buscar dados para clonar:", error);
     }
   };
+
   const router = useRouter();
   const [selectedLojas, setSelectedLojas] = useState([]);
   const [formData, setFormData] = useState({
@@ -47,7 +140,8 @@ export function FormularioLoja() {
     genero: "",
     aro: "",
     material: [],
-    categoria: "armacoes",
+    titulo: "", // Novo campo para título do produto
+    subcategoria: "grau", // Substituição do campo categoria por subcategoria
     cor: "",
     formato: "",
     codigo: "",
@@ -55,11 +149,11 @@ export function FormularioLoja() {
     ponte: "",
     haste: "",
     NCM: "",
-    custo: "", // Campo de custo já existente
-    valor: "", // Campo de valor de venda já existente
-    percentual_lucro: "", // Campo de percentual de lucro (calculado)
-    custo_medio: "", // Campo de custo médio (calculado)
-    sku: "", // Adiciona o campo SKU
+    custo: "",
+    valor: "",
+    percentual_lucro: "",
+    custo_medio: "",
+    sku: "",
     quantidade: "",
     avaria: false,
     imagem: null,
@@ -77,8 +171,24 @@ export function FormularioLoja() {
     origem_produto: "",
     peso_bruto: "",
     peso_liquido: "",
-    csosn: "", // Campo de CSOSN (102)
+    csosn: "",
   });
+
+  // Definir loja inicial baseado nas permissões
+  useEffect(() => {
+    if (userPermissions) {
+      // Se não for admin, usa a primeira loja que tem acesso
+      if (!userPermissions.isAdmin && userPermissions.lojas.length > 0) {
+        setSelectedLoja(userPermissions.lojas[0]);
+        setSelectedLojas([renderLojaName(userPermissions.lojas[0])]);
+      }
+      // Se for admin, usa a primeira loja da lista
+      else if (userPermissions.isAdmin && userPermissions.lojas.length > 0) {
+        setSelectedLoja(userPermissions.lojas[0]);
+      }
+    }
+  }, [userPermissions]);
+
   useEffect(() => {
     const cloneId = searchParams.get("cloneId");
     const loja = searchParams.get("loja");
@@ -87,6 +197,7 @@ export function FormularioLoja() {
       fetchCloneData(cloneId, loja);
     }
   }, [searchParams]);
+
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const [fabricantes, setFabricantes] = useState([]);
@@ -110,23 +221,66 @@ export function FormularioLoja() {
     }
     return result;
   };
+
   const fetchNcm = async () => {
     try {
+      // Tente a coleção original primeiro
       const ncmSnapshot = await getDocs(collection(firestore, "ncm"));
-      const ncmList = ncmSnapshot.docs.map((doc) => doc.data().name); // Supondo que o campo seja "name"
-      setNcm(ncmList);
+
+      // Se não houver dados, tente um caminho alternativo
+      if (ncmSnapshot.empty) {
+        console.log("Coleção NCM vazia, tentando caminho alternativo...");
+        // Tente outro caminho que poderia conter os dados NCM
+        const altNcmSnapshot = await getDocs(collection(firestore, "lojas/estoque/ncm"));
+
+        if (!altNcmSnapshot.empty) {
+          const ncmList = altNcmSnapshot.docs.map((doc) => {
+            const data = doc.data();
+            return data.codigo ? `${data.codigo} - ${data.descricao || ''}` : data.name || doc.id;
+          });
+          setNcm(ncmList);
+          return;
+        }
+
+        // Se nenhum dado for encontrado, adicione alguns NCMs comuns para armações óticas como fallback
+        const defaultNcms = [
+          "9003.11.00 - Armações de plástico",
+          "9003.19.10 - Armações de metais preciosos",
+          "9003.19.90 - Armações de outros materiais",
+          "9004.10.00 - Óculos de sol"
+        ];
+        setNcm(defaultNcms);
+        console.log("Usando NCMs padrão como fallback");
+      } else {
+        // Se encontrou dados no caminho original
+        const ncmList = ncmSnapshot.docs.map((doc) => {
+          const data = doc.data();
+          return data.codigo ? `${data.codigo} - ${data.descricao || ''}` : data.name || doc.id;
+        });
+        setNcm(ncmList);
+      }
     } catch (error) {
       console.error("Erro ao buscar NCMs: ", error);
+      // Adicione NCMs padrão como fallback em caso de erro
+      const defaultNcms = [
+        "9003.11.00 - Armações de plástico",
+        "9003.19.10 - Armações de metais preciosos",
+        "9003.19.90 - Armações de outros materiais",
+        "9004.10.00 - Óculos de sol"
+      ];
+      setNcm(defaultNcms);
+      console.log("Usando NCMs padrão devido a erro");
     }
   };
-  const generateSKU = () => {
-    const randomPart = Math.floor(Math.random() * 10000); // Número aleatório
-    const productCode = formData.codigo || generateRandomCode(); // Gera letras aleatórias se não houver código
-    const productName = formData.produto
-      ? formData.produto.substring(0, 3).toUpperCase()
-      : "AMC"; // Pega os primeiros 3 caracteres do nome do produto
 
-    return `${productName}-${productCode}-${randomPart}`; // Exemplo: PRD-ABC-4567
+  const generateSKU = () => {
+    const randomPart = Math.floor(Math.random() * 10000);
+    const productCode = formData.codigo || generateRandomCode();
+    const productName = formData.titulo
+      ? formData.titulo.substring(0, 3).toUpperCase()
+      : "AMC";
+
+    return `${productName}-${productCode}-${randomPart}`;
   };
 
   // Atualiza o SKU automaticamente quando o código ou nome do produto muda
@@ -136,13 +290,14 @@ export function FormularioLoja() {
       ...prevData,
       sku: sku,
     }));
-  }, [formData.codigo, formData.produto]);
+  }, [formData.codigo, formData.titulo]);
 
   useEffect(() => {
     if (router.state?.formData) {
-      setFormData(router.state.formData); // Preenche o formulário com os dados existentes
+      setFormData(router.state.formData);
     }
   }, [router.state]);
+
   // Função para pegar a data e hora atuais
   useEffect(() => {
     const now = new Date();
@@ -156,39 +311,152 @@ export function FormularioLoja() {
     };
 
     // Formatando a data e hora com o fuso de Brasília (BR)
-    const formattedDate = now.toLocaleDateString("pt-BR", options); // Formato DD/MM/YYYY
-    const formattedTime = now.toTimeString().split(":").slice(0, 2).join(":"); // Formato HH:MM
+    const formattedDate = now.toLocaleDateString("pt-BR", options);
+    const formattedTime = now.toTimeString().split(":").slice(0, 2).join(":");
 
     // Transformando a data no formato compatível com o input date (YYYY-MM-DD)
     const [day, month, year] = formattedDate.split("/");
-    const date = `${year}-${month}-${day}`; // Formato compatível com o campo input "date"
+    const date = `${year}-${month}-${day}`;
 
     setFormData((prevData) => ({
       ...prevData,
-      data: date, // Formato YYYY-MM-DD
-      hora: formattedTime, // Formato HH:MM
+      data: date,
+      hora: formattedTime,
     }));
   }, []);
 
-  // Funções para buscar dados dos aros, cores, fabricantes, etc.
-  const fetchAros = async () => {
+  // Funções para adicionar novos itens às coleções
+  const addNewItem = async (collectionName, value) => {
+    if (!selectedLoja && selectedLojas.length === 0) {
+      alert("Selecione uma loja antes de adicionar novos itens!");
+      return;
+    }
+
     try {
-      const arosSnapshot = await getDocs(
-        collection(firestore, "armacoes_aros")
-      );
-      const arosList = arosSnapshot.docs.map((doc) => doc.data().name);
-      setAros(arosList);
+      // Determinar a loja para salvar
+      const lojaToUse = selectedLoja ||
+        (selectedLojas[0]?.includes("Loja 1") ? "loja1" :
+          selectedLojas[0]?.includes("Loja 2") ? "loja2" : "loja1");
+
+      // Salva na estrutura específica do estoque da loja
+      const lojaPath = `lojas/estoque/${lojaToUse}/armacoes/${collectionName}`;
+      const lojaItemRef = doc(firestore, lojaPath, value.toLowerCase().replace(/\s+/g, '_'));
+
+      await setDoc(lojaItemRef, {
+        name: value,
+        createdAt: new Date(),
+        addedBy: userData?.nome || 'Sistema'
+      });
+      // Atualizar a lista correspondente
+      switch (collectionName) {
+        case "armacoes_fabricantes":
+          setFabricantes([...fabricantes, value]);
+          break;
+        case "fornecedores":
+          setFornecedores([...fornecedores, value]);
+          break;
+        case "armacoes_marcas":
+          setMarcas([...marcas, value]);
+          break;
+        case "armacoes_formatos":
+          setFormatos([...formatos, value]);
+          break;
+        case "armacoes_aros":
+          setAros([...aros, value]);
+          break;
+        case "armacoes_materiais":
+          setMateriais([...materiais, value]);
+          break;
+        case "armacoes_cores":
+          setCores([...cores, value]);
+          break;
+        case "armacoes_unidades":
+          setUnidades([...unidades, value]);
+          break;
+        default:
+          break;
+      }
+
+      // Se o item adicionado corresponder ao campo atual, atualizar o formData
+      if (collectionName === "armacoes_fabricantes") setFormData(prev => ({ ...prev, fabricante: value }));
+      if (collectionName === "fornecedores") setFormData(prev => ({ ...prev, fornecedor: value }));
+      if (collectionName === "armacoes_marcas") setFormData(prev => ({ ...prev, marca: value }));
+      if (collectionName === "armacoes_formatos") setFormData(prev => ({ ...prev, formato: value }));
+      if (collectionName === "armacoes_aros") setFormData(prev => ({ ...prev, aro: value }));
+      if (collectionName === "armacoes_materiais") setFormData(prev => ({ ...prev, material: value }));
+      if (collectionName === "armacoes_cores") setFormData(prev => ({ ...prev, cor: value }));
+      if (collectionName === "armacoes_unidades") setFormData(prev => ({ ...prev, unidade: value }));
+
+      alert(`${value} adicionado com sucesso!`);
     } catch (error) {
-      console.error("Erro ao buscar fabricantes:", error);
+      console.error(`Erro ao adicionar ${value} à coleção ${collectionName}:`, error);
+      alert(`Erro ao adicionar ${value}`);
     }
   };
 
-  // Funções para buscar dados (fabricantes, fornecedores, marcas)
+  // Função para adicionar novos valores numéricos às coleções
+  const addNewValueItem = async (collectionName, value) => {
+    if (!selectedLoja && selectedLojas.length === 0) {
+      alert("Selecione uma loja antes de adicionar novos itens!");
+      return;
+    }
+    try {
+      // Determinar a loja para salvar
+      const lojaToUse = selectedLoja ||
+        (selectedLojas[0]?.includes("Loja 1") ? "loja1" :
+          selectedLojas[0]?.includes("Loja 2") ? "loja2" : "loja1");
+
+      // Salva na estrutura específica do estoque da loja
+      const lojaPath = `lojas/estoque/${lojaToUse}/armacoes/${collectionName}`;
+      const lojaItemRef = doc(firestore, lojaPath, value.toString().replace(/\./g, '_'));
+
+      await setDoc(lojaItemRef, {
+        value: value,
+        createdAt: new Date(),
+        addedBy: userData?.nome || 'Sistema'
+      });
+
+      // Atualizar a lista correspondente
+      switch (collectionName) {
+        case "armacoes_hastes":
+          setHastes([...hastes, value]);
+          break;
+        case "armacoes_largura_lentes":
+          setLentes([...lentes, value]);
+          break;
+        case "armacoes_pontes":
+          setPontes([...pontes, value]);
+          break;
+        default:
+          break;
+      }
+
+      // Se o item adicionado corresponder ao campo atual, atualizar o formData
+      if (collectionName === "armacoes_hastes") setFormData(prev => ({ ...prev, haste: value }));
+      if (collectionName === "armacoes_largura_lentes") setFormData(prev => ({ ...prev, lente: value }));
+      if (collectionName === "armacoes_pontes") setFormData(prev => ({ ...prev, ponte: value }));
+
+      alert(`${value} adicionado com sucesso!`);
+    } catch (error) {
+      console.error(`Erro ao adicionar ${value} à coleção ${collectionName}:`, error);
+      alert(`Erro ao adicionar ${value}`);
+    }
+  };
+
+  // Funções para buscar dados
+  const fetchAros = async () => {
+    try {
+      const arosSnapshot = await getDocs(collection(firestore, "armacoes_aros"));
+      const arosList = arosSnapshot.docs.map((doc) => doc.data().name);
+      setAros(arosList);
+    } catch (error) {
+      console.error("Erro ao buscar aros:", error);
+    }
+  };
+
   const fetchCores = async () => {
     try {
-      const corSnapshot = await getDocs(
-        collection(firestore, "armacoes_cores")
-      );
+      const corSnapshot = await getDocs(collection(firestore, "armacoes_cores"));
       const corList = corSnapshot.docs.map((doc) => doc.data().name);
       setCores(corList);
     } catch (error) {
@@ -198,9 +466,7 @@ export function FormularioLoja() {
 
   const fetchFabricantes = async () => {
     try {
-      const fabricantesSnapshot = await getDocs(
-        collection(firestore, "armacoes_fabricantes")
-      );
+      const fabricantesSnapshot = await getDocs(collection(firestore, "armacoes_fabricantes"));
       const fabricantesList = fabricantesSnapshot.docs.map(
         (doc) => doc.data().name
       );
@@ -212,69 +478,57 @@ export function FormularioLoja() {
 
   const fetchHastes = async () => {
     try {
-      const hasteSnapshot = await getDocs(
-        collection(firestore, "armacoes_hastes")
-      );
+      const hasteSnapshot = await getDocs(collection(firestore, "armacoes_hastes"));
       const hasteList = hasteSnapshot.docs.map((doc) => doc.data().value);
       setHastes(hasteList);
     } catch (error) {
-      console.error("Erro ao buscar fornecedores:", error);
+      console.error("Erro ao buscar hastes:", error);
     }
   };
 
   const fetchLentes = async () => {
     try {
-      const lenteSnapshot = await getDocs(
-        collection(firestore, "armacoes_largura_lentes")
-      );
+      const lenteSnapshot = await getDocs(collection(firestore, "armacoes_largura_lentes"));
       const lentesList = lenteSnapshot.docs.map((doc) => doc.data().value);
       setLentes(lentesList);
     } catch (error) {
-      console.error("Erro ao buscar fornecedores:", error);
+      console.error("Erro ao buscar lentes:", error);
     }
   };
 
   const fetchMarcas = async () => {
     try {
-      const marcasSnapshot = await getDocs(
-        collection(firestore, "armacoes_marcas")
-      );
+      const marcasSnapshot = await getDocs(collection(firestore, "armacoes_marcas"));
       const marcasList = marcasSnapshot.docs.map((doc) => doc.data().name);
       setMarcas(marcasList);
     } catch (error) {
       console.error("Erro ao buscar marcas:", error);
     }
   };
+
   const fetchMateriais = async () => {
     try {
-      const materiaisSnapshot = await getDocs(
-        collection(firestore, "armacoes_materiais")
-      );
-      const materiaisList = materiaisSnapshot.docs.map(
-        (doc) => doc.data().name
-      );
+      const materiaisSnapshot = await getDocs(collection(firestore, "armacoes_materiais"));
+      const materiaisList = materiaisSnapshot.docs.map((doc) => doc.data().name);
       setMateriais(materiaisList);
     } catch (error) {
-      console.error("Erro ao buscar marcas:", error);
+      console.error("Erro ao buscar materiais:", error);
     }
   };
+
   const fetchPontes = async () => {
     try {
-      const pontesSnapshot = await getDocs(
-        collection(firestore, "armacoes_pontes")
-      );
+      const pontesSnapshot = await getDocs(collection(firestore, "armacoes_pontes"));
       const ponteList = pontesSnapshot.docs.map((doc) => doc.data().value);
       setPontes(ponteList);
     } catch (error) {
-      console.error("Erro ao buscar marcas:", error);
+      console.error("Erro ao buscar pontes:", error);
     }
   };
 
   const fetchFormatos = async () => {
     try {
-      const formatosSnapshot = await getDocs(
-        collection(firestore, "armacoes_formatos")
-      );
+      const formatosSnapshot = await getDocs(collection(firestore, "armacoes_formatos"));
       const formatosList = formatosSnapshot.docs.map((doc) => doc.data().name);
       setFormatos(formatosList);
     } catch (error) {
@@ -282,21 +536,36 @@ export function FormularioLoja() {
     }
   };
 
+  // Nova função para buscar fornecedores da estrutura correta do banco
   const fetchFornecedores = async () => {
     try {
-      const fornecedoresSnapshot = await getDocs(
-        collection(firestore, "fornecedores")
-      );
-      const fornecedoresList = fornecedoresSnapshot.docs.map(
-        (doc) => doc.data().name
-      );
+      // Busca fornecedores no caminho correto conforme estrutura do banco
+      const fornecedoresSnapshot = await getDocs(collection(firestore, "lojas/fornecedores/users"));
+      const fornecedoresList = fornecedoresSnapshot.docs.map((doc) => {
+        const data = doc.data();
+        const nomeFantasia = data.nomeFantasia || "";
+        const razaoSocial = data.razaoSocial || "";
+        const representante = data.representante || "";
+
+        // Se nome fantasia e razão social forem similares
+        if (nomeFantasia && razaoSocial && nomeFantasia.trim() === razaoSocial.trim()) {
+          return {
+            id: doc.id,
+            nome: representante ? `${nomeFantasia} - ${representante}` : nomeFantasia
+          };
+        }
+
+        // Caso padrão: mostrar ambos
+        return {
+          id: doc.id,
+          nome: razaoSocial ? `${nomeFantasia} (${razaoSocial})` : nomeFantasia
+        };
+      });
       setFornecedores(fornecedoresList);
     } catch (error) {
       console.error("Erro ao buscar fornecedores:", error);
     }
   };
-
-  // Outras funções para buscar fornecedores, hastes, lentes, etc.
 
   useEffect(() => {
     fetchAros();
@@ -312,15 +581,14 @@ export function FormularioLoja() {
     fetchNcm();
     fetchUnidades();
   }, []);
+
   const [unidades, setUnidades] = useState([]);
 
   const fetchUnidades = async () => {
     try {
-      const unidadesSnapshot = await getDocs(
-        collection(firestore, "armacoes_unidades")
-      );
-      const unidadesList = unidadesSnapshot.docs.map((doc) => doc.data().name); // Supondo que o campo seja "name"
-      setUnidades(unidadesList); // Salva as unidades no estado
+      const unidadesSnapshot = await getDocs(collection(firestore, "armacoes_unidades"));
+      const unidadesList = unidadesSnapshot.docs.map((doc) => doc.data().name);
+      setUnidades(unidadesList);
     } catch (error) {
       console.error("Erro ao buscar unidades:", error);
     }
@@ -335,15 +603,42 @@ export function FormularioLoja() {
         [name]: value,
       };
 
-      // Calcular o Percentual de Lucro e Custo Médio automaticamente
-      if (updatedData.custo && updatedData.valor) {
+      // Nova lógica: se o percentual de lucro ou custo mudar, recalcula o valor de venda
+      if (name === "percentual_lucro" && updatedData.custo) {
         const valorCusto = parseFloat(updatedData.custo);
-        const valorVenda = parseFloat(updatedData.valor);
+        const percentualLucro = parseFloat(value);
 
-        if (valorCusto > 0) {
+        if (valorCusto > 0 && !isNaN(percentualLucro)) {
+          // Calcula o valor de venda baseado no percentual de lucro
+          const valorVenda = valorCusto * (1 + (percentualLucro / 100));
+          updatedData.valor = valorVenda.toFixed(2);
+
+          // Calcula o custo médio (média simples)
+          const custoMedio = (valorCusto + valorVenda) / 2;
+          updatedData.custo_medio = custoMedio.toFixed(2);
+        }
+      } else if (name === "custo" && updatedData.percentual_lucro) {
+        // Se o custo for alterado, recalcula o valor com base no percentual já definido
+        const valorCusto = parseFloat(value);
+        const percentualLucro = parseFloat(updatedData.percentual_lucro);
+
+        if (valorCusto > 0 && !isNaN(percentualLucro)) {
+          // Calcula o valor de venda baseado no percentual de lucro
+          const valorVenda = valorCusto * (1 + (percentualLucro / 100));
+          updatedData.valor = valorVenda.toFixed(2);
+
+          // Calcula o custo médio (média simples)
+          const custoMedio = (valorCusto + valorVenda) / 2;
+          updatedData.custo_medio = custoMedio.toFixed(2);
+        }
+      } else if (name === "valor" && updatedData.custo) {
+        // Se o usuário preferir definir o valor diretamente, recalculamos o percentual
+        const valorCusto = parseFloat(updatedData.custo);
+        const valorVenda = parseFloat(value);
+
+        if (valorCusto > 0 && valorVenda > 0) {
           // Calcula o percentual de lucro
-          const percentualLucro =
-            ((valorVenda - valorCusto) / valorCusto) * 100;
+          const percentualLucro = ((valorVenda - valorCusto) / valorCusto) * 100;
           updatedData.percentual_lucro = percentualLucro.toFixed(2);
 
           // Calcula o custo médio (média simples)
@@ -380,9 +675,27 @@ export function FormularioLoja() {
       NCM: "",
       custo: "",
       valor: "",
-      produto: "",
+      titulo: "", // Limpa o campo de título
+      percentual_lucro: "", // Limpa o percentual de lucro
       quantidade: "",
       imagem: null,
+      codigoBarras: "",
+      codigoFabricante: "",
+      unidade: "",
+      CEST: "",
+      aliquota_icms: "",
+      base_calculo_icms: "",
+      aliquota_ipi: "",
+      cst_ipi: "",
+      base_calculo_ipi: "",
+      cst_pis: "",
+      cst_cofins: "",
+      cfop: "",
+      origem_produto: "",
+      peso_bruto: "",
+      peso_liquido: "",
+      csosn: "",
+      subcategoria: "grau", // Reset para o valor padrão da subcategoria
     });
     setSelectedLojas([]);
   };
@@ -412,28 +725,24 @@ export function FormularioLoja() {
     return downloadURL;
   };
 
-  useEffect(() => {
-    // Definindo a data e hora atuais
-    const currentDate = new Date();
-    const formattedDate = currentDate.toISOString().split("T")[0]; // Formato YYYY-MM-DD
-    const formattedTime = currentDate.toTimeString().slice(0, 5); // Formato HH:MM
-
-    setFormData({
-      data: formattedDate,
-      hora: formattedTime,
-    });
-  }, []);
   // Função para enviar os dados para o Firestore
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
-
+  
     if (selectedLojas.length === 0) {
       alert("Selecione ao menos uma loja antes de enviar o formulário");
       setIsLoading(false);
       return;
     }
-
+  
+    // Verificar se o título do produto foi preenchido
+    if (!formData.titulo || formData.titulo.trim() === "") {
+      alert("O título do produto é obrigatório");
+      setIsLoading(false);
+      return;
+    }
+  
     // Garantir que o SKU está presente antes de prosseguir
     let updatedFormData = { ...formData };
     if (!formData.sku) {
@@ -443,36 +752,59 @@ export function FormularioLoja() {
         sku: generatedSKU,
       };
     }
-
+  
     try {
       // Se houver uma imagem, faz o upload e obtém a URL
       let imageUrl = "";
       if (updatedFormData.imagem) {
         imageUrl = await handleImageUpload(updatedFormData.imagem);
       }
-
+  
       // Cria o objeto com os dados do formulário e a URL da imagem
-      const queryData = {
+      const productData = {
         ...updatedFormData,
-        lojas: selectedLojas,
         imagem: imageUrl,
-        categoria: updatedFormData.categoria || "armação",
+        categoria: "armacao", // Categoria fixa
+        subcategoria: updatedFormData.subcategoria || "grau", // Subcategoria
         avaria: updatedFormData.avaria || false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        createdBy: userData?.nome || 'Sistema'
       };
-
-      // Salva no Firestore na coleção 'temp_image'
-      const docRef = doc(firestore, "temp_image", updatedFormData.codigo); // Usa o código do produto como ID
-      await setDoc(docRef, queryData);
-
-      console.log("Dados enviados:", queryData);
-
+  
+      // Para cada loja selecionada, salvar o produto na estrutura correta
+      for (const loja of selectedLojas) {
+        // Converter o nome da loja para o ID usado no Firebase
+        const lojaId = loja.includes("Loja 1") ? "loja1" :
+          loja.includes("Loja 2") ? "loja2" : loja.toLowerCase().replace(/\s+/g, '');
+  
+        // Caminho para o documento do produto na estrutura correta do estoque
+        const docRef = doc(
+          firestore,
+          `lojas/estoque/${lojaId}/armacoes`,
+          updatedFormData.codigo // Usa o código do produto como ID
+        );
+  
+        await setDoc(docRef, productData);
+  
+        console.log(`Produto salvo no estoque da ${loja}:`, productData);
+      }
+  
+      // Também salva uma cópia na temp_image para compatibilidade com a página de confirmação
+      const tempRef = doc(firestore, "temp_image", updatedFormData.codigo);
+      await setDoc(tempRef, {
+        ...productData,
+        lojas: selectedLojas // Incluir lojas na cópia temporária
+      });
+  
       router.push(
         `/products_and_services/frames/confirm?formData=${encodeURIComponent(
-          JSON.stringify(queryData)
+          JSON.stringify({ ...productData, lojas: selectedLojas })
         )}`
       );
     } catch (error) {
       console.error("Erro ao enviar os dados:", error);
+      alert(`Erro ao salvar o produto: ${error.message}`);
     } finally {
       setIsLoading(false);
     }
@@ -481,845 +813,639 @@ export function FormularioLoja() {
   return (
     <div>
       <Layout>
-        <div className="relative flex items-center mt-4">
-          {/* Ícone na extrema esquerda */}
+        <div className="w-full max-w-5xl mx-auto rounded-lg">
+          <h2 className="text-3xl font-bold text-[#81059e] mb-8 mt-8 text-center">ADICIONAR ARMAÇÃO</h2>
 
-          {/* Ícone de Configurações acima dos botões */}
-          {/* Ícone de Configurações acima dos botões */}
-          <img
-            src="/images/Settings.png" // Caminho para o ícone de configurações
-            alt="Ícone de Configurações"
-            className="cursor-pointer hover:opacity-80 transition mb-4" // Adiciona margem inferior e hover
-            style={{ width: "40px", height: "40px" }} // Define o tamanho do ícone
-            onClick={() =>
-              router.push("/products_and_services/frames/frames-ab")
-            } // Redireciona para a rota desejada ao clicar
-          />
-
-          {/* Container para centralizar os botões e ajustar a responsividade */}
-          <div className="flex flex-col items-center justify-center space-y-2 mx-auto w-full md:w-auto">
-            <button
-              className="bg-[#800080] text-white font-bold px-4 py-2 rounded-lg shadow hover:bg-[#660066] transition w-full max-w-xs md:max-w-sm lg:max-w-md"
-              onClick={() => router.push("/products_and_services/frames")} // Lógica para exibir armações registradas
-            >
-              ARMAÇÕES REGISTRADAS
-            </button>
-
-            {/* Botão "LIMPAR SELEÇÃO" */}
-            <button
-              type="button"
-              className="bg-[#800080] text-white font-bold px-4 py-2 rounded-lg shadow hover:bg-[#660066] transition w-full max-w-xs md:max-w-sm lg:max-w-md"
-              onClick={handleClearSelection} // Chama a função para limpar a seleção
-            >
-              LIMPAR SELEÇÃO
-            </button>
-          </div>
-        </div>
-        <h2 className="text-3xl text-center font-semibold text-[#800080]">
-          ADICIONAR ARMAÇÃO
-        </h2>
-
-        {/* Campo para SKU */}
-        <div className="w-full">
-          <label
-            htmlFor="sku"
-            className="text-lg font-semibold text-[#800080] text-start"
-          >
-            SKU
-          </label>
-          <div className="flex items-center border border-[#800080] rounded-lg">
-            <input
-              type="text"
-              id="sku"
-              name="sku"
-              value={formData.sku}
-              readOnly // Define como somente leitura
-              placeholder="O SKU será gerado automaticamente"
-              className="w-full px-2 py-2 text-black focus:outline-none focus:border-[#800080] focus:ring-1 focus:ring-[#800080] rounded-lg bg-gray-100"
-            />
-          </div>
-        </div>
-
-        {/* Campo de Data (alinhado ao flex-start) */}
-        <div className="flex-1">
-          <label className="block text-md font-bold text-[#800080]">
-            Data:
-          </label>
-          <input
-            type="date"
-            name="data"
-            value={formData.data}
-            onChange={handleChange}
-            className="bg-gray-100 px-4 py-2 rounded-lg text-black w-full mt-2"
-          />
-        </div>
-
-        {/* Campo de Hora */}
-        <div className="flex-1 w-full sm:w-auto mb-4 sm:mb-0">
-          <label className="block text-md font-bold text-[#800080]">
-            Hora:
-          </label>
-          <input
-            type="time"
-            name="hora"
-            value={formData.hora}
-            onChange={handleChange}
-            className="bg-gray-100 px-4 py-2 rounded-lg text-black w-full mt-2"
-          />
-        </div>
-
-        {/* Campo de Loja */}
-
-        {/* Campo de Loja */}
-        <div className="flex-1 w-full sm:w-auto mt-4 sm:mt-0 sm:ml-0">
-          <label className="block text-md font-bold text-[#800080] mb-2 text-left">
-            Loja
-          </label>
-          <select
-            value={selectedLojas.length === 2 ? "Ambas" : selectedLojas}
-            onChange={(e) => {
-              const selectedValue = e.target.value;
-              if (selectedValue === "Ambas") {
-                setSelectedLojas(["Loja 1", "Loja 2"]);
-              } else {
-                setSelectedLojas([selectedValue]);
-              }
-            }}
-            className="bg-gray-100 w-full px-4 py-2 border rounded-lg text-black focus:outline-none focus:border-[#800080] focus:ring-1 focus:ring-[#800080]"
-          >
-            <option value="">Selecione uma loja</option>
-            <option value="Loja 1">LOJA 1</option>
-            <option value="Loja 2">LOJA 2</option>
-            <option value="Ambas">AMBAS AS LOJAS</option>
-          </select>
-
-          {/* Indica que ambas as lojas foram selecionadas */}
-          {selectedLojas.length === 2 && (
-            <p className="text-sm text-green-600 mt-2">
-              Ambas as lojas selecionadas
-            </p>
-          )}
-        </div>
-
-        <form onSubmit={handleSubmit} className="z-10 space-y-6">
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-[#800080]">
-              Código de Barras:
-            </h3>
-            <input
-              type="text"
-              name="codigoBarras"
-              placeholder="Informe o código de barras"
-              value={formData.codigoBarras || ""}
-              onChange={(e) =>
-                setFormData({ ...formData, codigoBarras: e.target.value })
-              }
-              className="bg-gray-100 w-full px-4 py-2 border rounded-lg text-black focus:outline-none focus:border-[#800080] focus:ring-1 focus:ring-[#800080]"
-              required
-            />
-          </div>
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-[#800080]">
-              Código do Fabricante:
-            </h3>
-            <input
-              type="text"
-              name="codigoFabricante"
-              placeholder="Informe o código do fabricante"
-              value={formData.codigoFabricante || ""}
-              onChange={(e) =>
-                setFormData({ ...formData, codigoFabricante: e.target.value })
-              }
-              className="bg-gray-100 w-full px-4 py-2 border rounded-lg text-black focus:outline-none focus:border-[#800080] focus:ring-1 focus:ring-[#800080]"
-              required
-            />
-          </div>
-
-          {/* Seção para selecionar o Fabricante como um select */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-[#800080]">
-              Fabricante:
-            </h3>
-            <select
-              name="fabricante"
-              value={formData.fabricante || ""}
-              onChange={(e) =>
-                setFormData({ ...formData, fabricante: e.target.value })
-              }
-              className="bg-gray-100 w-full px-4 py-2 border rounded-lg text-black focus:outline-none focus:border-[#800080] focus:ring-1 focus:ring-[#800080]"
-              required
-            >
-              <option value="">Selecione o Fabricante</option>
-              {fabricantes.map((fabricante) => (
-                <option key={fabricante} value={fabricante}>
-                  {fabricante ? fabricante.toUpperCase() : ""}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Seção para selecionar o Fornecedor como um select */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-[#800080]">
-              Fornecedor:
-            </h3>
-            <select
-              name="fornecedor"
-              value={formData.fornecedor || ""}
-              onChange={(e) =>
-                setFormData({ ...formData, fornecedor: e.target.value })
-              }
-              className="bg-gray-100 w-full px-4 py-2 border rounded-lg text-black focus:outline-none focus:border-[#800080] focus:ring-1 focus:ring-[#800080]"
-              required
-            >
-              <option value="">Selecione o Fornecedor</option>
-              {fornecedores.map((fornecedor) => (
-                <option key={fornecedor} value={fornecedor}>
-                  {fornecedor.toUpperCase()}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex justify-start space-x-8">
-            {/* Campo de Código do Produto */}
-            <div className="w-full">
-              <label className="block text-sm font-bold text-[#800080]">
-                Código do Produto (Obrigatório)
+          {/* Seletor de Loja para Admins */}
+          {userPermissions?.isAdmin && (
+            <div className="mb-6">
+              <label className="text-[#81059e] font-medium">
+                Selecionar Loja
               </label>
-              <input
-                type="text"
-                name="codigo"
-                placeholder="Informe o código do produto"
-                value={formData.codigo || ""}
-                onChange={(e) =>
-                  setFormData({ ...formData, codigo: e.target.value })
-                }
-                className="bg-gray-100 w-full px-4 py-2 border rounded-lg text-black focus:outline-none focus:border-[#800080] focus:ring-1 focus:ring-[#800080]"
-                required
-              />
-
-              {/* Seção para selecionar a Marca como um select */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-[#800080]">Marca:</h3>
-                <select
-                  name="marca"
-                  value={formData.marca || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, marca: e.target.value })
+              <select
+                value={selectedLoja || ''}
+                onChange={(e) => {
+                  setSelectedLoja(e.target.value);
+                  if (e.target.value === "ambas") {
+                    setSelectedLojas(["Loja 1", "Loja 2"]);
+                  } else {
+                    setSelectedLojas([renderLojaName(e.target.value)]);
                   }
-                  className="bg-gray-100 w-full px-4 py-2 border rounded-lg text-black focus:outline-none focus:border-[#800080] focus:ring-1 focus:ring-[#800080]"
-                  required
-                >
-                  <option value="">Selecione a Marca</option>
-                  {marcas.map((marca) => (
-                    <option key={marca} value={marca}>
-                      {marca.toUpperCase()}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              {/* Seção para selecionar o Gênero como um select */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-[#800080]">
-                  Gênero:
-                </h3>
-                <select
-                  name="genero"
-                  value={formData.genero || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, genero: e.target.value })
-                  }
-                  className="bg-gray-100 w-full px-4 py-2 border rounded-lg text-black focus:outline-none focus:border-[#800080] focus:ring-1 focus:ring-[#800080]"
-                  required
-                >
-                  <option value="">Selecione o Gênero</option>
-                  {["Masculino", "Feminino", "Unissex"].map((genero) => (
-                    <option key={genero} value={genero}>
-                      {genero.toUpperCase()}
-                    </option>
-                  ))}
-                </select>
-              </div>
+                }}
+                className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black mt-1"
+              >
+                <option value="">Selecione uma loja</option>
+                {userPermissions.lojas.map((loja) => (
+                  <option key={loja} value={loja}>
+                    {renderLojaName(loja)}
+                  </option>
+                ))}
+                <option value="ambas">AMBAS AS LOJAS</option>
+              </select>
+            </div>
+          )}
 
-              {/* Seção para selecionar o Material com um único item no select */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-[#800080]">
-                  Material
-                </h3>
-                <select
-                  value={formData.material || ""}
-                  onChange={(e) => {
-                    setFormData({
-                      ...formData,
-                      material: e.target.value, // Define o valor do material selecionado
-                    });
-                  }}
-                  className="bg-gray-100 w-full px-4 py-2 border rounded-lg text-black focus:outline-none focus:border-[#800080] focus:ring-1 focus:ring-[#800080]"
-                >
-                  <option value="">Selecione o material</option>{" "}
-                  {/* Opção padrão vazia */}
-                  {materiais &&
-                    materiais.map((material) => (
-                      <option key={material} value={material}>
-                        {material ? material.toUpperCase() : ""}
-                      </option>
-                    ))}
-                </select>
-              </div>
-              {/* Seção para selecionar o Aro como um select */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-[#800080]">Aro:</h3>
-                <select
-                  name="aro"
-                  value={formData.aro || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, aro: e.target.value })
-                  }
-                  className="bg-gray-100 w-full px-4 py-2 border rounded-lg text-black focus:outline-none focus:border-[#800080] focus:ring-1 focus:ring-[#800080]"
-                  required
-                >
-                  <option value="">Selecione o Aro</option>
-                  {aros &&
-                    aros.map((aro) => (
-                      <option key={aro} value={aro}>
-                        {aro ? aro.toUpperCase() : ""}
-                      </option>
-                    ))}
-                </select>
-              </div>
-              {/* Seção para selecionar o Formato como um select */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-[#800080]">
-                  Formato:
-                </h3>
-                <select
-                  name="formato"
-                  value={formData.formato || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, formato: e.target.value })
-                  }
-                  className="bg-gray-100 w-full px-4 py-2 border rounded-lg text-black focus:outline-none focus:border-[#800080] focus:ring-1 focus:ring-[#800080]"
-                  required
-                >
-                  <option value="">Selecione o Formato</option>
-                  {formatos &&
-                    formatos.map((formato) => (
-                      <option key={formato} value={formato}>
-                        {formato ? formato.toUpperCase() : ""}
-                      </option>
-                    ))}
-                </select>
-              </div>
+          <div className='space-x-2 mb-6'>
+            <Link href="/products_and_services/frames">
+              <button className="bg-[#81059e] p-3 rounded-sm text-white">
+                ARMAÇÕES REGISTRADAS
+              </button>
+            </Link>
+            <button
+              onClick={handleClearSelection}
+              className="text-[#81059e] px-4 py-2 border-2 border-[#81059e] font-bold text-base rounded-sm"
+            >
+              Limpar
+            </button>
+          </div>
 
-              {/* Seção para selecionar a Cor como um select */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-[#800080]">Cor:</h3>
-                <select
-                  name="cor"
-                  value={formData.cor || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, cor: e.target.value })
-                  }
-                  className="bg-gray-100 w-full px-4 py-2 border rounded-lg text-black focus:outline-none focus:border-[#800080] focus:ring-1 focus:ring-[#800080]"
-                  required
-                >
-                  <option value="">Selecione a Cor</option>
-                  {cores.map((cor) => (
-                    <option key={cor} value={cor}>
-                      {cor ? cor.toUpperCase() : ""}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              {/* Seção para selecionar a Lente como um select */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-[#800080]">Lente:</h3>
-                <select
-                  name="lente"
-                  value={formData.lente || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, lente: e.target.value })
-                  }
-                  className="bg-gray-100 w-full px-4 py-2 border rounded-lg text-black focus:outline-none focus:border-[#800080] focus:ring-1 focus:ring-[#800080]"
-                  required
-                >
-                  <option value="">Selecione a Lente</option>
-                  {lentes.map((lente) => (
-                    <option key={lente} value={lente}>
-                      {lente}
-                    </option>
-                  ))}
-                </select>
-              </div>
+          <form onSubmit={handleSubmit} className="mt-8 mb-20">
+            <div className="p-4 bg-gray-50 rounded-lg mb-6">
+              <h3 className="text-lg font-semibold text-[#81059e] mb-4">Informações Básicas</h3>
 
-              {/* Seção para selecionar a Ponte como um select */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-[#800080]">Ponte:</h3>
-                <select
-                  name="ponte"
-                  value={formData.ponte || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, ponte: e.target.value })
-                  }
-                  className="bg-gray-100 w-full px-4 py-2 border rounded-lg text-black focus:outline-none focus:border-[#800080] focus:ring-1 focus:ring-[#800080]"
-                  required
-                >
-                  <option value="">Selecione a Ponte</option>
-                  {pontes.map((ponte) => (
-                    <option key={ponte} value={ponte}>
-                      {ponte}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Título do Produto - NOVO CAMPO */}
+                <div>
+                  <label className="text-[#81059e] font-medium">Título do Produto</label>
+                  <input
+                    type="text"
+                    id="titulo"
+                    name="titulo"
+                    value={formData.titulo || ""}
+                    onChange={handleChange}
+                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    placeholder="Ex: Armação Ray-Ban Wayfarer"
+                    required
+                  />
+                </div>
 
-              {/* Seção para selecionar a Haste como um select */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-[#800080]">Haste:</h3>
-                <select
-                  name="haste"
-                  value={formData.haste || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, haste: e.target.value })
-                  }
-                  className="bg-gray-100 w-full px-4 py-2 border rounded-lg text-black focus:outline-none focus:border-[#800080] focus:ring-1 focus:ring-[#800080]"
-                  required
-                >
-                  <option value="">Selecione a Haste</option>
-                  {hastes.map((haste) => (
-                    <option key={haste} value={haste}>
-                      {haste}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-[#800080]">
-                  Imagem do Produto:
-                </h3>
-                <input
-                  type="file"
-                  name="imagem"
-                  accept="image/*"
-                  onChange={(e) =>
-                    setFormData({ ...formData, imagem: e.target.files[0] })
-                  } // Captura o arquivo de imagem
-                  className="w-full px-4 py-2 border  bg-gray-100 rounded-lg text-black focus:outline-none focus:border-[#800080] focus:ring-1 focus:ring-[#800080]"
-                  required
-                />
-              </div>
-              <div className="flex justify-between items-start space-x-8 mt-4"></div>
-
-              <div className="flex justify-start space-x-8">
-                <div className="space-y-4 w-full">
-                  <div className="flex items-center w-full">
-                    {/* Campo de Custo - Aumentando a largura */}
-                    <div className="w-full">
-                      {" "}
-                      {/* Aumentei a largura de w-32 para w-48 */}
-                      <h3 className="text-lg font-semibold text-[#800080] text-start">
-                        Custo:
-                      </h3>
-                      <div className="flex items-center border border-[#800080] rounded-lg">
-                        <span className="px-2 text-gray-400">R$</span>
-                        <input
-                          type="number"
-                          name="custo"
-                          value={formData.custo}
-                          onChange={(e) => handleChange(e)} // Função handleChange
-                          placeholder="0,00"
-                          className="w-full px-2 py-2 text-black focus:outline-none focus:border-[#800080] focus:ring-1 focus:ring-[#800080] rounded-lg"
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    {/* Espaçamento manual ajustado */}
-                    <div className="w-14"></div>
-
-                    {/* Campo de Total - Aumentando a largura */}
-                    <div className="w-full">
-                      {" "}
-                      {/* Aumentei a largura de w-32 para w-48 */}
-                      <h3 className="text-lg font-semibold text-[#800080] text-start">
-                        Total:
-                      </h3>
-                      <div className="flex items-center border border-[#800080] rounded-lg">
-                        <span className="px-2 text-gray-400">R$</span>
-                        <input
-                          type="number"
-                          name="valor"
-                          value={formData.valor}
-                          onChange={(e) => handleChange(e)} // Função handleChange
-                          placeholder="0,00"
-                          className="w-full px-2 py-2 text-black focus:outline-none focus:border-[#800080] focus:ring-1 focus:ring-[#800080] rounded-lg"
-                          required
-                        />
-                      </div>
-                    </div>
-                  </div>
+                {/* SKU */}
+                <div>
+                  <label className="text-[#81059e] font-medium">SKU</label>
+                  <input
+                    type="text"
+                    id="sku"
+                    name="sku"
+                    value={formData.sku}
+                    readOnly
+                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black bg-gray-100"
+                  />
                 </div>
               </div>
-              <div className="space-y-4">
-                {/* Campo para Percentual de Lucro */}
-                <div className="w-full">
-                  <label
-                    htmlFor="percentual_lucro"
-                    className="text-lg font-semibold text-[#800080] text-start"
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                {/* Data */}
+                <div>
+                  <label className="text-[#81059e] font-medium">Data</label>
+                  <input
+                    type="date"
+                    name="data"
+                    value={formData.data}
+                    onChange={handleChange}
+                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                  />
+                </div>
+
+                {/* Subcategoria - SUBSTITUI O CAMPO CATEGORIA */}
+                <div>
+                  <label className="text-[#81059e] font-medium">Tipo de Armação</label>
+                  <select
+                    name="subcategoria"
+                    value={formData.subcategoria}
+                    onChange={handleChange}
+                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
                   >
-                    Percentual de Lucro (%)
-                  </label>
-                  <div className="flex items-center border border-[#800080] rounded-lg">
+                    <option value="grau">Armação de Grau</option>
+                    <option value="solar">Óculos Solar</option>
+                    <option value="clip-on">Armação com Clip-on</option>
+                    <option value="infantil">Armação Infantil</option>
+                    <option value="esportiva">Armação Esportiva</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                {/* Código de Barras */}
+                <div>
+                  <label className="text-[#81059e] font-medium">Código de Barras</label>
+                  <input
+                    type="text"
+                    name="codigoBarras"
+                    value={formData.codigoBarras || ""}
+                    onChange={(e) => setFormData({ ...formData, codigoBarras: e.target.value })}
+                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    required
+                  />
+                </div>
+
+                {/* Código do Fabricante */}
+                <div>
+                  <label className="text-[#81059e] font-medium">Código do Fabricante</label>
+                  <input
+                    type="text"
+                    name="codigoFabricante"
+                    value={formData.codigoFabricante || ""}
+                    onChange={(e) => setFormData({ ...formData, codigoFabricante: e.target.value })}
+                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-1 gap-6 mt-4">
+                {/* Código do Produto */}
+                <div>
+                  <label className="text-[#81059e] font-medium">Código do Produto</label>
+                  <input
+                    type="text"
+                    name="codigo"
+                    value={formData.codigo || ""}
+                    onChange={(e) => setFormData({ ...formData, codigo: e.target.value })}
+                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Seção Características do Produto */}
+            <div className="p-4 bg-gray-50 rounded-lg mb-6">
+              <h3 className="text-lg font-semibold text-[#81059e] mb-4">Características do Produto</h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Fabricante com opção de adicionar */}
+                <SelectWithAddOption
+                  label="Fabricante"
+                  options={fabricantes}
+                  value={formData.fabricante}
+                  onChange={(value) => setFormData({ ...formData, fabricante: value })}
+                  addNewOption={(value) => addNewItem("armacoes_fabricantes", value)}
+                />
+
+                {/* Fornecedor - Agora sem opção de adicionar */}
+                <div className="space-y-2">
+                  <h3 className="text-lg font-semibold text-[#81059e]">Fornecedor:</h3>
+                  <select
+                    value={formData.fornecedor || ""}
+                    onChange={(e) => setFormData({ ...formData, fornecedor: e.target.value })}
+                    className="bg-gray-100 w-full px-4 py-3 border-2 border-[#81059e] rounded-lg text-black focus:outline-none focus:border-[#81059e] focus:ring-1 focus:ring-[#81059e]"
+                  >
+                    <option value="">Selecione um fornecedor</option>
+                    {fornecedores.map((fornecedor) => (
+                      <option key={fornecedor.id} value={fornecedor.nome}>
+                        {fornecedor.nome.toUpperCase()}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                {/* Marca com opção de adicionar */}
+                <SelectWithAddOption
+                  label="Marca"
+                  options={marcas}
+                  value={formData.marca}
+                  onChange={(value) => setFormData({ ...formData, marca: value })}
+                  addNewOption={(value) => addNewItem("armacoes_marcas", value)}
+                />
+
+                {/* Gênero */}
+                <div className="space-y-2">
+                  <h3 className="text-lg font-semibold text-[#81059e]">Gênero:</h3>
+                  <select
+                    name="genero"
+                    value={formData.genero || ""}
+                    onChange={(e) => setFormData({ ...formData, genero: e.target.value })}
+                    className="bg-gray-100 w-full px-4 py-3 border-2 border-[#81059e] rounded-lg text-black focus:outline-none focus:border-[#81059e] focus:ring-1 focus:ring-[#81059e]"
+                    required
+                  >
+                    <option value="">Selecione o Gênero</option>
+                    {["Masculino", "Feminino", "Unissex"].map((genero) => (
+                      <option key={genero} value={genero}>
+                        {genero.toUpperCase()}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                {/* Formato com opção de adicionar */}
+                <SelectWithAddOption
+                  label="Formato"
+                  options={formatos}
+                  value={formData.formato}
+                  onChange={(value) => setFormData({ ...formData, formato: value })}
+                  addNewOption={(value) => addNewItem("armacoes_formatos", value)}
+                />
+
+                {/* Cor com opção de adicionar */}
+                <SelectWithAddOption
+                  label="Cor"
+                  options={cores}
+                  value={formData.cor}
+                  onChange={(value) => setFormData({ ...formData, cor: value })}
+                  addNewOption={(value) => addNewItem("armacoes_cores", value)}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                {/* Material com opção de adicionar */}
+                <SelectWithAddOption
+                  label="Material"
+                  options={materiais}
+                  value={formData.material}
+                  onChange={(value) => setFormData({ ...formData, material: value })}
+                  addNewOption={(value) => addNewItem("armacoes_materiais", value)}
+                />
+
+                {/* Aro com opção de adicionar */}
+                <SelectWithAddOption
+                  label="Aro"
+                  options={aros}
+                  value={formData.aro}
+                  onChange={(value) => setFormData({ ...formData, aro: value })}
+                  addNewOption={(value) => addNewItem("armacoes_aros", value)}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
+                {/* Ponte com opção de adicionar */}
+                <SelectWithAddOption
+                  label="Ponte"
+                  options={pontes}
+                  value={formData.ponte}
+                  onChange={(value) => setFormData({ ...formData, ponte: value })}
+                  addNewOption={(value) => addNewValueItem("armacoes_pontes", value)}
+                />
+
+                {/* Haste com opção de adicionar */}
+                <SelectWithAddOption
+                  label="Haste"
+                  options={hastes}
+                  value={formData.haste}
+                  onChange={(value) => setFormData({ ...formData, haste: value })}
+                  addNewOption={(value) => addNewValueItem("armacoes_hastes", value)}
+                />
+
+                {/* Lente com opção de adicionar */}
+                <SelectWithAddOption
+                  label="Lente"
+                  options={lentes}
+                  value={formData.lente}
+                  onChange={(value) => setFormData({ ...formData, lente: value })}
+                  addNewOption={(value) => addNewValueItem("armacoes_largura_lentes", value)}
+                />
+              </div>
+            </div>
+
+            {/* Seção Valores - MODIFICADA PARA CALCULAR PREÇO A PARTIR DO PERCENTUAL */}
+            <div className="p-4 bg-gray-50 rounded-lg mb-6">
+              <h3 className="text-lg font-semibold text-[#81059e] mb-4">Valores</h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* Custo */}
+                <div>
+                  <label className="text-[#81059e] font-medium">Custo (R$)</label>
+                  <div className="flex items-center border-2 border-[#81059e] rounded-lg">
+                    <span className="px-2 text-gray-400">R$</span>
                     <input
-                      type="text"
+                      type="number"
+                      name="custo"
+                      value={formData.custo}
+                      onChange={handleChange}
+                      placeholder="0,00"
+                      className="w-full px-2 py-3 text-black focus:outline-none focus:border-[#81059e] focus:ring-1 focus:ring-[#81059e] rounded-lg"
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Percentual de Lucro - CAMPO MODIFICADO */}
+                <div>
+                  <label className="text-[#81059e] font-medium">Percentual de Lucro (%)</label>
+                  <div className="flex items-center border-2 border-[#81059e] rounded-lg">
+                    <input
+                      type="number"
                       id="percentual_lucro"
                       name="percentual_lucro"
                       value={formData.percentual_lucro}
-                      readOnly // Campo de leitura
-                      className="w-full px-2 py-2 text-black bg-gray-100 focus:outline-none focus:border-[#800080] focus:ring-1 focus:ring-[#800080] rounded-lg"
-                      placeholder="O percentual será calculado automaticamente"
+                      onChange={handleChange}
+                      placeholder="0,00"
+                      className="w-full px-2 py-3 text-black focus:outline-none focus:border-[#81059e] focus:ring-1 focus:ring-[#81059e] rounded-lg"
+                      required
                     />
+                    <span className="px-2 text-gray-400">%</span>
                   </div>
                 </div>
 
-                {/* Campo para Custo Médio */}
-                <div className="w-full">
-                  <label
-                    htmlFor="custo_medio"
-                    className="text-lg font-semibold text-[#800080] text-start"
-                  >
-                    Custo Médio
-                  </label>
-                  <div className="flex items-center border border-[#800080] rounded-lg">
+                {/* Valor de Venda - AGORA CALCULADO AUTOMATICAMENTE */}
+                <div>
+                  <label className="text-[#81059e] font-medium">Valor de Venda (R$)</label>
+                  <div className="flex items-center border-2 border-[#81059e] rounded-lg">
+                    <span className="px-2 text-gray-400">R$</span>
                     <input
-                      type="text"
-                      id="custo_medio"
-                      name="custo_medio"
-                      value={
-                        formData.custo_medio ? `${formData.custo_medio} R$` : ""
-                      } // Adiciona "R$" depois do valor
-                      readOnly // Campo de leitura
-                      className="w-full px-2 py-2 text-black bg-gray-100 focus:outline-none focus:border-[#800080] focus:ring-1 focus:ring-[#800080] rounded-lg"
-                      placeholder="Calculado automaticamente"
+                      type="number"
+                      name="valor"
+                      value={formData.valor}
+                      onChange={handleChange}
+                      placeholder="0,00"
+                      className="w-full px-2 py-3 text-black focus:outline-none focus:border-[#81059e] focus:ring-1 focus:ring-[#81059e] rounded-lg"
+                      required
                     />
                   </div>
                 </div>
               </div>
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-[#800080]">
-                  Quantidade do Produto:
-                </h3>
-                <input
-                  type="number"
-                  name="quantidade"
-                  placeholder="Informe a quantidade"
-                  value={formData.quantidade || ""}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    if (value > 0) {
-                      // Verifica se o valor é maior que zero
-                      setFormData({ ...formData, quantidade: value });
-                    }
-                  }}
-                  min="1" // Garante que o campo só aceitará valores iguais ou maiores que 1
-                  className="bg-gray-100 w-full px-4 py-2 border rounded-lg text-black focus:outline-none focus:border-[#800080] focus:ring-1 focus:ring-[#800080]"
-                  required
-                />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                {/* Custo Médio */}
+                <div>
+                  <label className="text-[#81059e] font-medium">Custo Médio (R$)</label>
+                  <input
+                    type="text"
+                    id="custo_medio"
+                    name="custo_medio"
+                    value={formData.custo_medio || ""}
+                    readOnly
+                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black bg-gray-100"
+                    placeholder="Calculado automaticamente"
+                  />
+                </div>
+
+                {/* Quantidade */}
+                <div>
+                  <label className="text-[#81059e] font-medium">Quantidade</label>
+                  <input
+                    type="number"
+                    name="quantidade"
+                    value={formData.quantidade || ""}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value > 0) {
+                        setFormData({ ...formData, quantidade: value });
+                      }
+                    }}
+                    min="1"
+                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    required
+                  />
+                </div>
               </div>
 
-              {/* Unidade */}
-              <div className="space-y-4">
-                <label className="text-lg font-semibold text-[#800080]">
-                  Unidade:
-                </label>
-                <select
-                  name="unidade"
-                  value={formData.unidade || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, unidade: e.target.value })
-                  }
-                  className="bg-gray-100 px-4 py-2 rounded-lg text-black w-full"
-                >
-                  <option value="">Selecione a unidade</option>
-                  {unidades.map((unidade) => (
-                    <option key={unidade} value={unidade}>
-                      {unidade ? unidade.toUpperCase() : ""}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Campo de CSOSN (102) */}
-              <div className="w-full">
-                <h3 className="text-lg font-semibold text-[#800080]">
-                  CSOSN (102):
-                </h3>
-                <input
-                  type="text"
-                  name="csosn"
-                  value={formData.csosn || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, csosn: e.target.value })
-                  }
-                  className="bg-gray-100 w-full px-4 py-2 border rounded-lg text-black focus:outline-none focus:border-[#800080] focus:ring-1 focus:ring-[#800080]"
-                  required
-                />
-              </div>
-
-              {/* Campo de CEST */}
-              <div className="w-full">
-                <h3 className="text-lg font-semibold text-[#800080]">CEST:</h3>
-                <input
-                  type="text"
-                  name="CEST"
-                  value={formData.CEST || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, CEST: e.target.value })
-                  }
-                  className="bg-gray-100 w-full px-4 py-2 border rounded-lg text-black focus:outline-none focus:border-[#800080] focus:ring-1 focus:ring-[#800080]"
-                  required
-                />
-              </div>
-
-              {/* Campo de Alíquota do ICMS */}
-              <div className="w-full">
-                <h3 className="text-lg font-semibold text-[#800080]">
-                  Alíquota do ICMS:
-                </h3>
-                <input
-                  type="text"
-                  name="aliquota_icms"
-                  value={formData.aliquota_icms || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, aliquota_icms: e.target.value })
-                  }
-                  className="bg-gray-100 w-full px-4 py-2 border rounded-lg text-black focus:outline-none focus:border-[#800080] focus:ring-1 focus:ring-[#800080]"
-                  required
-                />
-              </div>
-
-              {/* Campo de Base de Cálculo ICMS */}
-              <div className="w-full">
-                <h3 className="text-lg font-semibold text-[#800080]">
-                  Base de Cálculo ICMS:
-                </h3>
-                <input
-                  type="text"
-                  name="base_calculo_icms"
-                  value={formData.base_calculo_icms || ""}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      base_calculo_icms: e.target.value,
-                    })
-                  }
-                  className="bg-gray-100 w-full px-4 py-2 border rounded-lg text-black focus:outline-none focus:border-[#800080] focus:ring-1 focus:ring-[#800080]"
-                  required
-                />
-              </div>
-              {/* Campo de NCM como select */}
-              <div className="w-full">
-                <h3 className="text-lg font-semibold text-[#800080]">NCM:</h3>
-                <select
-                  name="NCM"
-                  value={formData.NCM || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, NCM: e.target.value })
-                  }
-                  className="bg-gray-100 w-full px-4 py-2 border rounded-lg text-black focus:outline-none focus:border-[#800080] focus:ring-1 focus:ring-[#800080]"
-                  required
-                >
-                  <option value="">Selecione o NCM</option>
-                  {ncm.map((NCM) => (
-                    <option key={NCM} value={NCM}>
-                      {NCM}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              {/* Campo de Alíquota do IPI */}
-              <div className="w-full">
-                <h3 className="text-lg font-semibold text-[#800080]">
-                  Alíquota do IPI:
-                </h3>
-                <input
-                  type="text"
-                  name="aliquota_ipi"
-                  value={formData.aliquota_ipi || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, aliquota_ipi: e.target.value })
-                  }
-                  className="bg-gray-100 w-full px-4 py-2 border rounded-lg text-black focus:outline-none focus:border-[#800080] focus:ring-1 focus:ring-[#800080]"
-                  required
-                />
-              </div>
-
-              {/* Campo de CST IPI */}
-              <div className="w-full">
-                <h3 className="text-lg font-semibold text-[#800080]">
-                  CST IPI:
-                </h3>
-                <input
-                  type="text"
-                  name="cst_ipi"
-                  value={formData.cst_ipi || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, cst_ipi: e.target.value })
-                  }
-                  className="bg-gray-100 w-full px-4 py-2 border rounded-lg text-black focus:outline-none focus:border-[#800080] focus:ring-1 focus:ring-[#800080]"
-                  required
-                />
-              </div>
-
-              {/* Campo de Base de Cálculo do IPI */}
-              <div className="w-full">
-                <h3 className="text-lg font-semibold text-[#800080]">
-                  Base de Cálculo do IPI:
-                </h3>
-                <input
-                  type="text"
-                  name="base_calculo_ipi"
-                  value={formData.base_calculo_ipi || ""}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      base_calculo_ipi: e.target.value,
-                    })
-                  }
-                  className="bg-gray-100 w-full px-4 py-2 border rounded-lg text-black focus:outline-none focus:border-[#800080] focus:ring-1 focus:ring-[#800080]"
-                  required
-                />
-              </div>
-
-              {/* Campo de CST PIS */}
-              <div className="w-full">
-                <h3 className="text-lg font-semibold text-[#800080]">
-                  CST PIS:
-                </h3>
-                <input
-                  type="text"
-                  name="cst_pis"
-                  value={formData.cst_pis || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, cst_pis: e.target.value })
-                  }
-                  className="bg-gray-100 w-full px-4 py-2 border rounded-lg text-black focus:outline-none focus:border-[#800080] focus:ring-1 focus:ring-[#800080]"
-                  required
-                />
-              </div>
-
-              {/* Campo de CST COFINS */}
-              <div className="w-full">
-                <h3 className="text-lg font-semibold text-[#800080]">
-                  CST COFINS:
-                </h3>
-                <input
-                  type="text"
-                  name="cst_cofins"
-                  value={formData.cst_cofins || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, cst_cofins: e.target.value })
-                  }
-                  className="bg-gray-100 w-full px-4 py-2 border rounded-lg text-black focus:outline-none focus:border-[#800080] focus:ring-1 focus:ring-[#800080]"
-                  required
-                />
-              </div>
-
-              {/* Campo de CFOP */}
-              <div className="w-full">
-                <h3 className="text-lg font-semibold text-[#800080]">CFOP:</h3>
-                <input
-                  type="text"
-                  name="cfop"
-                  value={formData.cfop || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, cfop: e.target.value })
-                  }
-                  className="bg-gray-100 w-full px-4 py-2 border rounded-lg text-black focus:outline-none focus:border-[#800080] focus:ring-1 focus:ring-[#800080]"
-                  required
-                />
-              </div>
-
-              {/* Campo de Origem do Produto */}
-              <div className="w-full">
-                <h3 className="text-lg font-semibold text-[#800080]">
-                  Origem do Produto:
-                </h3>
-                <input
-                  type="text"
-                  name="origem_produto"
-                  value={formData.origem_produto || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, origem_produto: e.target.value })
-                  }
-                  className="bg-gray-100 w-full px-4 py-2 border rounded-lg text-black focus:outline-none focus:border-[#800080] focus:ring-1 focus:ring-[#800080]"
-                  required
-                />
-              </div>
-
-              {/* Campo de Peso Bruto */}
-              <div className="w-full">
-                <h3 className="text-lg font-semibold text-[#800080]">
-                  Peso Bruto:
-                </h3>
-                <input
-                  type="text"
-                  name="peso_bruto"
-                  value={formData.peso_bruto || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, peso_bruto: e.target.value })
-                  }
-                  className="bg-gray-100 w-full px-4 py-2 border rounded-lg text-black focus:outline-none focus:border-[#800080] focus:ring-1 focus:ring-[#800080]"
-                  required
-                />
-              </div>
-
-              {/* Campo de Peso Líquido */}
-              <div className="w-full">
-                <h3 className="text-lg font-semibold text-[#800080]">
-                  Peso Líquido:
-                </h3>
-                <input
-                  type="text"
-                  name="peso_liquido"
-                  value={formData.peso_liquido || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, peso_liquido: e.target.value })
-                  }
-                  className="bg-gray-100 w-full px-4 py-2 border rounded-lg text-black focus:outline-none focus:border-[#800080] focus:ring-1 focus:ring-[#800080]"
-                  required
+              {/* Unidade com opção de adicionar */}
+              <div className="mt-4">
+                <SelectWithAddOption
+                  label="Unidade"
+                  options={unidades}
+                  value={formData.unidade}
+                  onChange={(value) => setFormData({ ...formData, unidade: value })}
+                  addNewOption={(value) => addNewItem("armacoes_unidades", value)}
                 />
               </div>
             </div>
-          </div>
 
-          {/* Div para definir a quantidade e botão de enviar */}
-          <div className="flex justify-center items-center mt-4 space-x-4">
-            {/* Botão de enviar */}
-            <button
-              onClick={handleSubmit}
-              className={`bg-purple-700 text-white font-bold px-8 py-3 rounded-lg shadow ${
-                isLoading || !formData.imagem
-                  ? "opacity-50 cursor-not-allowed"
-                  : ""
-              }`}
-              disabled={isLoading || !formData.imagem}
-            >
-              {isLoading ? "Enviando..." : "CONFIRMAR"}
-            </button>
-          </div>
 
-          {showSuccessPopup && (
-            <div className="fixed bottom-4 right-4 bg-green-500 text-white p-4 rounded-lg shadow-lg">
-              <p>Produto enviado com sucesso!</p>
+            {/* Seção Fiscal */}
+            <div className="p-4 bg-gray-50 rounded-lg mb-6">
+              <h3 className="text-lg font-semibold text-[#81059e] mb-4">Informações Fiscais</h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* NCM */}
+                <div>
+                  <SelectWithAddOption
+                    label="NCM"
+                    options={ncm}
+                    value={formData.NCM}
+                    onChange={(value) => setFormData({ ...formData, NCM: value })}
+                    addNewOption={(value) => addNewItem("ncm", value)}
+                  />
+                </div>
+
+                {/* CEST */}
+                <div>
+                  <label className="text-[#81059e] font-medium">CEST</label>
+                  <input
+                    type="text"
+                    name="CEST"
+                    value={formData.CEST || ""}
+                    onChange={(e) => setFormData({ ...formData, CEST: e.target.value })}
+                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    required
+                  />
+                </div>
+
+                {/* CSOSN */}
+                <div>
+                  <label className="text-[#81059e] font-medium">CSOSN</label>
+                  <input
+                    type="text"
+                    name="csosn"
+                    value={formData.csosn || ""}
+                    onChange={(e) => setFormData({ ...formData, csosn: e.target.value })}
+                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                {/* CFOP */}
+                <div>
+                  <label className="text-[#81059e] font-medium">CFOP</label>
+                  <input
+                    type="text"
+                    name="cfop"
+                    value={formData.cfop || ""}
+                    onChange={(e) => setFormData({ ...formData, cfop: e.target.value })}
+                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    required
+                  />
+                </div>
+
+                {/* Origem do Produto */}
+                <div>
+                  <label className="text-[#81059e] font-medium">Origem do Produto</label>
+                  <input
+                    type="text"
+                    name="origem_produto"
+                    value={formData.origem_produto || ""}
+                    onChange={(e) => setFormData({ ...formData, origem_produto: e.target.value })}
+                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
+                {/* Alíquota ICMS */}
+                <div>
+                  <label className="text-[#81059e] font-medium">Alíquota ICMS (%)</label>
+                  <input
+                    type="text"
+                    name="aliquota_icms"
+                    value={formData.aliquota_icms || ""}
+                    onChange={(e) => setFormData({ ...formData, aliquota_icms: e.target.value })}
+                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    required
+                  />
+                </div>
+
+                {/* Base de Cálculo ICMS */}
+                <div>
+                  <label className="text-[#81059e] font-medium">Base de Cálculo ICMS</label>
+                  <input
+                    type="text"
+                    name="base_calculo_icms"
+                    value={formData.base_calculo_icms || ""}
+                    onChange={(e) => setFormData({ ...formData, base_calculo_icms: e.target.value })}
+                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    required
+                  />
+                </div>
+
+                {/* CST PIS */}
+                <div>
+                  <label className="text-[#81059e] font-medium">CST PIS</label>
+                  <input
+                    type="text"
+                    name="cst_pis"
+                    value={formData.cst_pis || ""}
+                    onChange={(e) => setFormData({ ...formData, cst_pis: e.target.value })}
+                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
+                {/* CST COFINS */}
+                <div>
+                  <label className="text-[#81059e] font-medium">CST COFINS</label>
+                  <input
+                    type="text"
+                    name="cst_cofins"
+                    value={formData.cst_cofins || ""}
+                    onChange={(e) => setFormData({ ...formData, cst_cofins: e.target.value })}
+                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    required
+                  />
+                </div>
+
+                {/* Alíquota IPI */}
+                <div>
+                  <label className="text-[#81059e] font-medium">Alíquota IPI (%)</label>
+                  <input
+                    type="text"
+                    name="aliquota_ipi"
+                    value={formData.aliquota_ipi || ""}
+                    onChange={(e) => setFormData({ ...formData, aliquota_ipi: e.target.value })}
+                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    required
+                  />
+                </div>
+
+                {/* CST IPI */}
+                <div>
+                  <label className="text-[#81059e] font-medium">CST IPI</label>
+                  <input
+                    type="text"
+                    name="cst_ipi"
+                    value={formData.cst_ipi || ""}
+                    onChange={(e) => setFormData({ ...formData, cst_ipi: e.target.value })}
+                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
+                {/* Base de Cálculo IPI */}
+                <div>
+                  <label className="text-[#81059e] font-medium">Base de Cálculo IPI</label>
+                  <input
+                    type="text"
+                    name="base_calculo_ipi"
+                    value={formData.base_calculo_ipi || ""}
+                    onChange={(e) => setFormData({ ...formData, base_calculo_ipi: e.target.value })}
+                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    required
+                  />
+                </div>
+
+                {/* Peso Bruto */}
+                <div>
+                  <label className="text-[#81059e] font-medium">Peso Bruto</label>
+                  <input
+                    type="text"
+                    name="peso_bruto"
+                    value={formData.peso_bruto || ""}
+                    onChange={(e) => setFormData({ ...formData, peso_bruto: e.target.value })}
+                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    required
+                  />
+                </div>
+
+                {/* Peso Líquido */}
+                <div>
+                  <label className="text-[#81059e] font-medium">Peso Líquido</label>
+                  <input
+                    type="text"
+                    name="peso_liquido"
+                    value={formData.peso_liquido || ""}
+                    onChange={(e) => setFormData({ ...formData, peso_liquido: e.target.value })}
+                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    required
+                  />
+                </div>
+              </div>
             </div>
-          )}
-        </form>
+
+            {/* Seção Imagem */}
+            <div className="p-4 bg-gray-50 rounded-lg mb-6">
+              <h3 className="text-lg font-semibold text-[#81059e] mb-4">Imagem do Produto</h3>
+
+              <input
+                type="file"
+                name="imagem"
+                accept="image/*"
+                onChange={(e) => setFormData({ ...formData, imagem: e.target.files[0] })}
+                className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black bg-gray-100"
+                required
+              />
+            </div>
+
+            {/* Botões de ação */}
+            <div className="flex justify-center gap-4 mt-8">
+              <button
+                type="submit"
+                className="bg-[#81059e] p-3 px-6 rounded-sm text-white flex items-center gap-2"
+                disabled={isLoading || !formData.imagem}
+              >
+                {isLoading ? 'PROCESSANDO...' : 'CONFIRMAR'}
+              </button>
+              <button
+                type="button"
+                onClick={handleClearSelection}
+                className="border-2 border-[#81059e] p-3 px-6 rounded-sm text-[#81059e] flex items-center gap-2"
+                disabled={isLoading}
+              >
+                CANCELAR
+              </button>
+            </div>
+          </form>
+        </div>
+
+        {showSuccessPopup && (
+          <div className="fixed bottom-4 right-4 bg-green-500 text-white p-4 rounded-lg shadow-lg">
+            <p>Produto enviado com sucesso!</p>
+          </div>
+        )}
       </Layout>
     </div>
   );
 }
+
 export default function Page() {
   return (
     <Suspense fallback={<div>Carregando...</div>}>

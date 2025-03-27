@@ -48,6 +48,8 @@ export default function ListaRecebimentos() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingConta, setEditingConta] = useState(null);
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+  const [viewCompletedPayments, setViewCompletedPayments] = useState(false);
+  const [completedPayments, setCompletedPayments] = useState([]);
 
   useEffect(() => {
     const fetchContas = async () => {
@@ -103,6 +105,55 @@ export default function ListaRecebimentos() {
 
     fetchContas();
   }, [selectedLoja, userPermissions]);
+
+  const fetchCompletedPayments = async () => {
+    try {
+      setLoading(true);
+      const fetchedCompletedPayments = [];
+
+      // Se for "Ambas", buscar de todas as lojas que o usuário tem acesso
+      if (selectedLoja === 'Ambas') {
+        const lojas = userPermissions?.lojas || [];
+
+        for (const loja of lojas) {
+          const completedPaymentsRef = collection(firestore, `lojas/${loja}/financeiro/contas_receber_concluidas/items`);
+          const completedSnapshot = await getDocs(completedPaymentsRef);
+
+          completedSnapshot.docs.forEach((docItem) => {
+            const paymentData = docItem.data();
+            fetchedCompletedPayments.push({
+              id: docItem.id,
+              ...paymentData,
+              loja: loja
+            });
+          });
+        }
+      } else {
+        // Buscar de uma loja específica
+        const completedPaymentsRef = collection(
+          firestore,
+          `lojas/${selectedLoja}/financeiro/contas_receber_concluidas/items`
+        );
+        const completedSnapshot = await getDocs(completedPaymentsRef);
+
+        completedSnapshot.docs.forEach((docItem) => {
+          const paymentData = docItem.data();
+          fetchedCompletedPayments.push({
+            id: docItem.id,
+            ...paymentData,
+            loja: selectedLoja
+          });
+        });
+      }
+
+      setCompletedPayments(sortContas(fetchedCompletedPayments, sortField, sortDirection));
+      setLoading(false);
+    } catch (err) {
+      console.error('Erro ao carregar recebimentos concluídos:', err);
+      setError(`Erro ao carregar recebimentos concluídos: ${err.message}`);
+      setLoading(false);
+    }
+  };
 
   // Extrair anos disponíveis dos dados
   useEffect(() => {
@@ -438,6 +489,20 @@ export default function ListaRecebimentos() {
     }
 
     try {
+      // Preparar dados da conta concluída com informações adicionais
+      const completedAccountData = {
+        ...selectedConta,
+        dataPagamento: new Date(),
+        formaPagamento: formaRecebimento,
+        statusPagamento: 'Concluído'
+      };
+
+      // Adicionar à coleção de contas concluídas
+      const completedAccountRef = doc(
+        collection(firestore, `lojas/${selectedConta.loja}/financeiro/contas_receber_concluidas/items`)
+      );
+      await setDoc(completedAccountRef, completedAccountData);
+
       // Preparar descrição personalizada
       const descricao = `Recebimento da conta ${selectedConta.numeroDocumento || selectedConta.id} via ${formaRecebimento}`;
 
@@ -485,6 +550,11 @@ export default function ListaRecebimentos() {
       setFilteredContas((prevContas) => prevContas.filter((conta) => conta.id !== selectedConta.id));
       setTotalContas(prevState => prevState - 1); // Decrementar o contador
 
+      // Se estiver visualizando contas concluídas, atualizar a lista
+      if (viewCompletedPayments) {
+        fetchCompletedPayments();
+      }
+
       setSettleMessage('Recebimento registrado com sucesso!');
       setTimeout(() => {
         setSettleMessage('');
@@ -495,6 +565,18 @@ export default function ListaRecebimentos() {
       alert('Erro ao registrar recebimento.');
     }
   };
+
+  useEffect(() => {
+    if (viewCompletedPayments) {
+      fetchCompletedPayments();
+    } else {
+      const fetchContas = async () => {
+        // ... seu código existente para buscar contas pendentes ...
+      };
+      fetchContas();
+    }
+  }, [viewCompletedPayments, selectedLoja, userPermissions]);
+
 
 
   // Calcular contas para a página atual
@@ -637,8 +719,21 @@ export default function ListaRecebimentos() {
       <div className="min-h-screen p-0 md:p-2 mb-20">
         <div className="w-full max-w-5xl mx-auto rounded-lg">
           <div className="mb-4">
-            <h2 className="text-3xl font-bold text-[#81059e] mb-8 mt-8">RECEBIMENTOS PENDENTES</h2>
+            <h2 className="text-3xl font-bold text-[#81059e] mb-2 mt-8">
+              {viewCompletedPayments ? "RECEBIMENTOS CONCLUÍDOS" : "RECEBIMENTOS PENDENTES"}
+            </h2>
+            <div className="flex justify-end mb-4">
+              <button
+                onClick={() => setViewCompletedPayments(!viewCompletedPayments)}
+                className="bg-[#81059e] text-white px-4 py-2 rounded-md hover:bg-[#690480] transition"
+              >
+                {viewCompletedPayments ? "Ver Pendentes" : "Ver Concluídos"}
+              </button>
+            </div>
           </div>
+
+
+
 
           {/* Dashboard compacto com estatísticas essenciais */}
           <div className="mb-6">
@@ -893,140 +988,279 @@ export default function ListaRecebimentos() {
             <p>{error}</p>
           ) : (
             <div className="w-full overflow-x-auto">
-              {filteredContas.length === 0 ? (
-                <p>Nenhuma conta encontrada.</p>
-              ) : (
-                <>
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full table-auto select-none">
-                      <thead>
-                        <tr className="bg-[#81059e] text-white">
-                          <th className="px-3 py-2 w-12">
-                            <span className="sr-only">Selecionar</span>
-                          </th>
-                          <th className="px-3 py-2 cursor-pointer whitespace-nowrap" onClick={() => handleSort('numeroDocumento')}>
-                            Código {renderSortArrow('numeroDocumento')}
-                          </th>
-                          <th className="px-3 py-2 cursor-pointer" onClick={() => handleSort('cliente')}>
-                            Cliente {renderSortArrow('cliente')}
-                          </th>
-                          <th className="px-3 py-2 cursor-pointer" onClick={() => handleSort('valor')}>
-                            Valor {renderSortArrow('valor')}
-                          </th>
-                          <th className="px-3 py-2 cursor-pointer whitespace-nowrap" onClick={() => handleSort('dataRegistro')}>
-                            Registro {renderSortArrow('dataRegistro')}
-                          </th>
-                          <th className="px-3 py-2 cursor-pointer whitespace-nowrap" onClick={() => handleSort('dataCobranca')}>
-                            Cobrança {renderSortArrow('dataCobranca')}
-                          </th>
-                          <th className="px-3 py-2 cursor-pointer whitespace-nowrap" onClick={() => handleSort('valorPago')}>
-                            Total Pago {renderSortArrow('valorPago')}
-                          </th>
-                          <th className="px-3 py-2 cursor-pointer" onClick={() => handleSort('juros')}>
-                            Juros {renderSortArrow('juros')}
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {currentContas.map((conta) => (
-                          <tr
-                            key={conta.id}
-                            className="text-black text-left hover:bg-gray-100 cursor-pointer"
-                          >
-                            <td className="border px-2 py-2 text-center">
-                              <input
-                                type="checkbox"
-                                checked={selectedForDeletion.includes(conta.id)}
-                                onChange={(e) => toggleDeletion(e, conta.id)}
-                                className="h-4 w-4 cursor-pointer"
-                                onClick={(e) => e.stopPropagation()}
-                              />
-                            </td>
-                            <td className="border px-3 py-2 whitespace-nowrap" onClick={() => openModal(conta)}>
-                              {conta.numeroDocumento || 'N/A'}
-                            </td>
-                            <td className="border px-4 py-2 max-w-[300px] truncate" onClick={() => openModal(conta)}>
-                              {conta.cliente || 'N/A'}
-                            </td>
-                            <td className="border px-3 py-2 whitespace-nowrap" onClick={() => openModal(conta)}>
-                              R$ {parseFloat(conta.valor || 0).toFixed(2)}
-                            </td>
-                            <td className="border px-3 py-2 whitespace-nowrap" onClick={() => openModal(conta)}>
-                              {formatFirestoreDate(conta.dataRegistro)}
-                            </td>
-                            <td className={`border px-3 py-2 whitespace-nowrap ${getStatusColor(conta.dataCobranca)}`} onClick={() => openModal(conta)}>
-                              {formatFirestoreDate(conta.dataCobranca)}
-                            </td>
-                            <td className="border px-3 py-2 whitespace-nowrap" onClick={() => openModal(conta)}>
-                              R$ {parseFloat(conta.valorPago || 0).toFixed(2)}
-                            </td>
-                            <td className="border px-3 py-2 whitespace-nowrap" onClick={() => openModal(conta)}>
-                              R$ {parseFloat(conta.juros || 0).toFixed(2)}
-                            </td>
+              {viewCompletedPayments ? (
+                // Tabela de recebimentos concluídos
+                completedPayments.length === 0 ? (
+                  <p>Nenhum recebimento concluído encontrado.</p>
+                ) : (
+                  <>
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full table-auto select-none">
+                        <thead>
+                          <tr className="bg-[#81059e] text-white">
+                            <th className="px-3 py-2 w-12">
+                              <span className="sr-only">Selecionar</span>
+                            </th>
+                            <th className="px-3 py-2 cursor-pointer whitespace-nowrap" onClick={() => handleSort('numeroDocumento')}>
+                              Código {renderSortArrow('numeroDocumento')}
+                            </th>
+                            <th className="px-3 py-2 cursor-pointer" onClick={() => handleSort('cliente')}>
+                              Cliente {renderSortArrow('cliente')}
+                            </th>
+                            <th className="px-3 py-2 cursor-pointer" onClick={() => handleSort('valor')}>
+                              Valor {renderSortArrow('valor')}
+                            </th>
+                            <th className="px-3 py-2 cursor-pointer whitespace-nowrap" onClick={() => handleSort('dataCobranca')}>
+                              Data Cobrança {renderSortArrow('dataCobranca')}
+                            </th>
+                            <th className="px-3 py-2 cursor-pointer whitespace-nowrap" onClick={() => handleSort('dataPagamento')}>
+                              Data Pagamento {renderSortArrow('dataPagamento')}
+                            </th>
+                            <th className="px-3 py-2 cursor-pointer whitespace-nowrap" onClick={() => handleSort('formaPagamento')}>
+                              Forma Pagamento {renderSortArrow('formaPagamento')}
+                            </th>
+                            <th className="px-3 py-2">Loja</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  {/* Paginação */}
-                  <div className="flex items-center justify-between mt-4">
-                    <div className="text-sm text-gray-700">
-                      Mostrando <span className="font-medium">{indexOfFirstItem + 1}</span> a{' '}
-                      <span className="font-medium">
-                        {Math.min(indexOfLastItem, filteredContas.length)}
-                      </span>{' '}
-                      de <span className="font-medium">{filteredContas.length}</span> registros
+                        </thead>
+                        <tbody>
+                          {completedPayments.slice(indexOfFirstItem, indexOfLastItem).map((pagamento) => (
+                            <tr
+                              key={pagamento.id}
+                              className="text-black text-left hover:bg-gray-100 cursor-pointer"
+                              onClick={() => openModal(pagamento)}
+                            >
+                              <td className="border px-2 py-2 text-center">
+                                <input
+                                  type="checkbox"
+                                  checked={selectedForDeletion.includes(pagamento.id)}
+                                  onChange={(e) => toggleDeletion(e, pagamento.id)}
+                                  className="h-4 w-4 cursor-pointer"
+                                  onClick={(e) => e.stopPropagation()}
+                                />
+                              </td>
+                              <td className="border px-3 py-2 whitespace-nowrap">
+                                {pagamento.numeroDocumento || 'N/A'}
+                              </td>
+                              <td className="border px-4 py-2 max-w-[300px] truncate">
+                                {pagamento.cliente || 'N/A'}
+                              </td>
+                              <td className="border px-3 py-2 whitespace-nowrap">
+                                R$ {parseFloat(pagamento.valor || 0).toFixed(2)}
+                              </td>
+                              <td className="border px-3 py-2 whitespace-nowrap">
+                                {formatFirestoreDate(pagamento.dataCobranca)}
+                              </td>
+                              <td className="border px-3 py-2 whitespace-nowrap font-medium text-green-700">
+                                {formatFirestoreDate(pagamento.dataPagamento)}
+                              </td>
+                              <td className="border px-3 py-2 whitespace-nowrap">
+                                {pagamento.formaPagamento || 'N/A'}
+                              </td>
+                              <td className="border px-3 py-2 whitespace-nowrap">
+                                {pagamento.loja || 'N/A'}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
-                    <div className="flex space-x-1">
-                      <button
-                        onClick={() => goToPage(1)}
-                        disabled={currentPage === 1}
-                        className={`px-3 py-1 rounded ${currentPage === 1
-                          ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                          : 'bg-[#81059e] text-white hover:bg-[#690480]'
-                          }`}
-                      >
-                        &laquo;
-                      </button>
-                      <button
-                        onClick={() => goToPage(currentPage - 1)}
-                        disabled={currentPage === 1}
-                        className={`px-3 py-1 rounded ${currentPage === 1
-                          ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                          : 'bg-[#81059e] text-white hover:bg-[#690480]'
-                          }`}
-                      >
-                        &lt;
-                      </button>
 
-                      <span className="px-3 py-1 text-gray-700">
-                        {currentPage} / {totalPages}
-                      </span>
+                    {/* Paginação para contas concluídas */}
+                    <div className="flex items-center justify-between mt-4">
+                      <div className="text-sm text-gray-700">
+                        Mostrando <span className="font-medium">{indexOfFirstItem + 1}</span> a{' '}
+                        <span className="font-medium">
+                          {Math.min(indexOfLastItem, completedPayments.length)}
+                        </span>{' '}
+                        de <span className="font-medium">{completedPayments.length}</span> registros
+                      </div>
+                      <div className="flex space-x-1">
+                        <button
+                          onClick={() => goToPage(1)}
+                          disabled={currentPage === 1}
+                          className={`px-3 py-1 rounded ${currentPage === 1
+                            ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                            : 'bg-[#81059e] text-white hover:bg-[#690480]'
+                            }`}
+                        >
+                          &laquo;
+                        </button>
+                        <button
+                          onClick={() => goToPage(currentPage - 1)}
+                          disabled={currentPage === 1}
+                          className={`px-3 py-1 rounded ${currentPage === 1
+                            ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                            : 'bg-[#81059e] text-white hover:bg-[#690480]'
+                            }`}
+                        >
+                          &lt;
+                        </button>
 
-                      <button
-                        onClick={() => goToPage(currentPage + 1)}
-                        disabled={currentPage === totalPages}
-                        className={`px-3 py-1 rounded ${currentPage === totalPages
-                          ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                          : 'bg-[#81059e] text-white hover:bg-[#690480]'
-                          }`}
-                      >
-                        &gt;
-                      </button>
-                      <button
-                        onClick={() => goToPage(totalPages)}
-                        disabled={currentPage === totalPages}
-                        className={`px-3 py-1 rounded ${currentPage === totalPages
-                          ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                          : 'bg-[#81059e] text-white hover:bg-[#690480]'
-                          }`}
-                      >
-                        &raquo;
-                      </button>
+                        <span className="px-3 py-1 text-gray-700">
+                          {currentPage} / {Math.ceil(completedPayments.length / itemsPerPage)}
+                        </span>
+
+                        <button
+                          onClick={() => goToPage(currentPage + 1)}
+                          disabled={currentPage === Math.ceil(completedPayments.length / itemsPerPage)}
+                          className={`px-3 py-1 rounded ${currentPage === Math.ceil(completedPayments.length / itemsPerPage)
+                            ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                            : 'bg-[#81059e] text-white hover:bg-[#690480]'
+                            }`}
+                        >
+                          &gt;
+                        </button>
+                        <button
+                          onClick={() => goToPage(Math.ceil(completedPayments.length / itemsPerPage))}
+                          disabled={currentPage === Math.ceil(completedPayments.length / itemsPerPage)}
+                          className={`px-3 py-1 rounded ${currentPage === Math.ceil(completedPayments.length / itemsPerPage)
+                            ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                            : 'bg-[#81059e] text-white hover:bg-[#690480]'
+                            }`}
+                        >
+                          &raquo;
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                </>
+                  </>
+                )
+              ) : (
+                // Tabela de recebimentos pendentes
+                filteredContas.length === 0 ? (
+                  <p>Nenhuma conta pendente encontrada.</p>
+                ) : (
+                  <>
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full table-auto select-none">
+                        <thead>
+                          <tr className="bg-[#81059e] text-white">
+                            <th className="px-3 py-2 w-12">
+                              <span className="sr-only">Selecionar</span>
+                            </th>
+                            <th className="px-3 py-2 cursor-pointer whitespace-nowrap" onClick={() => handleSort('numeroDocumento')}>
+                              Código {renderSortArrow('numeroDocumento')}
+                            </th>
+                            <th className="px-3 py-2 cursor-pointer" onClick={() => handleSort('cliente')}>
+                              Cliente {renderSortArrow('cliente')}
+                            </th>
+                            <th className="px-3 py-2 cursor-pointer" onClick={() => handleSort('valor')}>
+                              Valor {renderSortArrow('valor')}
+                            </th>
+                            <th className="px-3 py-2 cursor-pointer whitespace-nowrap" onClick={() => handleSort('dataRegistro')}>
+                              Registro {renderSortArrow('dataRegistro')}
+                            </th>
+                            <th className="px-3 py-2 cursor-pointer whitespace-nowrap" onClick={() => handleSort('dataCobranca')}>
+                              Cobrança {renderSortArrow('dataCobranca')}
+                            </th>
+                            <th className="px-3 py-2 cursor-pointer whitespace-nowrap" onClick={() => handleSort('valorPago')}>
+                              Total Pago {renderSortArrow('valorPago')}
+                            </th>
+                            <th className="px-3 py-2 cursor-pointer" onClick={() => handleSort('juros')}>
+                              Juros {renderSortArrow('juros')}
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {currentContas.map((conta) => (
+                            <tr
+                              key={conta.id}
+                              className="text-black text-left hover:bg-gray-100 cursor-pointer"
+                            >
+                              <td className="border px-2 py-2 text-center">
+                                <input
+                                  type="checkbox"
+                                  checked={selectedForDeletion.includes(conta.id)}
+                                  onChange={(e) => toggleDeletion(e, conta.id)}
+                                  className="h-4 w-4 cursor-pointer"
+                                  onClick={(e) => e.stopPropagation()}
+                                />
+                              </td>
+                              <td className="border px-3 py-2 whitespace-nowrap" onClick={() => openModal(conta)}>
+                                {conta.numeroDocumento || 'N/A'}
+                              </td>
+                              <td className="border px-4 py-2 max-w-[300px] truncate" onClick={() => openModal(conta)}>
+                                {conta.cliente || 'N/A'}
+                              </td>
+                              <td className="border px-3 py-2 whitespace-nowrap" onClick={() => openModal(conta)}>
+                                R$ {parseFloat(conta.valor || 0).toFixed(2)}
+                              </td>
+                              <td className="border px-3 py-2 whitespace-nowrap" onClick={() => openModal(conta)}>
+                                {formatFirestoreDate(conta.dataRegistro)}
+                              </td>
+                              <td className={`border px-3 py-2 whitespace-nowrap ${getStatusColor(conta.dataCobranca)}`} onClick={() => openModal(conta)}>
+                                {formatFirestoreDate(conta.dataCobranca)}
+                              </td>
+                              <td className="border px-3 py-2 whitespace-nowrap" onClick={() => openModal(conta)}>
+                                R$ {parseFloat(conta.valorPago || 0).toFixed(2)}
+                              </td>
+                              <td className="border px-3 py-2 whitespace-nowrap" onClick={() => openModal(conta)}>
+                                R$ {parseFloat(conta.juros || 0).toFixed(2)}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Paginação para contas pendentes */}
+                    <div className="flex items-center justify-between mt-4">
+                      <div className="text-sm text-gray-700">
+                        Mostrando <span className="font-medium">{indexOfFirstItem + 1}</span> a{' '}
+                        <span className="font-medium">
+                          {Math.min(indexOfLastItem, filteredContas.length)}
+                        </span>{' '}
+                        de <span className="font-medium">{filteredContas.length}</span> registros
+                      </div>
+                      <div className="flex space-x-1">
+                        <button
+                          onClick={() => goToPage(1)}
+                          disabled={currentPage === 1}
+                          className={`px-3 py-1 rounded ${currentPage === 1
+                            ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                            : 'bg-[#81059e] text-white hover:bg-[#690480]'
+                            }`}
+                        >
+                          &laquo;
+                        </button>
+                        <button
+                          onClick={() => goToPage(currentPage - 1)}
+                          disabled={currentPage === 1}
+                          className={`px-3 py-1 rounded ${currentPage === 1
+                            ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                            : 'bg-[#81059e] text-white hover:bg-[#690480]'
+                            }`}
+                        >
+                          &lt;
+                        </button>
+
+                        <span className="px-3 py-1 text-gray-700">
+                          {currentPage} / {totalPages}
+                        </span>
+
+                        <button
+                          onClick={() => goToPage(currentPage + 1)}
+                          disabled={currentPage === totalPages}
+                          className={`px-3 py-1 rounded ${currentPage === totalPages
+                            ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                            : 'bg-[#81059e] text-white hover:bg-[#690480]'
+                            }`}
+                        >
+                          &gt;
+                        </button>
+                        <button
+                          onClick={() => goToPage(totalPages)}
+                          disabled={currentPage === totalPages}
+                          className={`px-3 py-1 rounded ${currentPage === totalPages
+                            ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                            : 'bg-[#81059e] text-white hover:bg-[#690480]'
+                            }`}
+                        >
+                          &raquo;
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )
               )}
             </div>
           )}
@@ -1036,12 +1270,13 @@ export default function ListaRecebimentos() {
             <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
               <div className="bg-white rounded-lg shadow-lg w-full max-w-md flex flex-col h-3/5 overflow-hidden">
                 <div className="bg-[#81059e] text-white p-4 flex justify-between items-center">
-                  <h3 className="text-xl font-bold">Detalhamento de Conta a Receber</h3>
-
+                  <h3 className="text-xl font-bold">
+                    {viewCompletedPayments ? "Detalhamento de Recebimento Concluído" : "Detalhamento de Conta a Receber"}
+                  </h3>
                   <FontAwesomeIcon
                     icon={faX}
                     className="h-5 w-5 text-white cursor-pointer hover:text-gray-200"
-                    onClick={() => setIsEditModalOpen(false)}
+                    onClick={closeModal}
                   />
                 </div>
                 <div className="space-y-3 p-4 overflow-y-auto flex-grow">
@@ -1062,55 +1297,90 @@ export default function ListaRecebimentos() {
                     <strong>Data de Cobrança:</strong>{' '}
                     {formatFirestoreDate(selectedConta.dataCobranca)}
                   </p>
-                  <p>
-                    <strong>Data de Pagamento:</strong>{' '}
-                    {formatFirestoreDate(selectedConta.dataPagamento) || 'Pendente'}
-                  </p>
+
+                  {viewCompletedPayments || selectedConta.dataPagamento ? (
+                    // Campos específicos para recebimentos concluídos
+                    <>
+                      <p>
+                        <strong>Data de Pagamento:</strong>{' '}
+                        {formatFirestoreDate(selectedConta.dataPagamento)}
+                      </p>
+                      <p>
+                        <strong>Forma de Pagamento:</strong>{' '}
+                        {selectedConta.formaPagamento || 'N/A'}
+                      </p>
+                      <p className="bg-green-100 text-green-800 p-2 rounded">
+                        <strong>Status:</strong> Concluído
+                      </p>
+                    </>
+                  ) : (
+                    // Campos apenas para recebimentos pendentes
+                    <p>
+                      <strong>Data de Pagamento:</strong> Pendente
+                    </p>
+                  )}
+
                   <p>
                     <strong>Loja:</strong> {selectedConta.loja || 'Não especificada'}
                   </p>
-                  <p>
-                    <strong>Origem:</strong> {selectedConta.origem || 'N/A'}
-                  </p>
-                  <p>
-                    <strong>Parcela:</strong> {selectedConta.parcela || 'N/A'}
-                  </p>
-                  <p>
-                    <strong>Total Pago:</strong> R$ {parseFloat(selectedConta.valorPago || 0).toFixed(2)}
-                  </p>
-                  <p>
-                    <strong>Juros:</strong> R$ {parseFloat(selectedConta.juros || 0).toFixed(2)}
-                  </p>
+
+                  {selectedConta.origem && (
+                    <p>
+                      <strong>Origem:</strong> {selectedConta.origem}
+                    </p>
+                  )}
+
+                  {selectedConta.parcela && (
+                    <p>
+                      <strong>Parcela:</strong> {selectedConta.parcela}
+                    </p>
+                  )}
+
+                  {(selectedConta.valorPago || selectedConta.valorPago === 0) && (
+                    <p>
+                      <strong>Total Pago:</strong> R$ {parseFloat(selectedConta.valorPago || 0).toFixed(2)}
+                    </p>
+                  )}
+
+                  {(selectedConta.juros || selectedConta.juros === 0) && (
+                    <p>
+                      <strong>Juros:</strong> R$ {parseFloat(selectedConta.juros || 0).toFixed(2)}
+                    </p>
+                  )}
+
                   {selectedConta.observacoes && (
                     <p>
                       <strong>Observações:</strong> {selectedConta.observacoes}
                     </p>
                   )}
 
-                  {/* Seção para registrar o recebimento */}
-                  <div className="mt-6">
-                    <label className="block text-black font-bold mb-2">
-                      Forma de Recebimento
-                    </label>
-                    <select
-                      value={formaRecebimento}
-                      onChange={(e) => setFormaRecebimento(e.target.value)}
-                      className="w-full p-2 border border-gray-300 rounded-md text-black"
-                    >
-                      <option value="">Selecione</option>
-                      <option value="Dinheiro">Dinheiro</option>
-                      <option value="Cartão de Crédito">Cartão de Crédito</option>
-                      <option value="Cartão de Débito">Cartão de Débito</option>
-                      <option value="Pix">Pix</option>
-                      <option value="Cheque">Cheque</option>
-                      <option value="Boleto">Boleto</option>
-                    </select>
-                  </div>
+                  {/* Seção para registrar o recebimento - apenas para pendentes */}
+                  {!viewCompletedPayments && !selectedConta.dataPagamento && (
+                    <div className="mt-6">
+                      <label className="block text-black font-bold mb-2">
+                        Forma de Recebimento
+                      </label>
+                      <select
+                        value={formaRecebimento}
+                        onChange={(e) => setFormaRecebimento(e.target.value)}
+                        className="w-full p-2 border border-gray-300 rounded-md text-black"
+                      >
+                        <option value="">Selecione</option>
+                        <option value="Dinheiro">Dinheiro</option>
+                        <option value="Cartão de Crédito">Cartão de Crédito</option>
+                        <option value="Cartão de Débito">Cartão de Débito</option>
+                        <option value="Pix">Pix</option>
+                        <option value="Cheque">Cheque</option>
+                        <option value="Boleto">Boleto</option>
+                      </select>
+                    </div>
+                  )}
 
                   {settleMessage && (
                     <p className="text-green-600 mt-4">{settleMessage}</p>
                   )}
 
+                  {/* Mostrar botões diferentes para pendentes e concluídos */}
                   <div className="flex justify-around mt-6">
                     <button
                       onClick={generatePDF}
@@ -1132,26 +1402,21 @@ export default function ListaRecebimentos() {
                     </button>
                   </div>
 
-                  <div className="flex justify-center mt-4">
-                    <button
-                      onClick={handleSettlePayment}
-                      className="bg-green-600 text-white px-4 py-2 rounded-md"
-                    >
-                      <FontAwesomeIcon
-                        icon={faCheck}
-                        className="h-5 w-5 text-white cursor-pointer hover:text-gray-200 pr-2  justify-center"
-                      />
-
-                      Registrar Recebimento
-                    </button>
-                  </div>
-
-                  <button
-                    onClick={closeModal}
-                    className="absolute top-2 right-2 text-gray-600 hover:text-gray-800"
-                  >
-                    &times;
-                  </button>
+                  {/* Botão de registrar recebimento - apenas para pendentes */}
+                  {!viewCompletedPayments && !selectedConta.dataPagamento && (
+                    <div className="flex justify-center mt-4">
+                      <button
+                        onClick={handleSettlePayment}
+                        className="bg-green-600 text-white px-4 py-2 rounded-md"
+                      >
+                        <FontAwesomeIcon
+                          icon={faCheck}
+                          className="h-5 w-5 text-white cursor-pointer hover:text-gray-200 pr-2 justify-center"
+                        />
+                        Registrar Recebimento
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -1160,78 +1425,80 @@ export default function ListaRecebimentos() {
       </div>
 
       {/* Modal de Edição de contas */}
-      {isEditModalOpen && editingConta && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-          <div className="bg-white rounded-lg shadow-lg w-full max-w-md flex flex-col h-3/5 overflow-hidden">
-            <div className="bg-[#81059e] text-white p-4 flex justify-between items-center">
-              <h3 className="text-xl font-bold">Editar Conta a Pagar</h3>
+      {
+        isEditModalOpen && editingConta && (
+          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+            <div className="bg-white rounded-lg shadow-lg w-full max-w-md flex flex-col h-3/5 overflow-hidden">
+              <div className="bg-[#81059e] text-white p-4 flex justify-between items-center">
+                <h3 className="text-xl font-bold">Editar Conta a Pagar</h3>
 
-              <FontAwesomeIcon
-                icon={faX}
-                className="h-5 w-5 text-white cursor-pointer hover:text-gray-200"
-                onClick={() => setIsEditModalOpen(false)}
-              />
-            </div>
-
-            <div className="space-y-3 p-4 overflow-y-auto flex-grow">
-              <div>
-                <label className="text-[#81059e] font-medium">Código:</label>
-                <input
-                  type="text"
-                  value={editingConta.documento || ''}
-                  onChange={(e) => setEditingConta({ ...editingConta, documento: e.target.value })}
-                  className="w-full p-2 border-2 border-[#81059e] rounded-sm"
-                />
-              </div>
-              <div>
-                <label className="text-[#81059e] font-medium">Credor:</label>
-                <input
-                  type="text"
-                  value={editingConta.credor || ''}
-                  onChange={(e) => setEditingConta({ ...editingConta, credor: e.target.value })}
-                  className="w-full p-2 border-2 border-[#81059e] rounded-sm"
+                <FontAwesomeIcon
+                  icon={faX}
+                  className="h-5 w-5 text-white cursor-pointer hover:text-gray-200"
+                  onClick={() => setIsEditModalOpen(false)}
                 />
               </div>
 
-              <div>
-                <label className="text-[#81059e] font-medium">Valor:</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={editingConta.valor || 0}
-                  onChange={(e) => setEditingConta({ ...editingConta, valor: parseFloat(e.target.value) || 0 })}
-                  className="w-full p-2 border-2 border-[#81059e] rounded-sm"
-                />
+              <div className="space-y-3 p-4 overflow-y-auto flex-grow">
+                <div>
+                  <label className="text-[#81059e] font-medium">Código:</label>
+                  <input
+                    type="text"
+                    value={editingConta.documento || ''}
+                    onChange={(e) => setEditingConta({ ...editingConta, documento: e.target.value })}
+                    className="w-full p-2 border-2 border-[#81059e] rounded-sm"
+                  />
+                </div>
+                <div>
+                  <label className="text-[#81059e] font-medium">Credor:</label>
+                  <input
+                    type="text"
+                    value={editingConta.credor || ''}
+                    onChange={(e) => setEditingConta({ ...editingConta, credor: e.target.value })}
+                    className="w-full p-2 border-2 border-[#81059e] rounded-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[#81059e] font-medium">Valor:</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={editingConta.valor || 0}
+                    onChange={(e) => setEditingConta({ ...editingConta, valor: parseFloat(e.target.value) || 0 })}
+                    className="w-full p-2 border-2 border-[#81059e] rounded-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[#81059e] font-medium">Categoria:</label>
+                  <input
+                    type="text"
+                    value={editingConta.categoriaDespesa || ''}
+                    onChange={(e) => setEditingConta({ ...editingConta, categoriaDespesa: e.target.value })}
+                    className="w-full p-2 border-2 border-[#81059e] rounded-sm"
+                  />
+                </div>
               </div>
 
-              <div>
-                <label className="text-[#81059e] font-medium">Categoria:</label>
-                <input
-                  type="text"
-                  value={editingConta.categoriaDespesa || ''}
-                  onChange={(e) => setEditingConta({ ...editingConta, categoriaDespesa: e.target.value })}
-                  className="w-full p-2 border-2 border-[#81059e] rounded-sm"
-                />
+              <div className="p-4 bg-gray-50 border-t flex justify-end space-x-2">
+                <button
+                  onClick={() => setIsEditModalOpen(false)}
+                  className="text-[#81059e] px-4 py-2 rounded-md"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleSaveEdit}
+                  className="bg-[#81059e] text-white px-4 py-2 rounded-sm"
+                >
+                  Salvar
+                </button>
               </div>
-            </div>
-
-            <div className="p-4 bg-gray-50 border-t flex justify-end space-x-2">
-              <button
-                onClick={() => setIsEditModalOpen(false)}
-                className="text-[#81059e] px-4 py-2 rounded-md"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleSaveEdit}
-                className="bg-[#81059e] text-white px-4 py-2 rounded-sm"
-              >
-                Salvar
-              </button>
             </div>
           </div>
-        </div>
-      )}
-    </Layout>
+        )
+      }
+    </Layout >
   );
 }
