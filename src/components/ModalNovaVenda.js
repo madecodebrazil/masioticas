@@ -112,21 +112,31 @@ const ModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
         }
     };
 
-    // Carregar produtos do estoque
-    const fetchProducts = async () => {
+      // Carregar produtos do estoque
+      const fetchProducts = async () => {
         try {
             setLoading(true);
-            const productsRef = collection(firestore, 'lojas/estoque/items/items/');
-            const querySnapshot = await getDocs(productsRef);
-
-            const productsList = querySnapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-            })).filter(product =>
-                // Filtrar apenas produtos disponíveis para a loja selecionada
-                product.por_loja &&
-                product.por_loja[selectedLoja] &&
-                product.por_loja[selectedLoja].quantidade > 0
+            
+            // Buscar produtos de cada categoria (armações, lentes, solares)
+            const categorias = ['armacoes', 'lentes', 'solares'];
+            let allProducts = [];
+            
+            for (const categoria of categorias) {
+                const productsRef = collection(firestore, `lojas/${selectedLoja}/${categoria}`);
+                const querySnapshot = await getDocs(productsRef);
+                
+                const categoryProducts = querySnapshot.docs.map(doc => ({
+                    id: doc.id,
+                    categoria: categoria,
+                    ...doc.data()
+                }));
+                
+                allProducts = [...allProducts, ...categoryProducts];
+            }
+            
+            // Filtrar produtos com quantidade disponível
+            const productsList = allProducts.filter(product => 
+                product.quantidade > 0
             );
 
             setProducts(productsList);

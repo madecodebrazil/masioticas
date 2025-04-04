@@ -69,7 +69,7 @@ const Sidebar = ({ showSidebar, hideSidebar }) => {
     { icon: Wallet, label: "Financeiro", route: "/finance" },
     { icon: ShoppingCart, label: "Vendas", route: "/sales" },
     { icon: Package, label: "Estoque", route: "/stock" },
-    { icon: Wrench, label: "Serviços", route: "/products_and_services" },
+    { icon: Wrench, label: "Produtos", route: "/products_and_services" },
     { icon: FileText, label: "Cadastro", route: "/register" },
     { icon: Activity, label: "Consultas", route: "/commercial" },
     { icon: Users, label: "Clientes", route: "/register/consumers" },

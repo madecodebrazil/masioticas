@@ -298,30 +298,24 @@ export function FormularioLoja() {
     }
   }, [router.state]);
 
-  // Função para pegar a data e hora atuais
   useEffect(() => {
     const now = new Date();
 
-    // Definindo as opções de formatação para o fuso horário do Brasil
-    const options = {
-      timeZone: "America/Sao_Paulo",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    };
-
-    // Formatando a data e hora com o fuso de Brasília (BR)
-    const formattedDate = now.toLocaleDateString("pt-BR", options);
-    const formattedTime = now.toTimeString().split(":").slice(0, 2).join(":");
-
-    // Transformando a data no formato compatível com o input date (YYYY-MM-DD)
-    const [day, month, year] = formattedDate.split("/");
+    // Formatando a data diretamente no formato YYYY-MM-DD para o input type="date"
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0'); // Mês começa do 0 no JS
+    const day = String(now.getDate()).padStart(2, '0');
     const date = `${year}-${month}-${day}`;
+
+    // Formatando a hora
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const time = `${hours}:${minutes}`;
 
     setFormData((prevData) => ({
       ...prevData,
       data: date,
-      hora: formattedTime,
+      hora: time,
     }));
   }, []);
 
@@ -729,20 +723,20 @@ export function FormularioLoja() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
-  
+
     if (selectedLojas.length === 0) {
       alert("Selecione ao menos uma loja antes de enviar o formulário");
       setIsLoading(false);
       return;
     }
-  
+
     // Verificar se o título do produto foi preenchido
     if (!formData.titulo || formData.titulo.trim() === "") {
       alert("O título do produto é obrigatório");
       setIsLoading(false);
       return;
     }
-  
+
     // Garantir que o SKU está presente antes de prosseguir
     let updatedFormData = { ...formData };
     if (!formData.sku) {
@@ -752,14 +746,14 @@ export function FormularioLoja() {
         sku: generatedSKU,
       };
     }
-  
+
     try {
       // Se houver uma imagem, faz o upload e obtém a URL
       let imageUrl = "";
       if (updatedFormData.imagem) {
         imageUrl = await handleImageUpload(updatedFormData.imagem);
       }
-  
+
       // Cria o objeto com os dados do formulário e a URL da imagem
       const productData = {
         ...updatedFormData,
@@ -771,32 +765,32 @@ export function FormularioLoja() {
         updatedAt: new Date(),
         createdBy: userData?.nome || 'Sistema'
       };
-  
+
       // Para cada loja selecionada, salvar o produto na estrutura correta
       for (const loja of selectedLojas) {
         // Converter o nome da loja para o ID usado no Firebase
         const lojaId = loja.includes("Loja 1") ? "loja1" :
           loja.includes("Loja 2") ? "loja2" : loja.toLowerCase().replace(/\s+/g, '');
-  
+
         // Caminho para o documento do produto na estrutura correta do estoque
         const docRef = doc(
           firestore,
           `lojas/estoque/${lojaId}/armacoes`,
           updatedFormData.codigo // Usa o código do produto como ID
         );
-  
+
         await setDoc(docRef, productData);
-  
+
         console.log(`Produto salvo no estoque da ${loja}:`, productData);
       }
-  
+
       // Também salva uma cópia na temp_image para compatibilidade com a página de confirmação
       const tempRef = doc(firestore, "temp_image", updatedFormData.codigo);
       await setDoc(tempRef, {
         ...productData,
         lojas: selectedLojas // Incluir lojas na cópia temporária
       });
-  
+
       router.push(
         `/products_and_services/frames/confirm?formData=${encodeURIComponent(
           JSON.stringify({ ...productData, lojas: selectedLojas })
@@ -895,16 +889,14 @@ export function FormularioLoja() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
                 {/* Data */}
-                <div>
-                  <label className="text-[#81059e] font-medium">Data</label>
-                  <input
-                    type="date"
-                    name="data"
-                    value={formData.data}
-                    onChange={handleChange}
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
-                  />
-                </div>
+                <input
+                  type="date"
+                  name="data"
+                  value={formData.data}
+                  readOnly
+                  disabled // Adicionando disabled para garantir
+                  className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black bg-gray-100"
+                />
 
                 {/* Subcategoria - SUBSTITUI O CAMPO CATEGORIA */}
                 <div>

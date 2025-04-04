@@ -75,7 +75,6 @@ export default function FinancesPage() {
         <Layout>
             <div>
                 <div>
-                    <Sidebar />
                     <main>
                         <div className="w-full">
                             <div className="grid items-center grid-cols-2 gap-8 sm:grid-cols-3 md:grid-cols-2">
