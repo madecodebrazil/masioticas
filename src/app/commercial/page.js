@@ -16,7 +16,8 @@ export default function ProductsPage() {
     return (
         <Layout>
             <div className="w-full">
-                <div className="grid items-center grid-cols-1 gap-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-2">
+                <div className="grid items-center grid-cols-2 gap-8 sm:grid-cols-3 md:grid-cols-2">
+                <h1 className='text-4xl ml-0 md:ml-4 font-bold text-[#9a5fc7] text-center md:text-left'>Comercial</h1>
                     {productsItems.map((item, index) => (
                         <Link key={index} href={item.route}>
                             <motion.div

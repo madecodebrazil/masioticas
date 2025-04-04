@@ -1,8 +1,9 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { getFirestore, collection, getDocs } from "firebase/firestore";
-import Layout from "@/components/Layout"; // Seu layout instanciado
-import { app } from "@/lib/firebaseConfig"; // Certifique-se de que o Firebase está corretamente inicializado
+import { collection, getDocs, query, where } from "firebase/firestore";
+import { firestore } from "@/lib/firebaseConfig";
+import Layout from "@/components/Layout";
+import { useAuth } from "@/hooks/useAuth";
 import {
   format,
   addMonths,
@@ -14,188 +15,303 @@ import {
   isSameDay,
   isSameMonth,
   eachDayOfInterval,
-} from "date-fns"; // Biblioteca de datas
-
-const db = getFirestore(app); // Inicializando Firestore
+  parseISO
+} from "date-fns";
+import { ptBR } from "date-fns/locale";
+import Image from "next/image";
+import { motion } from "framer-motion";
 
 const CalendarConsultation = () => {
-  const [consultations, setConsultations] = useState([]); // Armazenar todas as consultas
-  const [selectedDate, setSelectedDate] = useState(new Date()); // Data selecionada pelo usuário
-  const [selectedDay, setSelectedDay] = useState(null); // Armazenar o dia clicado
-  const [consultationsByDay, setConsultationsByDay] = useState([]); // Consultas para a data selecionada
-  const [isLoading, setIsLoading] = useState(true); // Estado de carregamento
+  const { userData, loading, userPermissions } = useAuth();
+  const [consultations, setConsultations] = useState([]);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [selectedDay, setSelectedDay] = useState(null);
+  const [consultationsByDay, setConsultationsByDay] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [currentLoja, setCurrentLoja] = useState("loja1");
 
-  // Função para buscar todas as consultas no Firestore
-  const fetchConsultations = async () => {
-    setIsLoading(true); // Inicia o estado de carregamento
+  // Função para buscar consultas da loja selecionada
+  const fetchConsultations = async (lojaId) => {
+    setIsLoading(true);
     try {
-      const consultationsCollection = collection(db, "consultations"); // Referência à coleção consultations
-      const querySnapshot = await getDocs(consultationsCollection);
+      // Usar a estrutura correta de lojas do seu sistema
+      const consultationsRef = collection(firestore, `lojas/${lojaId}/consultas`);
+      const querySnapshot = await getDocs(consultationsRef);
 
       const consultationsData = [];
       querySnapshot.forEach((doc) => {
         const data = doc.data();
-        consultationsData.push({ id: doc.id, ...data }); // Atribuir os dados ao array
+        // Garantir que a data seja tratada corretamente
+        const consultationDate = data.data_consulta?.toDate ? 
+          data.data_consulta.toDate() : 
+          (typeof data.data_consulta === 'string' ? parseISO(data.data_consulta) : new Date());
+
+        consultationsData.push({ 
+          id: doc.id, 
+          ...data,
+          dataFormatada: format(consultationDate, 'dd/MM/yyyy'),
+          dataObj: consultationDate
+        });
       });
 
-      setConsultations(consultationsData); // Armazenar todas as consultas
+      setConsultations(consultationsData);
     } catch (error) {
       console.error("Erro ao buscar consultas:", error);
     } finally {
-      setIsLoading(false); // Para o estado de carregamento
+      setIsLoading(false);
     }
   };
 
-  // useEffect para buscar as consultas quando a página carregar
+  // useEffect para buscar as consultas quando a loja mudar
   useEffect(() => {
-    fetchConsultations();
-  }, []);
+    if (!loading && userPermissions) {
+      // Se for admin, pode escolher a loja
+      if (userPermissions.isAdmin) {
+        fetchConsultations(currentLoja);
+      } 
+      // Se não for admin, usa a primeira loja disponível
+      else if (userPermissions.lojas && userPermissions.lojas.length > 0) {
+        const lojaId = userPermissions.lojas[0];
+        setCurrentLoja(lojaId);
+        fetchConsultations(lojaId);
+      }
+    }
+  }, [loading, userPermissions, currentLoja]);
 
-  // Função para retornar as consultas de uma data específica
+  // Função para obter consultas de um dia específico
   const getConsultationsByDay = (date) => {
-    return consultations.filter((consultation) =>
-      isSameDay(new Date(consultation.data.replace(/-/g, "/")), date)
-    );
+    return consultations.filter((consultation) => {
+      const consultationDate = consultation.dataObj;
+      return isSameDay(consultationDate, date);
+    });
   };
 
-  // Função para gerar os dias do mês atual, incluindo os dias antes e depois para completar as semanas
-  const generateCalendarDays = () => {
-    const start = startOfWeek(startOfMonth(selectedDate)); // Início da semana do primeiro dia do mês
-    const end = endOfWeek(endOfMonth(selectedDate)); // Final da semana do último dia do mês
+  // Função para mudar a loja (somente para admins)
+  const handleLojaChange = (lojaId) => {
+    setCurrentLoja(lojaId);
+  };
 
+  // Função para gerar os dias do calendário
+  const generateCalendarDays = () => {
+    const start = startOfWeek(startOfMonth(selectedDate), { weekStartsOn: 0 });
+    const end = endOfWeek(endOfMonth(selectedDate), { weekStartsOn: 0 });
     return eachDayOfInterval({ start, end });
   };
 
   // Função para mudar o mês
   const changeMonth = (direction) => {
     if (direction === "prev") {
-      setSelectedDate(subMonths(selectedDate, 1)); // Mês anterior
+      setSelectedDate(subMonths(selectedDate, 1));
     } else if (direction === "next") {
-      setSelectedDate(addMonths(selectedDate, 1)); // Próximo mês
+      setSelectedDate(addMonths(selectedDate, 1));
     }
-    setSelectedDay(null); // Limpar o dia selecionado quando mudar o mês
-    setConsultationsByDay([]); // Limpar as consultas exibidas
+    setSelectedDay(null);
+    setConsultationsByDay([]);
   };
 
-  // Função para lidar com o clique em um dia do calendário
+  // Função para lidar com o clique em um dia
   const handleDayClick = (day) => {
-    // Define o novo dia selecionado ou desmarca se o mesmo dia for clicado novamente
-    if (isSameDay(day, selectedDay)) {
+    if (selectedDay && isSameDay(day, selectedDay)) {
       setSelectedDay(null);
       setConsultationsByDay([]);
     } else {
       setSelectedDay(day);
-      setSelectedDate(day);
-      const consultationsForDay = getConsultationsByDay(day);
-      setConsultationsByDay(consultationsForDay);
+      const dayConsultations = getConsultationsByDay(day);
+      setConsultationsByDay(dayConsultations);
     }
   };
 
-  // Função para verificar se um dia tem consultas
+  // Verifica se um dia tem consultas
   const hasConsultations = (day) => {
     return getConsultationsByDay(day).length > 0;
   };
 
-  const daysOfWeek = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"]; // Dias da semana
+  // Dias da semana em português
+  const daysOfWeek = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <p>Carregando...</p>
+      </div>
+    );
+  }
 
   return (
     <Layout>
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50">
-        <h2 className="text-2xl font-semibold text-[#81059e] mb-6">
-          CALENDÁRIO DE CONSULTAS
-        </h2>
-
-        {/* Navegação do Mês */}
-        <div className="flex items-center justify-between mb-4">
-          <button
-            onClick={() => changeMonth("prev")}
-            className="px-4 py-2 bg-[#81059e] text-white rounded-lg hover:bg-[#820f76]"
-          >
-            Mês Anterior
-          </button>
-          <h3 className="text-xl font-semibold text-[#81059e] mx-8">
-            {format(selectedDate, "MMMM yyyy")}
-          </h3>
-          <button
-            onClick={() => changeMonth("next")}
-            className="px-4 py-2 bg-[#81059e] text-white rounded-lg hover:bg-[#820f76]"
-          >
-            Próximo Mês
-          </button>
+      <div className="min-h-screen p-4">
+        <div className="mb-6">
+          <h1 className="text-3xl md:text-4xl font-bold text-[#9a5fc7] mb-2">
+            Calendário de Consultas
+          </h1>
+          <p className="text-gray-600">
+            Visualize e gerencie todas as consultas agendadas
+          </p>
         </div>
 
-        {/* Calendário */}
-        <div className="grid grid-cols-7 gap-4 bg-white rounded-lg p-4 shadow-md">
-          {/* Renderizando os dias da semana */}
-          {daysOfWeek.map((day, index) => (
-            <div
-              key={day}
-              className={`text-center font-semibold ${index === 0 ? "text-red-500" : "text-black"
-                }`} // Domingo em vermelho e os outros dias em preto
-            >
-              {day}
+        {/* Seletor de loja (apenas para admins) */}
+        {userPermissions && userPermissions.isAdmin && userPermissions.lojas && userPermissions.lojas.length > 0 && (
+          <div className="mb-6">
+            <h2 className="text-lg font-semibold text-[#9a5fc7] mb-2">Selecione a Loja:</h2>
+            <div className="flex space-x-4">
+              {userPermissions.lojas.map((loja) => (
+                <button
+                  key={loja}
+                  className={`px-4 py-2 rounded-md ${
+                    currentLoja === loja
+                      ? "bg-[#9a5fc7] text-white"
+                      : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                  }`}
+                  onClick={() => handleLojaChange(loja)}
+                >
+                  {loja === "loja1" ? "Loja 1" : "Loja 2"}
+                </button>
+              ))}
             </div>
-          ))}
+          </div>
+        )}
 
-          {/* Renderizando os dias do calendário */}
-          {generateCalendarDays().map((day, index) => (
-            <div
-              key={index}
-              onClick={() => handleDayClick(day)}
-              className={`flex items-center justify-center p-4 rounded-lg cursor-pointer transition-all duration-200 ${isSameDay(day, selectedDay)
-                  ? "bg-yellow-300 text-black border-2 border-yellow-600"
-                  : hasConsultations(day)
-                    ? "bg-gray-100 text-black"
-                    : "bg-gray-100 text-black"
-                } ${isSameMonth(day, selectedDate) ? "" : "text-gray-400"} ${isSameDay(day, selectedDay)
-                  ? "bg-[#81059e] text-white"
-                  : ""
-                } hover:bg-gray-200`}
+        {/* Navegação do mês */}
+        <motion.div 
+          className="bg-white rounded-xl shadow-lg p-6 mb-6"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          <div className="flex items-center justify-between mb-6">
+            <button
+              onClick={() => changeMonth("prev")}
+              className="px-4 py-2 bg-[#9a5fc7] text-white rounded-lg hover:bg-[#8347af] transition-colors"
             >
-              {format(day, "d")}
-            </div>
-          ))}
-        </div>
+              <span className="flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+                Mês Anterior
+              </span>
+            </button>
+            <h3 className="text-xl font-bold text-[#9a5fc7]">
+              {format(selectedDate, "MMMM yyyy", { locale: ptBR }).toUpperCase()}
+            </h3>
+            <button
+              onClick={() => changeMonth("next")}
+              className="px-4 py-2 bg-[#9a5fc7] text-white rounded-lg hover:bg-[#8347af] transition-colors"
+            >
+              <span className="flex items-center">
+                Próximo Mês
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-1" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                </svg>
+              </span>
+            </button>
+          </div>
 
-        {/* Exibição de consultas para o dia selecionado */}
-        <div className="w-full max-w-6xl p-4 md:p-8 bg-white rounded-lg shadow-md mt-8">
-          <h3 className="text-lg md:text-xl font-semibold text-[#81059e] mb-4 text-center md:text-left">
+          {/* Calendário */}
+          <div className="grid grid-cols-7 gap-2">
+            {/* Cabeçalho dos dias da semana */}
+            {daysOfWeek.map((day, index) => (
+              <div
+                key={day}
+                className={`text-center font-semibold py-2 ${
+                  index === 0 ? "text-red-500" : "text-[#9a5fc7]"
+                }`}
+              >
+                {day}
+              </div>
+            ))}
+
+            {/* Dias do calendário */}
+            {generateCalendarDays().map((day, index) => {
+              const hasConsultation = hasConsultations(day);
+              const isToday = isSameDay(day, new Date());
+              const isSelected = selectedDay && isSameDay(day, selectedDay);
+              const isCurrentMonth = isSameMonth(day, selectedDate);
+
+              return (
+                <motion.div
+                  key={index}
+                  onClick={() => handleDayClick(day)}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className={`
+                    flex flex-col items-center justify-center p-2 rounded-lg cursor-pointer
+                    ${!isCurrentMonth ? "text-gray-300" : ""}
+                    ${isToday ? "ring-2 ring-[#9a5fc7]" : ""}
+                    ${isSelected ? "bg-[#9a5fc7] text-white" : hasConsultation ? "bg-purple-100" : "bg-gray-50"}
+                    ${isCurrentMonth && !isSelected ? "hover:bg-purple-50" : ""}
+                    transition-all duration-200
+                  `}
+                >
+                  <span className={`text-lg ${isSelected ? "font-bold" : ""}`}>
+                    {format(day, "d")}
+                  </span>
+                  {hasConsultation && !isSelected && (
+                    <div className="mt-1 w-2 h-2 rounded-full bg-[#9a5fc7]"></div>
+                  )}
+                </motion.div>
+              );
+            })}
+          </div>
+        </motion.div>
+
+        {/* Lista de consultas para o dia selecionado */}
+        <motion.div 
+          className="bg-white rounded-xl shadow-lg p-6"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.1 }}
+        >
+          <h3 className="text-xl font-bold text-[#9a5fc7] mb-4">
             {selectedDay
-              ? `Consultas para o dia ${format(selectedDay, "dd/MM/yyyy")}`
+              ? `Consultas do dia ${format(selectedDay, "dd/MM/yyyy")}`
               : "Selecione um dia para ver as consultas"}
           </h3>
 
-          {consultationsByDay.length > 0 ? (
+          {isLoading ? (
+            <div className="flex justify-center items-center h-40">
+              <p>Carregando consultas...</p>
+            </div>
+          ) : consultationsByDay.length > 0 ? (
             <div className="overflow-x-auto">
-              <table className="min-w-full bg-white border">
-                <thead className="border-b bg-gray-100">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead>
                   <tr>
-                    <th className="text-left px-4 py-2 text-[#81059e]">CPF</th>
-                    <th className="text-left px-4 py-2 text-[#81059e]">Paciente</th>
-                    <th className="text-left px-4 py-2 text-[#81059e]">RG</th>
-                    <th className="text-left px-4 py-2 text-[#81059e]">Logradouro</th>
-                    <th className="text-left px-4 py-2 text-[#81059e]">Bairro</th>
-                    <th className="text-left px-4 py-2 text-[#81059e]">Nº</th>
-                    <th className="text-left px-4 py-2 text-[#81059e]">Ametropia</th>
-                    <th className="text-left px-4 py-2 text-[#81059e]">Data</th>
-                    <th className="text-left px-4 py-2 text-[#81059e]">Hora</th>
-                    <th className="text-left px-4 py-2 text-[#81059e]">Clínica</th>
+                    <th className="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-[#9a5fc7] uppercase tracking-wider">Horário</th>
+                    <th className="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-[#9a5fc7] uppercase tracking-wider">Paciente</th>
+                    <th className="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-[#9a5fc7] uppercase tracking-wider">Contato</th>
+                    <th className="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-[#9a5fc7] uppercase tracking-wider">Procedimento</th>
+                    <th className="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-[#9a5fc7] uppercase tracking-wider">Profissional</th>
+                    <th className="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-[#9a5fc7] uppercase tracking-wider">Status</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="bg-white divide-y divide-gray-200">
                   {consultationsByDay.map((consultation) => (
-                    <tr key={consultation.id}>
-                      <td className="border-t px-4 py-2 text-black">{consultation.cpf}</td>
-                      <td className="border-t px-4 py-2 text-black">{consultation.nomePaciente}</td>
-                      <td className="border-t px-4 py-2 text-black">{consultation.rg}</td>
-                      <td className="border-t px-4 py-2 text-black">{consultation.logradouro}</td>
-                      <td className="border-t px-4 py-2 text-black">{consultation.bairro}</td>
-                      <td className="border-t px-4 py-2 text-black">{consultation.numeroCasa}</td>
-                      <td className="border-t px-4 py-2 text-black">{consultation.ametropia}</td>
-                      <td className="border-t px-4 py-2 text-black">{consultation.data}</td>
-                      <td className="border-t px-4 py-2 text-black">{consultation.hora}</td>
-                      <td className="border-t px-4 py-2 text-black">
-                        {consultation.clinica === "Óticas Popular 2" ? "Óticas Popular 2" : "Óticas Popular 1"}
+                    <tr key={consultation.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                        {consultation.hora || "Não informado"}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">
+                        {consultation.nomePaciente || "Não informado"}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">
+                        {consultation.telefone || "Não informado"}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">
+                        {consultation.tipoProcedimento || "Consulta Padrão"}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">
+                        {consultation.profissional || "Não atribuído"}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm">
+                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                          consultation.status === "concluida" ? "bg-green-100 text-green-800" :
+                          consultation.status === "cancelada" ? "bg-red-100 text-red-800" :
+                          "bg-yellow-100 text-yellow-800"
+                        }`}>
+                          {consultation.status === "concluida" ? "Concluída" :
+                           consultation.status === "cancelada" ? "Cancelada" :
+                           "Agendada"}
+                        </span>
                       </td>
                     </tr>
                   ))}
@@ -203,9 +319,25 @@ const CalendarConsultation = () => {
               </table>
             </div>
           ) : (
-            <p className="text-center text-gray-500">Nenhuma consulta para o dia selecionado.</p>
+            <div className="flex flex-col items-center justify-center py-12 bg-gray-50 rounded-lg">
+              <div className="text-[#9a5fc7] mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <p className="text-gray-600 text-center">
+                {selectedDay 
+                  ? "Não há consultas agendadas para este dia." 
+                  : "Selecione um dia no calendário para visualizar as consultas."}
+              </p>
+              {selectedDay && (
+                <button className="mt-4 px-4 py-2 bg-[#9a5fc7] text-white rounded-lg hover:bg-[#8347af] transition-colors">
+                  Agendar Nova Consulta
+                </button>
+              )}
+            </div>
           )}
-        </div>
+        </motion.div>
       </div>
     </Layout>
   );

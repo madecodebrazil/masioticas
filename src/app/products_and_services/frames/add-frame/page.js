@@ -11,6 +11,8 @@ import { useAuth } from "@/hooks/useAuth";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { FiPlus, FiChevronDown } from 'react-icons/fi';
+import { format } from 'date-fns';
+import ptBR from 'date-fns/locale/pt-BR';
 
 const SelectWithAddOption = ({ label, options, value, onChange, collectionName, addNewOption, canAddNew = true }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -89,6 +91,8 @@ const SelectWithAddOption = ({ label, options, value, onChange, collectionName, 
 };
 
 export function FormularioLoja() {
+  const currentDate = format(new Date(), 'yyyy-MM-dd', { locale: ptBR });
+  const currentTime = format(new Date(), 'HH:mm');
   const searchParams = useSearchParams();
   const { userPermissions, userData } = useAuth();
   const [ncm, setNcm] = useState([]);
@@ -132,8 +136,8 @@ export function FormularioLoja() {
     codigoBarras: "",
     unidade: "",
     codigoFabricante: "",
-    data: "",
-    hora: "",
+    data: currentDate,
+    hora: currentTime,
     fabricante: "",
     fornecedor: "",
     marca: "",
@@ -647,13 +651,12 @@ export function FormularioLoja() {
 
   // Função para limpar o formulário
   const handleClearSelection = () => {
-    const now = new Date();
-    const date = now.toISOString().split("T")[0];
-    const time = now.toTimeString().split(":").slice(0, 2).join(":");
+    const currentDate = format(new Date(), 'yyyy-MM-dd', { locale: ptBR });
+    const currentTime = format(new Date(), 'HH:mm');
 
     setFormData({
-      data: date,
-      hora: time,
+      data: currentDate,
+      hora: currentTime,
       fabricante: "",
       fornecedor: "",
       marca: "",
@@ -710,20 +713,15 @@ export function FormularioLoja() {
     }
   }, [searchParams]);
 
-  // Função para subir a imagem no Firebase Storage
-  const handleImageUpload = async (imageFile) => {
-    const storage = getStorage();
-    const storageRef = ref(storage, `temp_images/${imageFile.name}`);
-    await uploadBytes(storageRef, imageFile);
-    const downloadURL = await getDownloadURL(storageRef);
-    return downloadURL;
-  };
 
   // Função para enviar os dados para o Firestore
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsLoading(true);
+  // Correção para o handleSubmit
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setIsLoading(true);
 
+  try {
+    // Verificar se a loja foi selecionada
     if (selectedLojas.length === 0) {
       alert("Selecione ao menos uma loja antes de enviar o formulário");
       setIsLoading(false);
@@ -747,62 +745,135 @@ export function FormularioLoja() {
       };
     }
 
-    try {
-      // Se houver uma imagem, faz o upload e obtém a URL
-      let imageUrl = "";
-      if (updatedFormData.imagem) {
+    // Verificar se código do produto existe
+    if (!updatedFormData.codigo || updatedFormData.codigo.trim() === "") {
+      alert("O código do produto é obrigatório");
+      setIsLoading(false);
+      return;
+    }
+
+    console.log("Enviando dados:", updatedFormData);
+    console.log("Lojas selecionadas:", selectedLojas);
+
+    // Se houver uma imagem, faz o upload e obtém a URL
+    let imageUrl = "";
+    if (updatedFormData.imagem && updatedFormData.imagem instanceof File) {
+      console.log("Iniciando upload da imagem...");
+      try {
         imageUrl = await handleImageUpload(updatedFormData.imagem);
+        console.log("URL da imagem obtida:", imageUrl);
+      } catch (imageError) {
+        console.error("Erro no upload da imagem:", imageError);
+        alert(`Erro ao fazer upload da imagem: ${imageError.message}`);
+        setIsLoading(false);
+        return;
       }
+    } else {
+      // Se não tem imagem e é obrigatória, mostrar alerta
+      alert("Por favor, selecione uma imagem para o produto");
+      setIsLoading(false);
+      return;
+    }
 
-      // Cria o objeto com os dados do formulário e a URL da imagem
-      const productData = {
-        ...updatedFormData,
-        imagem: imageUrl,
-        categoria: "armacao", // Categoria fixa
-        subcategoria: updatedFormData.subcategoria || "grau", // Subcategoria
-        avaria: updatedFormData.avaria || false,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        createdBy: userData?.nome || 'Sistema'
-      };
+    // Cria o objeto com os dados do formulário e a URL da imagem
+    const productData = {
+      ...updatedFormData,
+      imagem: imageUrl,
+      categoria: "armacao", // Categoria fixa
+      subcategoria: updatedFormData.subcategoria || "grau", // Subcategoria
+      avaria: updatedFormData.avaria || false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      createdBy: userData?.nome || 'Sistema'
+    };
 
-      // Para cada loja selecionada, salvar o produto na estrutura correta
-      for (const loja of selectedLojas) {
-        // Converter o nome da loja para o ID usado no Firebase
-        const lojaId = loja.includes("Loja 1") ? "loja1" :
-          loja.includes("Loja 2") ? "loja2" : loja.toLowerCase().replace(/\s+/g, '');
+    console.log("Produto a ser salvo:", productData);
 
-        // Caminho para o documento do produto na estrutura correta do estoque
-        const docRef = doc(
-          firestore,
-          `lojas/estoque/${lojaId}/armacoes`,
-          updatedFormData.codigo // Usa o código do produto como ID
-        );
+    // Para cada loja selecionada, salvar o produto na estrutura correta
+    for (const loja of selectedLojas) {
+      // Converter o nome da loja para o ID usado no Firebase
+      const lojaId = loja.includes("Loja 1") ? "loja1" :
+        loja.includes("Loja 2") ? "loja2" : loja.toLowerCase().replace(/\s+/g, '');
+      
+      console.log(`Salvando no estoque da ${loja} (ID: ${lojaId})`);
 
+      // Caminho para o documento do produto na estrutura correta do estoque
+      const docRef = doc(
+        firestore,
+        `lojas/${lojaId}/estoque/armacoes/${updatedFormData.codigo}` // Caminho corrigido
+      );
+
+      try {
         await setDoc(docRef, productData);
-
-        console.log(`Produto salvo no estoque da ${loja}:`, productData);
+        console.log(`Produto salvo no estoque da ${loja} com sucesso!`);
+      } catch (saveError) {
+        console.error(`Erro ao salvar na loja ${loja}:`, saveError);
+        alert(`Erro ao salvar o produto na ${loja}: ${saveError.message}`);
+        // Continuar tentando salvar nas outras lojas
       }
+    }
 
-      // Também salva uma cópia na temp_image para compatibilidade com a página de confirmação
+    // Também salva uma cópia na temp_image para compatibilidade com a página de confirmação
+    try {
       const tempRef = doc(firestore, "temp_image", updatedFormData.codigo);
       await setDoc(tempRef, {
         ...productData,
         lojas: selectedLojas // Incluir lojas na cópia temporária
       });
+      console.log("Cópia temporária salva com sucesso!");
 
+      // Redirecionar para a página de confirmação
       router.push(
         `/products_and_services/frames/confirm?formData=${encodeURIComponent(
           JSON.stringify({ ...productData, lojas: selectedLojas })
         )}`
       );
-    } catch (error) {
-      console.error("Erro ao enviar os dados:", error);
-      alert(`Erro ao salvar o produto: ${error.message}`);
-    } finally {
-      setIsLoading(false);
+    } catch (tempError) {
+      console.error("Erro ao salvar cópia temporária:", tempError);
+      alert(`Produto salvo, mas ocorreu um erro ao finalizar: ${tempError.message}`);
+      // Mesmo com erro na cópia temp, o produto foi salvo
+      router.push("/products_and_services/frames");
     }
-  };
+  } catch (error) {
+    console.error("Erro geral ao enviar os dados:", error);
+    alert(`Erro ao salvar o produto: ${error.message}`);
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+// Função corrigida para upload de imagem
+const handleImageUpload = async (imageFile) => {
+  if (!imageFile) {
+    throw new Error("Nenhuma imagem selecionada");
+  }
+  
+  console.log("Iniciando upload da imagem:", imageFile.name);
+  
+  try {
+    // Criar um objeto FormData para enviar a imagem
+    const formData = new FormData();
+    formData.append('file', imageFile);
+    
+    // Enviar a imagem para a API Route
+    const response = await fetch('/api/upload', {
+      method: 'POST',
+      body: formData,
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Erro ao fazer upload da imagem');
+    }
+    
+    const data = await response.json();
+    console.log("Upload concluído, URL:", data.url);
+    return data.url;
+  } catch (error) {
+    console.error("Erro durante o upload:", error);
+    throw error;
+  }
+};
 
   return (
     <div>
@@ -889,14 +960,13 @@ export function FormularioLoja() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
                 {/* Data */}
-                <input
-                  type="date"
-                  name="data"
-                  value={formData.data}
-                  readOnly
-                  disabled // Adicionando disabled para garantir
-                  className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black bg-gray-100"
-                />
+                <div>
+                  <label className="text-[#81059e] font-medium">Data</label>
+                  <div className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black bg-gray-100">
+                    {format(new Date(), 'dd/MM/yyyy', { locale: ptBR })}
+                  </div>
+                  <input type="hidden" name="data" value={formData.data} />
+                </div>
 
                 {/* Subcategoria - SUBSTITUI O CAMPO CATEGORIA */}
                 <div>
@@ -1402,8 +1472,6 @@ export function FormularioLoja() {
                 name="imagem"
                 accept="image/*"
                 onChange={(e) => setFormData({ ...formData, imagem: e.target.files[0] })}
-                className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black bg-gray-100"
-                required
               />
             </div>
 
@@ -1412,7 +1480,7 @@ export function FormularioLoja() {
               <button
                 type="submit"
                 className="bg-[#81059e] p-3 px-6 rounded-sm text-white flex items-center gap-2"
-                disabled={isLoading || !formData.imagem}
+                disabled={isLoading}
               >
                 {isLoading ? 'PROCESSANDO...' : 'CONFIRMAR'}
               </button>

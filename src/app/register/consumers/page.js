@@ -32,25 +32,8 @@ export default function ClientsPage() {
 
     return (
         <Layout>
-            {/* Seletor de loja para admins */}
-            {userPermissions && (userPermissions.isAdmin || userPermissions.acesso_total) && userPermissions.lojas.length > 1 && (
-                <div className="mb-6 p-3 bg-purple-100 rounded-lg shadow">
-                    <h3 className="text-purple-700 font-medium mb-2">Selecionar Loja:</h3>
-                    <div className="flex flex-wrap gap-2">
-                        {userPermissions.lojas.map((loja) => (
-                            <button
-                                key={loja}
-                                className="px-4 py-2 rounded-md transition-colors bg-purple-600 text-white hover:bg-purple-700"
-                            >
-                                {loja.charAt(0).toUpperCase() + loja.slice(1)}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            )}
-
             <div className="w-full">
-                <div className="grid items-center grid-cols-1 gap-8 sm:grid-cols-3 md:grid-cols-1 lg:grid-cols-5 xl:grid-cols-2 mb-20 md:mb-0">
+                <div className="">
                     <h1 className='text-4xl ml-0 md:ml-4 font-bold text-[#9a5fc7] text-center md:text-left'>Clientes</h1>
                     {clientItems.map((item, index) => (
                         <Link key={index} href={item.route}>

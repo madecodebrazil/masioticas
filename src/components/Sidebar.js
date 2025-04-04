@@ -71,7 +71,7 @@ const Sidebar = ({ showSidebar, hideSidebar }) => {
     { icon: Package, label: "Estoque", route: "/stock" },
     { icon: Wrench, label: "Produtos", route: "/products_and_services" },
     { icon: FileText, label: "Cadastro", route: "/register" },
-    { icon: Activity, label: "Consultas", route: "/commercial" },
+    { icon: Activity, label: "Consultas", route: "/consultation" },
     { icon: Users, label: "Clientes", route: "/register/consumers" },
     { icon: Briefcase, label: "Comercial", route: "/commercial" },
     { icon: CreditCard, label: "Cobrança", route: "/billing" }

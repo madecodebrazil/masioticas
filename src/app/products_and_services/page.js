@@ -31,32 +31,32 @@ export default function ProductsPage() {
                             return snapshot.size;
                         })
                     );
-                    
+
                     const lentesCounts = await Promise.all(
                         userPermissions.lojas.map(async (loja) => {
                             const snapshot = await getDocs(collection(firestore, `${loja}_lentes`));
                             return snapshot.size;
                         })
                     );
-                    
+
                     const solaresCounts = await Promise.all(
                         userPermissions.lojas.map(async (loja) => {
                             const snapshot = await getDocs(collection(firestore, `${loja}_solares`));
                             return snapshot.size;
                         })
                     );
-                    
+
                     setTotalArmacoes(armacoesCounts.reduce((sum, count) => sum + count, 0));
                     setTotalLentes(lentesCounts.reduce((sum, count) => sum + count, 0));
                     setTotalOculosDeSol(solaresCounts.reduce((sum, count) => sum + count, 0));
                 } else {
                     // Para usuários normais, buscar apenas da loja especificada
                     const loja = userPermissions.lojas[0]; // Pega a primeira loja do usuário
-                    
+
                     const armacoesSnapshot = await getDocs(collection(firestore, `${loja}_armacoes`));
                     const lentesSnapshot = await getDocs(collection(firestore, `${loja}_lentes`));
                     const solaresSnapshot = await getDocs(collection(firestore, `${loja}_solares`));
-                    
+
                     setTotalArmacoes(armacoesSnapshot.size);
                     setTotalLentes(lentesSnapshot.size);
                     setTotalOculosDeSol(solaresSnapshot.size);
@@ -121,31 +121,9 @@ export default function ProductsPage() {
 
     return (
         <Layout>
-            {/* Seletor de loja para admins */}
-            {userPermissions && (userPermissions.isAdmin || userPermissions.acesso_total) && (
-                <div className="mb-6 p-3 bg-purple-100 rounded-lg shadow">
-                    <h3 className="text-purple-700 font-medium mb-2">Selecionar Loja:</h3>
-                    <div className="flex flex-wrap gap-2">
-                        {userPermissions.lojas.map((loja) => (
-                            <button
-                                key={loja}
-                                onClick={() => alternarLoja(loja)}
-                                className={`px-4 py-2 rounded-md transition-colors ${
-                                    lojaAtual === loja
-                                        ? 'bg-purple-600 text-white'
-                                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                                }`}
-                            >
-                                {loja.charAt(0).toUpperCase() + loja.slice(1)}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            )}
-
             <div className="w-full">
-                {/* Cards de Produtos com imagem de fundo opaca e animações */}
-                <div className="grid items-center grid-cols-1 gap-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-2"><h1 className='text-4xl ml-0 md:ml-4 font-bold text-[#9a5fc7] text-center md:text-left'>Produtos</h1>
+                <div className="grid items-center grid-cols-2 gap-8 sm:grid-cols-3 md:grid-cols-2">
+                    <h1 className='text-4xl ml-0 md:ml-4 font-bold text-[#9a5fc7] text-center md:text-left'>Produtos</h1>
                     {productsItems.map((item, index) => (
                         <Link key={index} href={item.route}>
                             <motion.div

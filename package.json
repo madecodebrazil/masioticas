@@ -25,6 +25,7 @@
     "firebase": "^10.14.1",
     "font-awesome": "^4.7.0",
     "fontawesome": "^5.6.3",
+    "formidable": "^3.5.2",
     "framer-motion": "^11.5.4",
     "jspdf": "^2.5.2",
     "jspdf-autotable": "^3.8.3",
