@@ -63,7 +63,10 @@ export default function GerenciamentoEstoque() {
         // Para cada loja e categoria, buscar os produtos
         for (const loja of lojas) {
           for (const categoria of categoriasEstoque) {
-            const produtosRef = collection(firestore, `lojas/${loja}/estoque/${categoria}`);
+        
+            // Corrija este caminho para seguir a estrutura do banco
+            const produtosRef = collection(firestore, `estoque/${loja}/${categoria}`);
+
             const produtosSnapshot = await getDocs(produtosRef);
 
             produtosSnapshot.docs.forEach((docProduto) => {
@@ -141,8 +144,8 @@ export default function GerenciamentoEstoque() {
   // Renderizar seta de ordenação
   const renderSortArrow = (field) => {
     if (sortField !== field) return null;
-    return sortDirection === 'asc' ? 
-      <FontAwesomeIcon icon={faArrowUp} className="ml-1 text-xs" /> : 
+    return sortDirection === 'asc' ?
+      <FontAwesomeIcon icon={faArrowUp} className="ml-1 text-xs" /> :
       <FontAwesomeIcon icon={faArrowDown} className="ml-1 text-xs" />;
   };
 
@@ -206,7 +209,8 @@ export default function GerenciamentoEstoque() {
       const produto = produtos.find(p => p.id === editingId);
       if (!produto) return;
 
-      const produtoRef = doc(firestore, `lojas/${produto.loja}/estoque/${produto.categoria}`, produto.id);
+      // Corrija o caminho
+      const produtoRef = doc(firestore, `estoque/${produto.loja}/items/${produto.categoria}`, produto.id);
       await updateDoc(produtoRef, { [editingField]: Number(editingValue) });
 
       // Atualizar o estado local
@@ -219,7 +223,7 @@ export default function GerenciamentoEstoque() {
 
       setProdutos(updatedProdutos);
       setFilteredProdutos(sortProdutos(updatedProdutos, sortField, sortDirection));
-      
+
       // Limpar estados de edição
       setEditingId(null);
       setEditingField(null);
@@ -258,30 +262,31 @@ export default function GerenciamentoEstoque() {
 
     try {
       // Verificar se o produto existe na loja de destino
-      const produtoOrigemRef = doc(firestore, `lojas/${selectedProduto.loja}/estoque/${selectedProduto.categoria}`, selectedProduto.id);
-      const produtoDestinoRef = doc(firestore, `lojas/${transferDestino}/estoque/${selectedProduto.categoria}`, selectedProduto.id);
-      
+      const produtoOrigemRef = doc(firestore, `estoque/${selectedProduto.loja}/items/${selectedProduto.categoria}`, selectedProduto.id);
+
+      const produtoDestinoRef = doc(firestore, `estoque/${transferDestino}/items/${selectedProduto.categoria}`, selectedProduto.id);
+
       const produtoOrigemSnap = await getDoc(produtoOrigemRef);
       const produtoDestinoSnap = await getDoc(produtoDestinoRef);
-      
+
       if (!produtoOrigemSnap.exists()) {
         alert('Produto não encontrado na loja de origem.');
         return;
       }
-      
+
       const produtoOrigemData = produtoOrigemSnap.data();
-      
+
       // Verificar se há estoque suficiente
       if (produtoOrigemData.quantidade < transferQuantidade) {
         alert('Quantidade insuficiente para transferência.');
         return;
       }
-      
+
       // Atualizar estoque na origem
       await updateDoc(produtoOrigemRef, {
         quantidade: produtoOrigemData.quantidade - transferQuantidade
       });
-      
+
       // Se o produto existe no destino, adicionar à quantidade. Caso contrário, criar.
       if (produtoDestinoSnap.exists()) {
         const produtoDestinoData = produtoDestinoSnap.data();
@@ -296,25 +301,25 @@ export default function GerenciamentoEstoque() {
         };
         await setDoc(produtoDestinoRef, newProdutoData);
       }
-      
+
       // Atualizar estado local
       const updatedProdutos = produtos.map(p => {
         if (p.id === selectedProduto.id && p.loja === selectedProduto.loja && p.categoria === selectedProduto.categoria) {
           return { ...p, quantidade: p.quantidade - transferQuantidade };
         }
-        
+
         if (p.id === selectedProduto.id && p.loja === transferDestino && p.categoria === selectedProduto.categoria) {
           return { ...p, quantidade: p.quantidade + transferQuantidade };
         }
-        
+
         return p;
       });
-      
+
       // Se o produto não existia na loja de destino, adicionar à lista
       const produtoExisteEmDestino = produtos.some(
         p => p.id === selectedProduto.id && p.loja === transferDestino && p.categoria === selectedProduto.categoria
       );
-      
+
       if (!produtoExisteEmDestino) {
         const novoProduto = {
           ...selectedProduto,
@@ -323,10 +328,10 @@ export default function GerenciamentoEstoque() {
         };
         updatedProdutos.push(novoProduto);
       }
-      
+
       setProdutos(updatedProdutos);
       setFilteredProdutos(sortProdutos(updatedProdutos, sortField, sortDirection));
-      
+
       alert('Transferência realizada com sucesso!');
       setShowTransferModal(false);
     } catch (error) {
@@ -488,8 +493,8 @@ export default function GerenciamentoEstoque() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
-              <FontAwesomeIcon 
-                icon={faSearch} 
+              <FontAwesomeIcon
+                icon={faSearch}
                 className="absolute left-3 top-3 text-gray-400"
               />
             </div>
@@ -663,8 +668,8 @@ export default function GerenciamentoEstoque() {
                               {produto.loja === 'loja1' ? 'Loja 1' : 'Loja 2'}
                             </td>
                             <td className="border px-3 py-2 capitalize">
-                              {produto.categoria === 'armacoes' ? 'Armação' : 
-                               produto.categoria === 'lentes' ? 'Lente' : 'Solar'}
+                              {produto.categoria === 'armacoes' ? 'Armação' :
+                                produto.categoria === 'lentes' ? 'Lente' : 'Solar'}
                             </td>
                             <td className="border px-3 py-2">
                               {produto.codigo || 'N/A'}
@@ -893,19 +898,19 @@ export default function GerenciamentoEstoque() {
                 <div className="p-6 space-y-4">
                   <div className="grid grid-cols-1 gap-4">
                     <h4 className="text-lg font-semibold text-center">Selecione o tipo de produto:</h4>
-                    
+
                     <Link href="/products_and_services/frames/add-frame">
                       <div className="p-4 border-2 border-gray-200 rounded-lg hover:border-[#81059e] hover:bg-purple-50 cursor-pointer transition">
                         <h5 className="text-center font-medium text-[#81059e]">Armação</h5>
                       </div>
                     </Link>
-                    
+
                     <Link href="/products_and_services/lenses/add-lense">
                       <div className="p-4 border-2 border-gray-200 rounded-lg hover:border-[#81059e] hover:bg-purple-50 cursor-pointer transition">
                         <h5 className="text-center font-medium text-[#81059e]">Lente</h5>
                       </div>
                     </Link>
-                    
+
                     <Link href="/products_and_services/solar">
                       <div className="p-4 border-2 border-gray-200 rounded-lg hover:border-[#81059e] hover:bg-purple-50 cursor-pointer transition">
                         <h5 className="text-center font-medium text-[#81059e]">Óculos Solar</h5>
@@ -998,11 +1003,10 @@ export default function GerenciamentoEstoque() {
                   <button
                     onClick={handleTransferencia}
                     disabled={transferQuantidade <= 0 || transferQuantidade > selectedProduto.quantidade}
-                    className={`px-4 py-2 rounded-md ${
-                      transferQuantidade <= 0 || transferQuantidade > selectedProduto.quantidade
+                    className={`px-4 py-2 rounded-md ${transferQuantidade <= 0 || transferQuantidade > selectedProduto.quantidade
                         ? 'bg-gray-400 cursor-not-allowed'
                         : 'bg-[#81059e] hover:bg-[#690480]'
-                    } text-white transition`}
+                      } text-white transition`}
                   >
                     Transferir
                   </button>

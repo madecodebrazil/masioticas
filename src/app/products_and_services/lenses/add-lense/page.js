@@ -17,7 +17,7 @@ const SelectWithAddOption = ({ label, options, value, onChange, collectionName, 
 
   const handleAddItem = async () => {
     if (!newItemValue.trim()) return;
-    
+
     try {
       await addNewOption(newItemValue);
       setNewItemValue("");
@@ -30,7 +30,7 @@ const SelectWithAddOption = ({ label, options, value, onChange, collectionName, 
   return (
     <div className="space-y-2 relative">
       <h3 className="text-lg font-semibold text-[#81059e]">{label}:</h3>
-      
+
       {!showAddInput ? (
         <div className="relative">
           <select
@@ -93,14 +93,14 @@ const SelectWithAddNumericOption = ({ label, options, value, onChange, collectio
 
   const handleAddItem = async () => {
     if (!newItemValue.trim()) return;
-    
+
     try {
       const numericValue = parseFloat(newItemValue);
       if (isNaN(numericValue)) {
         alert("Por favor, insira um valor numérico válido.");
         return;
       }
-      
+
       await addNewOption(numericValue);
       setNewItemValue("");
       setShowAddInput(false);
@@ -112,7 +112,7 @@ const SelectWithAddNumericOption = ({ label, options, value, onChange, collectio
   return (
     <div className="space-y-2 relative">
       <h3 className="text-lg font-semibold text-[#81059e]">{label}:</h3>
-      
+
       {!showAddInput ? (
         <div className="relative">
           <select
@@ -175,7 +175,7 @@ export function FormularioLentes() {
   const [selectedLoja, setSelectedLoja] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
-  
+
   const [fornecedores, setFornecedores] = useState([]);
   const [fabricantes, setFabricantes] = useState([]);
   const [marcas, setMarcas] = useState([]);
@@ -190,7 +190,7 @@ export function FormularioLentes() {
   const [ncmList, setNCMs] = useState([]);
   const [unidades, setUnidades] = useState([]);
   const [selectedLojas, setSelectedLojas] = useState([]);
-  
+
   const [formData, setFormData] = useState({
     sku: "",
     unidade: "",
@@ -418,14 +418,14 @@ export function FormularioLentes() {
 
     try {
       // Determinar a loja para salvar
-      const lojaToUse = selectedLoja || 
-                       (selectedLojas[0]?.includes("Loja 1") ? "loja1" : 
-                        selectedLojas[0]?.includes("Loja 2") ? "loja2" : "loja1");
-      
+      const lojaToUse = selectedLoja ||
+        (selectedLojas[0]?.includes("Loja 1") ? "loja1" :
+          selectedLojas[0]?.includes("Loja 2") ? "loja2" : "loja1");
+
       // Salva na estrutura específica do estoque da loja
-      const lojaPath = `lojas/estoque/${lojaToUse}/lentes/${collectionName}`;
+      const lojaPath = `estoque/${lojaToUse}/items/${collectionName}`;
       const lojaItemRef = doc(firestore, lojaPath, value.toLowerCase().replace(/\s+/g, '_'));
-      
+
       await setDoc(lojaItemRef, {
         name: value,
         createdAt: new Date(),
@@ -433,7 +433,7 @@ export function FormularioLentes() {
       });
 
       // Atualizar a lista correspondente
-      switch(collectionName) {
+      switch (collectionName) {
         case "lentes_fabricantes":
           setFabricantes([...fabricantes, value]);
           setFormData(prev => ({ ...prev, fabricante: value }));
@@ -471,7 +471,7 @@ export function FormularioLentes() {
         default:
           break;
       }
-      
+
       alert(`${value} adicionado com sucesso!`);
     } catch (error) {
       console.error(`Erro ao adicionar ${value} à coleção ${collectionName}:`, error);
@@ -487,22 +487,22 @@ export function FormularioLentes() {
     }
     try {
       // Determinar a loja para salvar
-      const lojaToUse = selectedLoja || 
-                      (selectedLojas[0]?.includes("Loja 1") ? "loja1" : 
-                       selectedLojas[0]?.includes("Loja 2") ? "loja2" : "loja1");
-      
+      const lojaToUse = selectedLoja ||
+        (selectedLojas[0]?.includes("Loja 1") ? "loja1" :
+          selectedLojas[0]?.includes("Loja 2") ? "loja2" : "loja1");
+
       // Salva na estrutura específica do estoque da loja
-      const lojaPath = `lojas/estoque/${lojaToUse}/lentes/${collectionName}`;
+      const lojaPath = `estoque/${lojaToUse}/items/${collectionName}`;
       const lojaItemRef = doc(firestore, lojaPath, value.toString().replace(/\./g, '_'));
-      
+
       await setDoc(lojaItemRef, {
         value: value,
         createdAt: new Date(),
         addedBy: userData?.nome || 'Sistema'
       });
-      
+
       // Atualizar a lista correspondente
-      switch(collectionName) {
+      switch (collectionName) {
         case "lentes_indices":
           setIndicies([...indicies, value]);
           setFormData(prev => ({ ...prev, indice: value }));
@@ -510,7 +510,7 @@ export function FormularioLentes() {
         default:
           break;
       }
-      
+
       alert(`${value} adicionado com sucesso!`);
     } catch (error) {
       console.error(`Erro ao adicionar ${value} à coleção ${collectionName}:`, error);
@@ -529,7 +529,7 @@ export function FormularioLentes() {
         console.error("Erro ao buscar fornecedores:", error);
       }
     };
-    
+
     const fetchFabricantes = async () => {
       try {
         const snapshot = await getDocs(collection(firestore, "lentes_fabricantes"));
@@ -539,7 +539,7 @@ export function FormularioLentes() {
         console.error("Erro ao buscar fabricantes:", error);
       }
     };
-    
+
     const fetchMarcas = async () => {
       try {
         const snapshot = await getDocs(collection(firestore, "lentes_marcas"));
@@ -549,7 +549,7 @@ export function FormularioLentes() {
         console.error("Erro ao buscar marcas:", error);
       }
     };
-    
+
     const fetchDesigns = async () => {
       try {
         const snapshot = await getDocs(collection(firestore, "lentes_designs"));
@@ -559,7 +559,7 @@ export function FormularioLentes() {
         console.error("Erro ao buscar designs:", error);
       }
     };
-    
+
     const fetchTipos = async () => {
       try {
         const snapshot = await getDocs(collection(firestore, "lentes_tipos"));
@@ -569,7 +569,7 @@ export function FormularioLentes() {
         console.error("Erro ao buscar tipos:", error);
       }
     };
-    
+
     const fetchIndicies = async () => {
       try {
         const snapshot = await getDocs(collection(firestore, "lentes_indices"));
@@ -579,7 +579,7 @@ export function FormularioLentes() {
         console.error("Erro ao buscar índices:", error);
       }
     };
-    
+
     const fetchMateriais = async () => {
       try {
         const snapshot = await getDocs(collection(firestore, "lentes_materiais"));
@@ -589,7 +589,7 @@ export function FormularioLentes() {
         console.error("Erro ao buscar materiais:", error);
       }
     };
-    
+
     const fetchTecnologias = async () => {
       try {
         const snapshot = await getDocs(collection(firestore, "lentes_tecnologias"));
@@ -599,7 +599,7 @@ export function FormularioLentes() {
         console.error("Erro ao buscar tecnologias:", error);
       }
     };
-    
+
     const fetchTipoTratamentos = async () => {
       try {
         const snapshot = await getDocs(collection(firestore, "lentes_tratamentos"));
@@ -609,7 +609,7 @@ export function FormularioLentes() {
         console.error("Erro ao buscar tratamentos:", error);
       }
     };
-    
+
     const fetchFamilias = async () => {
       try {
         const snapshot = await getDocs(collection(firestore, "lentes_familias"));
@@ -619,7 +619,7 @@ export function FormularioLentes() {
         console.error("Erro ao buscar famílias:", error);
       }
     };
-    
+
     const fetchNcm = async () => {
       try {
         const snapshot = await getDocs(collection(firestore, "ncm"));
@@ -629,7 +629,7 @@ export function FormularioLentes() {
         console.error("Erro ao buscar NCMs:", error);
       }
     };
-    
+
     const fetchUnidades = async () => {
       try {
         const snapshot = await getDocs(collection(firestore, "lentes_unidades"));
@@ -767,18 +767,19 @@ export function FormularioLentes() {
       // Para cada loja selecionada, salvar o produto na estrutura correta
       for (const loja of selectedLojas) {
         // Converter o nome da loja para o ID usado no Firebase
-        const lojaId = loja.includes("Loja 1") ? "loja1" : 
-                      loja.includes("Loja 2") ? "loja2" : loja.toLowerCase().replace(/\s+/g, '');
-                      
+        const lojaId = loja.includes("Loja 1") ? "loja1" :
+          loja.includes("Loja 2") ? "loja2" : loja.toLowerCase().replace(/\s+/g, '');
+
         // Caminho para o documento do produto na estrutura correta do estoque
         const docRef = doc(
-          firestore, 
-          `lojas/estoque/${lojaId}/lentes`, 
-          updatedFormData.codigo // Usa o código do produto como ID
+          firestore,
+          `lojas/estoque/${lojaId}/lentes`,
+          updatedFormData.codigo
         );
         
+
         await setDoc(docRef, productData);
-        
+
         console.log(`Produto salvo no estoque da ${loja}:`, productData);
       }
 
@@ -791,7 +792,7 @@ export function FormularioLentes() {
 
       router.push(
         `/products_and_services/lenses/confirm?formData=${encodeURIComponent(
-          JSON.stringify({...productData, lojas: selectedLojas})
+          JSON.stringify({ ...productData, lojas: selectedLojas })
         )}`
       );
     } catch (error) {
@@ -863,7 +864,7 @@ export function FormularioLentes() {
         <form onSubmit={handleSubmit} className="mt-8 mb-20">
           <div className="p-4 bg-gray-50 rounded-lg mb-6">
             <h3 className="text-lg font-semibold text-[#81059e] mb-4">Informações Básicas</h3>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* SKU */}
               <div>
@@ -877,7 +878,7 @@ export function FormularioLentes() {
                   className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black bg-gray-100"
                 />
               </div>
-              
+
               {/* Data */}
               <div>
                 <label className="text-[#81059e] font-medium">Data</label>
@@ -904,7 +905,7 @@ export function FormularioLentes() {
                   required
                 />
               </div>
-              
+
               {/* Código do Fabricante */}
               <div>
                 <label className="text-[#81059e] font-medium">Código do Fabricante</label>
@@ -932,7 +933,7 @@ export function FormularioLentes() {
                   required
                 />
               </div>
-              
+
               {/* Categoria */}
               <div>
                 <label className="text-[#81059e] font-medium">Categoria</label>
@@ -952,19 +953,19 @@ export function FormularioLentes() {
           {/* Seção Características do Produto */}
           <div className="p-4 bg-gray-50 rounded-lg mb-6">
             <h3 className="text-lg font-semibold text-[#81059e] mb-4">Características do Produto</h3>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Fabricante com opção de adicionar */}
-              <SelectWithAddOption 
+              <SelectWithAddOption
                 label="Fabricante"
                 options={fabricantes}
                 value={formData.fabricante}
                 onChange={(value) => setFormData({ ...formData, fabricante: value })}
                 addNewOption={(value) => addNewItem("lentes_fabricantes", value)}
               />
-              
+
               {/* Fornecedor com opção de adicionar */}
-              <SelectWithAddOption 
+              <SelectWithAddOption
                 label="Fornecedor"
                 options={fornecedores}
                 value={formData.fornecedor}
@@ -972,19 +973,19 @@ export function FormularioLentes() {
                 addNewOption={(value) => addNewItem("fornecedores", value)}
               />
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
               {/* Marca com opção de adicionar */}
-              <SelectWithAddOption 
+              <SelectWithAddOption
                 label="Marca"
                 options={marcas}
                 value={formData.marca}
                 onChange={(value) => setFormData({ ...formData, marca: value })}
                 addNewOption={(value) => addNewItem("lentes_marcas", value)}
               />
-              
+
               {/* Família com opção de adicionar */}
-              <SelectWithAddOption 
+              <SelectWithAddOption
                 label="Família"
                 options={familias}
                 value={formData.familia}
@@ -992,19 +993,19 @@ export function FormularioLentes() {
                 addNewOption={(value) => addNewItem("lentes_familias", value)}
               />
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
               {/* Material com opção de adicionar */}
-              <SelectWithAddOption 
+              <SelectWithAddOption
                 label="Material"
                 options={materiais}
                 value={formData.material}
                 onChange={(value) => setFormData({ ...formData, material: value })}
                 addNewOption={(value) => addNewItem("lentes_materiais", value)}
               />
-              
+
               {/* Design com opção de adicionar */}
-              <SelectWithAddOption 
+              <SelectWithAddOption
                 label="Design"
                 options={designs}
                 value={formData.design}
@@ -1012,19 +1013,19 @@ export function FormularioLentes() {
                 addNewOption={(value) => addNewItem("lentes_designs", value)}
               />
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
               {/* Índice com opção de adicionar */}
-              <SelectWithAddNumericOption 
+              <SelectWithAddNumericOption
                 label="Índice"
                 options={indicies}
                 value={formData.indice}
                 onChange={(value) => setFormData({ ...formData, indice: value })}
                 addNewOption={(value) => addNewValueItem("lentes_indices", value)}
               />
-              
+
               {/* Unidade com opção de adicionar */}
-              <SelectWithAddOption 
+              <SelectWithAddOption
                 label="Unidade"
                 options={unidades}
                 value={formData.unidade}
@@ -1032,7 +1033,7 @@ export function FormularioLentes() {
                 addNewOption={(value) => addNewItem("lentes_unidades", value)}
               />
             </div>
-            
+
             {/* Tipos (multiselect) */}
             <div className="mt-4">
               <label className="text-lg font-semibold text-[#81059e]">Tipos:</label>
@@ -1042,18 +1043,17 @@ export function FormularioLentes() {
                     key={tipo}
                     type="button"
                     onClick={() => handleToggle("tipo", tipo)}
-                    className={`px-4 py-2 rounded-lg border-2 ${
-                      Array.isArray(formData.tipo) && formData.tipo.includes(tipo)
+                    className={`px-4 py-2 rounded-lg border-2 ${Array.isArray(formData.tipo) && formData.tipo.includes(tipo)
                         ? "bg-[#81059e] text-white border-[#81059e]"
                         : "bg-transparent text-[#81059e] border-[#81059e]"
-                    }`}
+                      }`}
                   >
                     {tipo}
                   </button>
                 ))}
               </div>
             </div>
-            
+
             {/* Tecnologias (multiselect) */}
             <div className="mt-4">
               <label className="text-lg font-semibold text-[#81059e]">Tecnologias:</label>
@@ -1063,18 +1063,17 @@ export function FormularioLentes() {
                     key={tecnologia}
                     type="button"
                     onClick={() => handleToggle("tecnologia", tecnologia)}
-                    className={`px-4 py-2 rounded-lg border-2 ${
-                      Array.isArray(formData.tecnologia) && formData.tecnologia.includes(tecnologia)
+                    className={`px-4 py-2 rounded-lg border-2 ${Array.isArray(formData.tecnologia) && formData.tecnologia.includes(tecnologia)
                         ? "bg-[#81059e] text-white border-[#81059e]"
                         : "bg-transparent text-[#81059e] border-[#81059e]"
-                    }`}
+                      }`}
                   >
                     {tecnologia}
                   </button>
                 ))}
               </div>
             </div>
-            
+
             {/* Tratamentos (multiselect) */}
             <div className="mt-4">
               <label className="text-lg font-semibold text-[#81059e]">Tratamentos:</label>
@@ -1084,18 +1083,17 @@ export function FormularioLentes() {
                     key={tratamento}
                     type="button"
                     onClick={() => handleToggle("tratamento", tratamento)}
-                    className={`px-4 py-2 rounded-lg border-2 ${
-                      Array.isArray(formData.tratamento) && formData.tratamento.includes(tratamento)
+                    className={`px-4 py-2 rounded-lg border-2 ${Array.isArray(formData.tratamento) && formData.tratamento.includes(tratamento)
                         ? "bg-[#81059e] text-white border-[#81059e]"
                         : "bg-transparent text-[#81059e] border-[#81059e]"
-                    }`}
+                      }`}
                   >
                     {tratamento}
                   </button>
                 ))}
               </div>
             </div>
-            
+
             {/* Corredores (multiselect) */}
             <div className="mt-4">
               <label className="text-lg font-semibold text-[#81059e]">Corredores:</label>
@@ -1105,11 +1103,10 @@ export function FormularioLentes() {
                     key={corredor}
                     type="button"
                     onClick={() => handleToggle("corredor", corredor)}
-                    className={`px-4 py-2 rounded-lg border-2 ${
-                      Array.isArray(formData.corredor) && formData.corredor.includes(corredor)
+                    className={`px-4 py-2 rounded-lg border-2 ${Array.isArray(formData.corredor) && formData.corredor.includes(corredor)
                         ? "bg-[#81059e] text-white border-[#81059e]"
                         : "bg-transparent text-[#81059e] border-[#81059e]"
-                    }`}
+                      }`}
                   >
                     {corredor}
                   </button>
@@ -1117,11 +1114,11 @@ export function FormularioLentes() {
               </div>
             </div>
           </div>
-          
+
           {/* Seção Especificações Técnicas */}
           <div className="p-4 bg-gray-50 rounded-lg mb-6">
             <h3 className="text-lg font-semibold text-[#81059e] mb-4">Especificações Técnicas</h3>
-            
+
             {/* Esférico */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
@@ -1147,7 +1144,7 @@ export function FormularioLentes() {
                 />
               </div>
             </div>
-            
+
             {/* Cilindro */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
               <div>
@@ -1173,7 +1170,7 @@ export function FormularioLentes() {
                 />
               </div>
             </div>
-            
+
             {/* Diâmetro */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
               <div>
@@ -1199,7 +1196,7 @@ export function FormularioLentes() {
                 />
               </div>
             </div>
-            
+
             {/* Adição */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
               <div>
@@ -1226,7 +1223,7 @@ export function FormularioLentes() {
                 />
               </div>
             </div>
-            
+
             {/* Montagem */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
               <div>
@@ -1254,11 +1251,11 @@ export function FormularioLentes() {
               </div>
             </div>
           </div>
-          
+
           {/* Seção Valores */}
           <div className="p-4 bg-gray-50 rounded-lg mb-6">
             <h3 className="text-lg font-semibold text-[#81059e] mb-4">Valores</h3>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Custo */}
               <div>
@@ -1277,7 +1274,7 @@ export function FormularioLentes() {
                   />
                 </div>
               </div>
-              
+
               {/* Valor de Venda */}
               <div>
                 <label className="text-[#81059e] font-medium">Valor de Venda (R$)</label>
@@ -1295,7 +1292,7 @@ export function FormularioLentes() {
                   />
                 </div>
               </div>
-              
+
               {/* Quantidade */}
               <div>
                 <label className="text-[#81059e] font-medium">Quantidade</label>
@@ -1315,7 +1312,7 @@ export function FormularioLentes() {
                 />
               </div>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
               {/* Percentual de Lucro */}
               <div>
@@ -1330,7 +1327,7 @@ export function FormularioLentes() {
                   placeholder="Calculado automaticamente"
                 />
               </div>
-              
+
               {/* Custo Médio */}
               <div>
                 <label className="text-[#81059e] font-medium">Custo Médio (R$)</label>
@@ -1346,11 +1343,11 @@ export function FormularioLentes() {
               </div>
             </div>
           </div>
-          
+
           {/* Seção Fiscal */}
           <div className="p-4 bg-gray-50 rounded-lg mb-6">
             <h3 className="text-lg font-semibold text-[#81059e] mb-4">Informações Fiscais</h3>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* NCM */}
               <div>
@@ -1368,7 +1365,7 @@ export function FormularioLentes() {
                   ))}
                 </select>
               </div>
-              
+
               {/* CEST */}
               <div>
                 <label className="text-[#81059e] font-medium">CEST</label>
@@ -1381,7 +1378,7 @@ export function FormularioLentes() {
                   required
                 />
               </div>
-              
+
               {/* CSOSN */}
               <div>
                 <label className="text-[#81059e] font-medium">CSOSN</label>
@@ -1395,7 +1392,7 @@ export function FormularioLentes() {
                 />
               </div>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
               {/* CFOP */}
               <div>
@@ -1409,7 +1406,7 @@ export function FormularioLentes() {
                   required
                 />
               </div>
-              
+
               {/* Origem do Produto */}
               <div>
                 <label className="text-[#81059e] font-medium">Origem do Produto</label>
@@ -1423,7 +1420,7 @@ export function FormularioLentes() {
                 />
               </div>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
               {/* Alíquota ICMS */}
               <div>
@@ -1437,7 +1434,7 @@ export function FormularioLentes() {
                   required
                 />
               </div>
-              
+
               {/* Base de Cálculo ICMS */}
               <div>
                 <label className="text-[#81059e] font-medium">Base de Cálculo ICMS</label>
@@ -1450,7 +1447,7 @@ export function FormularioLentes() {
                   required
                 />
               </div>
-              
+
               {/* CST PIS */}
               <div>
                 <label className="text-[#81059e] font-medium">CST PIS</label>
@@ -1464,7 +1461,7 @@ export function FormularioLentes() {
                 />
               </div>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
               {/* CST COFINS */}
               <div>
@@ -1478,7 +1475,7 @@ export function FormularioLentes() {
                   required
                 />
               </div>
-              
+
               {/* Alíquota IPI */}
               <div>
                 <label className="text-[#81059e] font-medium">Alíquota IPI (%)</label>
@@ -1491,7 +1488,7 @@ export function FormularioLentes() {
                   required
                 />
               </div>
-              
+
               {/* CST IPI */}
               <div>
                 <label className="text-[#81059e] font-medium">CST IPI</label>
@@ -1505,7 +1502,7 @@ export function FormularioLentes() {
                 />
               </div>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
               {/* Base de Cálculo IPI */}
               <div>
@@ -1519,7 +1516,7 @@ export function FormularioLentes() {
                   required
                 />
               </div>
-              
+
               {/* Peso Bruto */}
               <div>
                 <label className="text-[#81059e] font-medium">Peso Bruto</label>
@@ -1532,7 +1529,7 @@ export function FormularioLentes() {
                   required
                 />
               </div>
-              
+
               {/* Peso Líquido */}
               <div>
                 <label className="text-[#81059e] font-medium">Peso Líquido</label>
@@ -1547,11 +1544,11 @@ export function FormularioLentes() {
               </div>
             </div>
           </div>
-          
+
           {/* Seção Imagem */}
           <div className="p-4 bg-gray-50 rounded-lg mb-6">
             <h3 className="text-lg font-semibold text-[#81059e] mb-4">Imagem do Produto</h3>
-            
+
             <input
               type="file"
               name="imagem"
@@ -1561,7 +1558,7 @@ export function FormularioLentes() {
               required
             />
           </div>
-          
+
           {/* Botões de ação */}
           <div className="flex justify-center gap-4 mt-8">
             <button

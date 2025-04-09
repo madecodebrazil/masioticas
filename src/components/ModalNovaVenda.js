@@ -5,6 +5,7 @@ import {
 } from 'firebase/firestore';
 import { FiClock, FiRefreshCw, FiMessageSquare, FiPrinter } from 'react-icons/fi';
 import CreditCardForm from './CreditCardForm';
+import CarrinhoCompras from './CarrinhoCompras';
 import { firestore } from '@/lib/firebaseConfig';
 import { useAuth } from '@/hooks/useAuth';
 import {
@@ -152,30 +153,67 @@ const ModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
     const fetchProducts = async () => {
         try {
             setLoading(true);
+            setError('');
 
-            // Buscar produtos de cada categoria (armações, lentes, solares)
+            // Categorias de produtos a serem buscadas
             const categorias = ['armacoes', 'lentes', 'solares'];
             let allProducts = [];
 
+            // Caminho correto conforme a estrutura do Firebase: estoque > loja1 > armacoes
             for (const categoria of categorias) {
-                const productsRef = collection(firestore, `lojas/${selectedLoja}/${categoria}`);
-                const querySnapshot = await getDocs(productsRef);
+                try {
+                    // Note que o caminho está correto conforme sua estrutura mostrada na captura de tela
+                    const productsRef = collection(firestore, `estoque/${selectedLoja}/${categoria}`);
+                    const querySnapshot = await getDocs(productsRef);
 
-                const categoryProducts = querySnapshot.docs.map(doc => ({
-                    id: doc.id,
-                    categoria: categoria,
-                    ...doc.data()
-                }));
+                    console.log(`Categoria ${categoria}: encontrados ${querySnapshot.size} produtos`);
 
-                allProducts = [...allProducts, ...categoryProducts];
+                    // Mapear documentos para o formato esperado
+                    const categoryProducts = querySnapshot.docs.map(doc => {
+                        const data = doc.data();
+                        return {
+                            id: doc.id,
+                            categoria: categoria,
+                            nome: data.nome || data.info_geral?.nome || `Produto ${doc.id}`,
+                            marca: data.marca || data.info_geral?.marca || "Sem marca",
+                            codigo: data.codigo || data.info_geral?.codigo || doc.id,
+                            preco: data.preco || data.info_geral?.preco || 0,
+                            quantidade: data.quantidade || 0,
+                            info_geral: data.info_geral || {
+                                nome: data.nome || `Produto ${doc.id}`,
+                                marca: data.marca || "Sem marca",
+                                codigo: data.codigo || doc.id,
+                                preco: data.preco || 0
+                            },
+                            info_adicional: data.info_adicional || {}
+                        };
+                    });
+
+                    allProducts = [...allProducts, ...categoryProducts];
+                } catch (err) {
+                    console.error(`Erro ao buscar categoria ${categoria}:`, err);
+                }
             }
 
-            // Filtrar produtos com quantidade disponível
-            const productsList = allProducts.filter(product =>
-                product.quantidade > 0
-            );
+            // Se encontrou produtos, define no estado
+            if (allProducts.length > 0) {
+                // Filtrar produtos com quantidade disponível
+                const productsWithStock = allProducts.filter(product =>
+                    (product.quantidade || 0) > 0
+                );
 
-            setProducts(productsList);
+                // Se não houver produtos com estoque, usar todos os produtos
+                if (productsWithStock.length === 0) {
+                    console.log('Nenhum produto com estoque. Mostrando todos os produtos.');
+                    setProducts(allProducts);
+                } else {
+                    setProducts(productsWithStock);
+                }
+            } else {
+                console.error('Nenhum produto encontrado no estoque!');
+                setError('Nenhum produto encontrado no estoque. Verifique a estrutura do banco de dados.');
+            }
+
         } catch (err) {
             console.error('Erro ao buscar produtos:', err);
             setError('Falha ao carregar lista de produtos');
@@ -221,21 +259,22 @@ const ModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
         if (productSearchTerm.trim() === '') {
             setFilteredProducts([]);
         } else {
+            // Atualizar este trecho do modal de vendas
             const filtered = products.filter(product =>
-                product.info_geral?.nome?.toLowerCase().includes(productSearchTerm.toLowerCase()) ||
-                product.info_geral?.codigo?.toLowerCase().includes(productSearchTerm.toLowerCase()) ||
-                product.info_geral?.marca?.toLowerCase().includes(productSearchTerm.toLowerCase())
+                product.nome?.toLowerCase().includes(productSearchTerm.toLowerCase()) ||
+                product.codigo?.toLowerCase().includes(productSearchTerm.toLowerCase()) ||
+                product.marca?.toLowerCase().includes(productSearchTerm.toLowerCase())
             );
             setFilteredProducts(filtered);
         }
     }, [productSearchTerm, products]);
 
-    // Calcular subtotal
-    const calculateSubtotal = () => {
-        return cartItems.reduce((total, item) =>
-            total + (item.info_geral?.preco || 0) * item.quantity, 0
-        );
-    };
+   // Calcular subtotal
+const calculateSubtotal = () => {
+    return cartItems.reduce((total, item) =>
+      total + ((item.preco || item.info_geral?.preco || 0) * item.quantity), 0
+    );
+  };
 
     // Calcular desconto
     const calculateDiscount = () => {
@@ -316,10 +355,10 @@ const ModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
         if (paymentMethods.length <= 1) {
             return;
         }
-        
+
         // Criar um novo array sem o método a ser removido
         const updatedMethods = paymentMethods.filter((_, index) => index !== indexToRemove);
-        
+
         // Ajustar o índice atual selecionado
         let newIndex = currentPaymentIndex;
         if (currentPaymentIndex >= updatedMethods.length) {
@@ -332,11 +371,11 @@ const ModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
             // Se estamos removendo um item antes do atualmente selecionado
             newIndex = currentPaymentIndex - 1;
         }
-        
+
         // Atualizar o estado dos métodos de pagamento e o índice atual
         setPaymentMethods(updatedMethods);
         setCurrentPaymentIndex(newIndex);
-        
+
         // Redistribuir os valores se estiver em modo automático
         // Usar um timeout maior para garantir que os estados sejam atualizados primeiro
         if (valueDistribution === 'auto') {
@@ -345,7 +384,7 @@ const ModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
                 currentMethods.forEach((_, idx) => {
                     const total = calculateTotal();
                     let newValue;
-    
+
                     if (currentMethods.length === 1) {
                         // Se houver apenas um método, atribui o valor total
                         newValue = total;
@@ -355,14 +394,14 @@ const ModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
                             i !== idx ? sum + (parseFloat(method.value) || 0) : sum, 0);
                         newValue = Math.max(0, total - allocated);
                     }
-    
+
                     // Atualiza o valor do método atual
                     currentMethods[idx] = {
                         ...currentMethods[idx],
                         value: newValue
                     };
                 });
-                
+
                 // Atualiza o estado com os novos valores
                 setPaymentMethods(currentMethods);
             }, 100);
@@ -650,12 +689,13 @@ const ModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
                 },
                 produtos: cartItems.map(item => ({
                     id: item.id,
-                    nome: item.info_geral?.nome,
-                    codigo: item.info_geral?.codigo,
-                    marca: item.info_geral?.marca,
-                    preco: item.info_geral?.preco,
+                    categoria: item.categoria,
+                    nome: item.nome || item.info_geral?.nome,
+                    codigo: item.codigo || item.info_geral?.codigo,
+                    marca: item.marca || item.info_geral?.marca,
+                    preco: item.preco || item.info_geral?.preco,
                     quantidade: item.quantity,
-                    total: item.info_geral?.preco * item.quantity
+                    total: (item.preco || item.info_geral?.preco || 0) * item.quantity
                 })),
                 pagamentos: dadosPagamento,
                 pagamento_resumo: {
@@ -700,20 +740,34 @@ const ModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
             // 3. Atualizar estoque apenas se o pagamento for aprovado ou for crediário
             if (statusVenda === 'paga') {
                 await Promise.all(cartItems.map(async (item) => {
-                    const productRef = doc(firestore, `lojas/estoque/items/${item.id}`);
+                  // Caminho correto para atualizar o estoque
+                  const productRef = doc(firestore, `estoque/${selectedLoja}/${item.categoria}`, item.id);
+                  
+                  try {
                     const productDoc = await getDoc(productRef);
-
+              
                     if (productDoc.exists()) {
-                        const productData = productDoc.data();
-                        const currentStock = productData.por_loja?.[selectedLoja]?.quantidade || 0;
-                        const newStock = Math.max(0, currentStock - item.quantity);
-
-                        await updateDoc(productRef, {
-                            [`por_loja.${selectedLoja}.quantidade`]: newStock
-                        });
+                      const productData = productDoc.data();
+                      const currentStock = productData.quantidade || 0;
+                      
+                      // Garantir que não ficará negativo
+                      const newStock = Math.max(0, currentStock - item.quantity);
+              
+                      // Atualizar estoque
+                      await updateDoc(productRef, {
+                        quantidade: newStock
+                      });
+                      
+                      console.log(`Estoque atualizado: ${item.nome || item.id} - Novo estoque: ${newStock}`);
+                    } else {
+                      console.warn(`Produto não encontrado no estoque: ${item.id} (${item.categoria})`);
                     }
+                  } catch (error) {
+                    console.error(`Erro ao atualizar estoque do produto ${item.id}:`, error);
+                    // Continuar mesmo com erro em um produto específico
+                  }
                 }));
-            }
+              }
 
             // 4. Registrar ordem de serviço apenas se pagamento aprovado ou crediário
             if (statusVenda === 'paga') {
@@ -1265,8 +1319,8 @@ const ModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
                                     type="button"
                                     onClick={() => changePaymentMethod(index, 'dinheiro')}
                                     className={`p-2 border rounded-md flex items-center justify-center ${payment.method === 'dinheiro'
-                                            ? 'bg-[#81059e] text-white border-[#81059e]'
-                                            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                        ? 'bg-[#81059e] text-white border-[#81059e]'
+                                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
                                         }`}
                                 >
                                     <FiDollarSign className="mr-1" /> Dinheiro
@@ -1276,8 +1330,8 @@ const ModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
                                     type="button"
                                     onClick={() => changePaymentMethod(index, 'cartao')}
                                     className={`p-2 border rounded-md flex items-center justify-center ${payment.method === 'cartao'
-                                            ? 'bg-[#81059e] text-white border-[#81059e]'
-                                            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                        ? 'bg-[#81059e] text-white border-[#81059e]'
+                                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
                                         }`}
                                 >
                                     <FiCreditCard className="mr-1" /> Cartão
@@ -1287,8 +1341,8 @@ const ModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
                                     type="button"
                                     onClick={() => changePaymentMethod(index, 'pix')}
                                     className={`p-2 border rounded-md flex items-center justify-center ${payment.method === 'pix'
-                                            ? 'bg-[#81059e] text-white border-[#81059e]'
-                                            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                        ? 'bg-[#81059e] text-white border-[#81059e]'
+                                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
                                         }`}
                                 >
                                     PIX
@@ -1298,8 +1352,8 @@ const ModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
                                     type="button"
                                     onClick={() => changePaymentMethod(index, 'crediario')}
                                     className={`p-2 border rounded-md flex items-center justify-center ${payment.method === 'crediario'
-                                            ? 'bg-[#81059e] text-white border-[#81059e]'
-                                            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                        ? 'bg-[#81059e] text-white border-[#81059e]'
+                                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
                                         }`}
                                 >
                                     Crediário
@@ -1309,8 +1363,8 @@ const ModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
                                     type="button"
                                     onClick={() => changePaymentMethod(index, 'boleto')}
                                     className={`p-2 border rounded-md flex items-center justify-center ${payment.method === 'boleto'
-                                            ? 'bg-[#81059e] text-white border-[#81059e]'
-                                            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                        ? 'bg-[#81059e] text-white border-[#81059e]'
+                                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
                                         }`}
                                 >
                                     <FiFileText className="mr-1" /> Boleto
@@ -1320,8 +1374,8 @@ const ModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
                                     type="button"
                                     onClick={() => changePaymentMethod(index, 'ted')}
                                     className={`p-2 border rounded-md flex items-center justify-center ${payment.method === 'ted'
-                                            ? 'bg-[#81059e] text-white border-[#81059e]'
-                                            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                        ? 'bg-[#81059e] text-white border-[#81059e]'
+                                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
                                         }`}
                                 >
                                     TED
@@ -1331,8 +1385,8 @@ const ModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
                                     type="button"
                                     onClick={() => changePaymentMethod(index, 'cashback')}
                                     className={`p-2 border rounded-md flex items-center justify-center ${payment.method === 'cashback'
-                                            ? 'bg-[#81059e] text-white border-[#81059e]'
-                                            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                        ? 'bg-[#81059e] text-white border-[#81059e]'
+                                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
                                         }`}
                                     disabled={cashbackDisponivel <= 0}
                                     title={cashbackDisponivel <= 0 ? "Cliente não possui saldo de cashback" : ""}
@@ -1344,8 +1398,8 @@ const ModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
                                     type="button"
                                     onClick={() => changePaymentMethod(index, 'crypto')}
                                     className={`p-2 border rounded-md flex items-center justify-center ${payment.method === 'crypto'
-                                            ? 'bg-[#81059e] text-white border-[#81059e]'
-                                            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                        ? 'bg-[#81059e] text-white border-[#81059e]'
+                                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
                                         }`}
                                 >
                                     <FaBitcoin className="mr-1" /> Crypto
@@ -1439,8 +1493,8 @@ const ModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
                                                 type="button"
                                                 onClick={() => setSelectedCrypto('bitcoin')}
                                                 className={`p-2 border rounded-md flex items-center justify-center ${selectedCrypto === 'bitcoin'
-                                                        ? 'bg-amber-500 text-white border-amber-500'
-                                                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                                    ? 'bg-amber-500 text-white border-amber-500'
+                                                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
                                                     }`}
                                             >
                                                 <FaBitcoin className="mr-1" /> Bitcoin
@@ -1450,8 +1504,8 @@ const ModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
                                                 type="button"
                                                 onClick={() => setSelectedCrypto('ethereum')}
                                                 className={`p-2 border rounded-md flex items-center justify-center ${selectedCrypto === 'ethereum'
-                                                        ? 'bg-blue-500 text-white border-blue-500'
-                                                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                                    ? 'bg-blue-500 text-white border-blue-500'
+                                                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
                                                     }`}
                                             >
                                                 <FaEthereum className="mr-1" /> Ethereum
@@ -1701,127 +1755,18 @@ const ModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
                                             <FiShoppingCart /> Produtos
                                         </label>
 
-                                        <div className="flex gap-2 mb-2">
-                                            <div className="relative flex-1">
-                                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                                    <FiSearch className="text-gray-400" />
-                                                </div>
-                                                <input
-                                                    type="text"
-                                                    value={productSearchTerm}
-                                                    onChange={(e) => setProductSearchTerm(e.target.value)}
-                                                    className="border-2 border-[#81059e] pl-10 p-2 rounded-lg w-full"
-                                                    placeholder="Buscar produto por nome ou código"
-                                                    ref={produtoInputRef}
-                                                />
-                                                {filteredProducts.length > 0 && (
-                                                    <div className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md border border-gray-300 max-h-60 overflow-auto">
-                                                        {filteredProducts.map(product => (
-                                                            <div
-                                                                key={product.id}
-                                                                className="p-2 hover:bg-purple-50 cursor-pointer border-b last:border-b-0"
-                                                                onClick={() => addToCart(product)}
-                                                            >
-                                                                <div className="font-medium">{product.info_geral?.nome}</div>
-                                                                <div className="flex justify-between text-sm">
-                                                                    <span className="text-gray-600">
-                                                                        {product.info_geral?.marca} | Cód: {product.info_geral?.codigo}
-                                                                    </span>
-                                                                    <span className="font-semibold text-[#81059e]">
-                                                                        {formatCurrency(product.info_geral?.preco || 0)}
-                                                                    </span>
-                                                                </div>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                )}
-                                            </div>
-                                            <input
-                                                type="number"
-                                                min="1"
-                                                value={newProductQty}
-                                                onChange={(e) => setNewProductQty(parseInt(e.target.value) || 1)}
-                                                className="border-2 border-[#81059e] p-2 rounded-lg w-16 text-center"
-                                            />
-                                        </div>
-
                                         {/* Tabela de Itens no Carrinho */}
                                         <div className="border-2 border-gray-200 rounded-lg overflow-hidden">
-                                            <table className="min-w-full divide-y divide-gray-200">
-                                                <thead className="bg-purple-100">
-                                                    <tr>
-                                                        <th scope="col" className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                            Qtd
-                                                        </th>
-                                                        <th scope="col" className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                            Produto
-                                                        </th>
-                                                        <th scope="col" className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                            Valor Unit.
-                                                        </th>
-                                                        <th scope="col" className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                            Valor Total
-                                                        </th>
-                                                        <th scope="col" className="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                            Ações
-                                                        </th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody className="bg-white divide-y divide-gray-200">
-                                                    {cartItems.length === 0 ? (
-                                                        <tr>
-                                                            <td colSpan="5" className="px-4 py-4 text-center text-sm text-gray-500">
-                                                                Nenhum produto adicionado
-                                                            </td>
-                                                        </tr>
-                                                    ) : (
-                                                        cartItems.map((item, index) => (
-                                                            <tr
-                                                                key={item.id}
-                                                                className={focusedRow === index ? "bg-purple-50" : ""}
-                                                                onClick={() => setFocusedRow(index)}
-                                                            >
-                                                                <td className="px-4 py-2 whitespace-nowrap text-sm">
-                                                                    <div className="flex items-center">
-                                                                        <button
-                                                                            onClick={(e) => {
-                                                                                e.stopPropagation();
-                                                                                updateQuantity(item.id, item.quantity + 1);
-                                                                            }}
-                                                                            className="text-gray-500 hover:text-[#81059e]"
-                                                                        >
-                                                                            +
-                                                                        </button>
-                                                                    </div>
-                                                                </td>
-                                                                <td className="px-4 py-2 text-sm">
-                                                                    <div className="font-medium">{item.info_geral?.nome}</div>
-                                                                    <div className="text-xs text-gray-500">
-                                                                        {item.info_geral?.marca} | Cód: {item.info_geral?.codigo}
-                                                                    </div>
-                                                                </td>
-                                                                <td className="px-4 py-2 whitespace-nowrap text-sm text-right">
-                                                                    {formatCurrency(item.info_geral?.preco || 0)}
-                                                                </td>
-                                                                <td className="px-4 py-2 whitespace-nowrap text-sm text-right font-medium">
-                                                                    {formatCurrency((item.info_geral?.preco || 0) * item.quantity)}
-                                                                </td>
-                                                                <td className="px-4 py-2 whitespace-nowrap text-right text-sm">
-                                                                    <button
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            removeFromCart(item.id);
-                                                                        }}
-                                                                        className="text-red-500 hover:text-red-700"
-                                                                    >
-                                                                        <FiTrash2 size={16} />
-                                                                    </button>
-                                                                </td>
-                                                            </tr>
-                                                        ))
-                                                    )}
-                                                </tbody>
-                                            </table>
+                                            <CarrinhoCompras
+                                                products={products}
+                                                cartItems={cartItems}
+                                                setCartItems={setCartItems}
+                                                selectedLoja={selectedLoja}
+                                                updateCartValue={(subtotal) => {
+                                                    // Esta função propaga os valores calculados no carrinho para o modal principal
+                                                    // Não precisa fazer nada aqui, pois o cálculo já é feito corretamente em calculateSubtotal
+                                                }}
+                                            />
                                         </div>
                                     </div>
 
