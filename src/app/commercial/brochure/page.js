@@ -497,10 +497,10 @@ const Catalogo = () => {
 
   return (
     <Layout>
-      <div className="p-4 sm:p-6">
+      <div className="p-4 w-full">
         <div className="flex flex-wrap justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold text-[#800080] text-center mb-4 sm:mb-0">
-            Catálogo
+          <h1 className="text-4xl ml-0 md:ml-4 font-bold text-[#9a5fc7] text-center md:text-left">
+            CATÁLOGO
           </h1>
           <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4 w-full sm:w-auto">
             <input

@@ -8,7 +8,7 @@ import Layout from '@/components/Layout';
 export default function ProductsPage() {
     // Defina os ícones e rótulos dos produtos
     const productsItems = [
-        { icon: '/images/FA.png', label: 'Venda', route: '/commercial/sales' },
+        { icon: '/images/FA.png', label: 'Venda', route: '/sales' },
         { icon: '/images/CD.png', label: 'Caixa diário', route: '/finance/cashier_day' },
         { icon: '/images/catalogos.png', label: 'Catálogos', route: '/commercial/brochure' },
     ];

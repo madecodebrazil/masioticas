@@ -33,17 +33,16 @@ export default function ProductsPage() {
         { icon: '/images/cadastro/Heart.Monitor.png', label: 'Pacientes', route: '/consultation/medical-consultation' },
         { icon: '/images/cadastro/Ophthalmology.png', label: 'Oftalmologista', route: '/consultation/ophthalmologist' },
         { icon: '/images/cadastro/Glasses.png', label: 'Optometrista', route: '/consultation/optometrist' },
-        { icon: '/images/financeiro/pagar.png', label: 'Pagar', route: '/finance/add-pay' },
-        { icon: '/images/financeiro/receber.png', label: 'Receber', route: '/finance/add-receive/list-receives' },
+        { icon: '/images/financeiro/pagar.png', label: 'Contas a Pagar', route: '/finance/add-pay' },
+        { icon: '/images/financeiro/receber.png', label: 'Contas a Receber', route: '/finance/add-receive/list-receives' },
         { icon: '/images/financeiro/caixa.png', label: 'Caixa', route: '/finance/cashier_day' },
         { icon: '/images/financeiro/vendas.png', label: 'Vendas', route: '/commercial/sales' },
-        { icon: '/images/financeiro/cartoes.png', label: 'Cartões', route: '/finance/cards' },
-        { icon: '/images/estoque/graph.png', label: 'Fluxo de caixa', route: '/finance/cashflow' },
+        { icon: '/images/financeiro/cartoes.png', label: 'Cartões', route: '/finance/cards' }
     ];
 
     return (
         <Layout>
-            <div className="w-full">
+            <div className="w-full mb-28">
                 <div className="grid items-center grid-cols-2 gap-8 sm:grid-cols-3 md:grid-cols-2">
                     <h1 className='text-4xl ml-0 md:ml-4 font-bold text-[#9a5fc7] text-center md:text-left'>Cadastro</h1>
                     {allItems.map((item, index) => (

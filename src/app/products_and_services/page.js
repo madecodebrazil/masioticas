@@ -121,7 +121,7 @@ export default function ProductsPage() {
 
     return (
         <Layout>
-            <div className="w-full">
+            <div className="w-full mb-28">
                 <div className="grid items-center grid-cols-2 gap-8 sm:grid-cols-3 md:grid-cols-2">
                     <h1 className='text-4xl ml-0 md:ml-4 font-bold text-[#9a5fc7] text-center md:text-left'>Produtos</h1>
                     {productsItems.map((item, index) => (
@@ -155,7 +155,7 @@ export default function ProductsPage() {
                                         height={50}
                                         className="object-contain mr-2"
                                     />
-                                    <span className="text-white font-bold text-lg flex-grow text-left">
+                                    <span className="font-semibold text-sm sm:text-base lg:text-lg flex-grow text-left">
                                         {item.label}
                                     </span>
                                 </div>

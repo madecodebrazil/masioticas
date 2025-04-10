@@ -201,7 +201,7 @@ const AdminRegisterForm = () => {
     <div className="min-h-screen">
       <div className="w-full max-w-5xl mx-auto rounded-lg">
         <h2 className="text-3xl font-bold text-[#81059e] mb-8 mt-8 flex items-center gap-2">
-          <FiUserPlus /> ADICIONAR COLABORADOR
+          + NOVO COLABORADOR
         </h2>
 
         {error && (

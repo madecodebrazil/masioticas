@@ -6,12 +6,15 @@ import Image from "next/image";
 import Layout from "@/components/Layout";
 import { motion } from "framer-motion";
 import ModalNovaVenda from "@/components/ModalNovaVenda";
+import ModalNovoOrcamento from "@/components/ModalNovoOrcamento";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function SalesPage() {
   const router = useRouter();
   const { userPermissions } = useAuth();
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  // Criar estados separados para cada modal
+  const [isVendaModalOpen, setIsVendaModalOpen] = useState(false);
+  const [isOrcamentoModalOpen, setIsOrcamentoModalOpen] = useState(false);
   const [selectedLoja, setSelectedLoja] = useState(
     userPermissions?.lojas?.[0] || "loja1"
   );
@@ -21,12 +24,12 @@ export default function SalesPage() {
     {
       icon: "/images/financeiro/vendas.png",
       label: "Nova Venda",
-      action: () => setIsModalOpen(true)
+      action: () => setIsVendaModalOpen(true)
     },
     {
       icon: "/images/financeiro/receber.png",
       label: "Novo orçamento",
-      route: "/sales/estimates"
+      action: () => setIsOrcamentoModalOpen(true)
     },
     {
       icon: "/images/financeiro/receber.png",
@@ -102,8 +105,15 @@ export default function SalesPage() {
               </div>
               {/* Modal de Nova Venda */}
               <ModalNovaVenda
-                isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
+                isOpen={isVendaModalOpen}
+                onClose={() => setIsVendaModalOpen(false)}
+                selectedLoja={selectedLoja}
+              />
+
+              {/* Modal de Novo Orçamento */}
+              <ModalNovoOrcamento
+                isOpen={isOrcamentoModalOpen}
+                onClose={() => setIsOrcamentoModalOpen(false)}
                 selectedLoja={selectedLoja}
               />
             </div>

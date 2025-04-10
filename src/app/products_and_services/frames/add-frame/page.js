@@ -11,13 +11,13 @@ import { useAuth } from "@/hooks/useAuth";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { FiPlus, FiChevronDown } from 'react-icons/fi';
-import { format } from 'date-fns';
-import ptBR from 'date-fns/locale/pt-BR';
+import ProductConfirmModal from '@/components/ProductConfirmModal';
 
 const SelectWithAddOption = ({ label, options, value, onChange, collectionName, addNewOption, canAddNew = true }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [newItemValue, setNewItemValue] = useState("");
   const [showAddInput, setShowAddInput] = useState(false);
+
 
 
   const handleAddItem = async () => {
@@ -91,12 +91,12 @@ const SelectWithAddOption = ({ label, options, value, onChange, collectionName, 
 };
 
 export function FormularioLoja() {
-  const currentDate = format(new Date(), 'yyyy-MM-dd', { locale: ptBR });
-  const currentTime = format(new Date(), 'HH:mm');
   const searchParams = useSearchParams();
   const { userPermissions, userData } = useAuth();
   const [ncm, setNcm] = useState([]);
   const [selectedLoja, setSelectedLoja] = useState(null);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [productToConfirm, setProductToConfirm] = useState(null);
 
   const renderLojaName = (lojaId) => {
     const lojaNames = {
@@ -136,8 +136,8 @@ export function FormularioLoja() {
     codigoBarras: "",
     unidade: "",
     codigoFabricante: "",
-    data: currentDate,
-    hora: currentTime,
+    data: "",
+    hora: "",
     fabricante: "",
     fornecedor: "",
     marca: "",
@@ -180,16 +180,10 @@ export function FormularioLoja() {
 
   // Definir loja inicial baseado nas permissões
   useEffect(() => {
-    if (userPermissions) {
-      // Se não for admin, usa a primeira loja que tem acesso
-      if (!userPermissions.isAdmin && userPermissions.lojas.length > 0) {
-        setSelectedLoja(userPermissions.lojas[0]);
-        setSelectedLojas([renderLojaName(userPermissions.lojas[0])]);
-      }
-      // Se for admin, usa a primeira loja da lista
-      else if (userPermissions.isAdmin && userPermissions.lojas.length > 0) {
-        setSelectedLoja(userPermissions.lojas[0]);
-      }
+    if (userPermissions && userPermissions.lojas && userPermissions.lojas.length > 0) {
+      const defaultLoja = userPermissions.lojas[0];
+      setSelectedLoja(defaultLoja);
+      setSelectedLojas([renderLojaName(defaultLoja)]);
     }
   }, [userPermissions]);
 
@@ -235,7 +229,7 @@ export function FormularioLoja() {
       if (ncmSnapshot.empty) {
         console.log("Coleção NCM vazia, tentando caminho alternativo...");
         // Tente outro caminho que poderia conter os dados NCM
-        const altNcmSnapshot = await getDocs(collection(firestore, "lojas/estoque/ncm"));
+        const altNcmSnapshot = await getDocs(collection(firestore, "/estoque/configuracoes/atributos/ncm"));
 
         if (!altNcmSnapshot.empty) {
           const ncmList = altNcmSnapshot.docs.map((doc) => {
@@ -332,12 +326,20 @@ export function FormularioLoja() {
 
     try {
       // Determinar a loja para salvar
-      const lojaToUse = selectedLoja ||
-        (selectedLojas[0]?.includes("Loja 1") ? "loja1" :
-          selectedLojas[0]?.includes("Loja 2") ? "loja2" : "loja1");
+      let lojaToUse;
+      if (selectedLoja === "ambas") {
+        lojaToUse = "loja1"; // Default para "ambas"
+      } else if (selectedLoja) {
+        lojaToUse = selectedLoja;
+      } else if (selectedLojas.length > 0) {
+        lojaToUse = selectedLojas[0]?.includes("Loja 1") ? "loja1" :
+          selectedLojas[0]?.includes("Loja 2") ? "loja2" : "loja1";
+      } else {
+        lojaToUse = "loja1"; // Default final
+      }
 
       // Salva na estrutura específica do estoque da loja
-      const lojaPath = `lojas/estoque/${lojaToUse}/armacoes/${collectionName}`;
+      const lojaPath = `/estoque/${lojaToUse}/armacoes/configuracoes/armacoes_marcas`;
       const lojaItemRef = doc(firestore, lojaPath, value.toLowerCase().replace(/\s+/g, '_'));
 
       await setDoc(lojaItemRef, {
@@ -405,7 +407,7 @@ export function FormularioLoja() {
           selectedLojas[0]?.includes("Loja 2") ? "loja2" : "loja1");
 
       // Salva na estrutura específica do estoque da loja
-      const lojaPath = `lojas/estoque/${lojaToUse}/armacoes/${collectionName}`;
+      const lojaPath = `/estoque/${lojaToUse}/armacoes/${collectionName}`;
       const lojaItemRef = doc(firestore, lojaPath, value.toString().replace(/\./g, '_'));
 
       await setDoc(lojaItemRef, {
@@ -444,7 +446,7 @@ export function FormularioLoja() {
   // Funções para buscar dados
   const fetchAros = async () => {
     try {
-      const arosSnapshot = await getDocs(collection(firestore, "armacoes_aros"));
+      const arosSnapshot = await getDocs(collection(firestore, "configuracoes/atributos/armacoes_aros"));
       const arosList = arosSnapshot.docs.map((doc) => doc.data().name);
       setAros(arosList);
     } catch (error) {
@@ -454,7 +456,7 @@ export function FormularioLoja() {
 
   const fetchCores = async () => {
     try {
-      const corSnapshot = await getDocs(collection(firestore, "armacoes_cores"));
+      const corSnapshot = await getDocs(collection(firestore, "configuracoes/atributos/armacoes_cores"));
       const corList = corSnapshot.docs.map((doc) => doc.data().name);
       setCores(corList);
     } catch (error) {
@@ -464,7 +466,7 @@ export function FormularioLoja() {
 
   const fetchFabricantes = async () => {
     try {
-      const fabricantesSnapshot = await getDocs(collection(firestore, "armacoes_fabricantes"));
+      const fabricantesSnapshot = await getDocs(collection(firestore, "configuracoes/atributos/armacoes_fabricantes"));
       const fabricantesList = fabricantesSnapshot.docs.map(
         (doc) => doc.data().name
       );
@@ -476,7 +478,7 @@ export function FormularioLoja() {
 
   const fetchHastes = async () => {
     try {
-      const hasteSnapshot = await getDocs(collection(firestore, "armacoes_hastes"));
+      const hasteSnapshot = await getDocs(collection(firestore, "configuracoes/atributos/armacoes_hastes"));
       const hasteList = hasteSnapshot.docs.map((doc) => doc.data().value);
       setHastes(hasteList);
     } catch (error) {
@@ -486,7 +488,7 @@ export function FormularioLoja() {
 
   const fetchLentes = async () => {
     try {
-      const lenteSnapshot = await getDocs(collection(firestore, "armacoes_largura_lentes"));
+      const lenteSnapshot = await getDocs(collection(firestore, "configuracoes/atributos/armacoes_largura_lentes"));
       const lentesList = lenteSnapshot.docs.map((doc) => doc.data().value);
       setLentes(lentesList);
     } catch (error) {
@@ -496,7 +498,7 @@ export function FormularioLoja() {
 
   const fetchMarcas = async () => {
     try {
-      const marcasSnapshot = await getDocs(collection(firestore, "armacoes_marcas"));
+      const marcasSnapshot = await getDocs(collection(firestore, "configuracoes/atributos/armacoes_marcas"));
       const marcasList = marcasSnapshot.docs.map((doc) => doc.data().name);
       setMarcas(marcasList);
     } catch (error) {
@@ -506,7 +508,7 @@ export function FormularioLoja() {
 
   const fetchMateriais = async () => {
     try {
-      const materiaisSnapshot = await getDocs(collection(firestore, "armacoes_materiais"));
+      const materiaisSnapshot = await getDocs(collection(firestore, "configuracoes/atributos/armacoes_materiais"));
       const materiaisList = materiaisSnapshot.docs.map((doc) => doc.data().name);
       setMateriais(materiaisList);
     } catch (error) {
@@ -516,7 +518,7 @@ export function FormularioLoja() {
 
   const fetchPontes = async () => {
     try {
-      const pontesSnapshot = await getDocs(collection(firestore, "armacoes_pontes"));
+      const pontesSnapshot = await getDocs(collection(firestore, "configuracoes/atributos/armacoes_pontes"));
       const ponteList = pontesSnapshot.docs.map((doc) => doc.data().value);
       setPontes(ponteList);
     } catch (error) {
@@ -526,7 +528,7 @@ export function FormularioLoja() {
 
   const fetchFormatos = async () => {
     try {
-      const formatosSnapshot = await getDocs(collection(firestore, "armacoes_formatos"));
+      const formatosSnapshot = await getDocs(collection(firestore, "configuracoes/atributos/armacoes_formatos"));
       const formatosList = formatosSnapshot.docs.map((doc) => doc.data().name);
       setFormatos(formatosList);
     } catch (error) {
@@ -584,7 +586,7 @@ export function FormularioLoja() {
 
   const fetchUnidades = async () => {
     try {
-      const unidadesSnapshot = await getDocs(collection(firestore, "armacoes_unidades"));
+      const unidadesSnapshot = await getDocs(collection(firestore, "estoque/items/armacoes_unidades"));
       const unidadesList = unidadesSnapshot.docs.map((doc) => doc.data().name);
       setUnidades(unidadesList);
     } catch (error) {
@@ -651,12 +653,13 @@ export function FormularioLoja() {
 
   // Função para limpar o formulário
   const handleClearSelection = () => {
-    const currentDate = format(new Date(), 'yyyy-MM-dd', { locale: ptBR });
-    const currentTime = format(new Date(), 'HH:mm');
+    const now = new Date();
+    const date = now.toISOString().split("T")[0];
+    const time = now.toTimeString().split(":").slice(0, 2).join(":");
 
     setFormData({
-      data: currentDate,
-      hora: currentTime,
+      data: date,
+      hora: time,
       fabricante: "",
       fornecedor: "",
       marca: "",
@@ -713,16 +716,40 @@ export function FormularioLoja() {
     }
   }, [searchParams]);
 
+  // Função para subir a imagem no Firebase Storage
+  const handleImageUpload = async (imageFile) => {
+    try {
+      const storage = getStorage();
+      // Use um caminho mais específico e baseado no timestamp para evitar colisões
+      const timestamp = new Date().getTime();
+      const fileName = `${timestamp}_${imageFile.name.replace(/\s+/g, '_')}`;
+      const storageRef = ref(storage, `armacoes/${fileName}`);
+
+      // Upload do arquivo
+      const uploadTask = await uploadBytes(storageRef, imageFile);
+      console.log("Upload concluído:", uploadTask);
+
+      // Obter URL de download
+      const downloadURL = await getDownloadURL(storageRef);
+      console.log("URL de download obtida:", downloadURL);
+
+      return downloadURL;
+    } catch (error) {
+      console.error("Erro durante o upload da imagem:", error);
+      throw error; // Propagar o erro para tratamento no handleSubmit
+    }
+  };
 
   // Função para enviar os dados para o Firestore
-  // Correção para o handleSubmit
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  setIsLoading(true);
+  // Estado para pré-visualização
+  const [previewUrl, setPreviewUrl] = useState(null);
 
-  try {
-    // Verificar se a loja foi selecionada
-    if (selectedLojas.length === 0) {
+  // Função para enviar os dados para o Firestore
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    if (!selectedLoja && selectedLojas.length === 0) {
       alert("Selecione ao menos uma loja antes de enviar o formulário");
       setIsLoading(false);
       return;
@@ -745,135 +772,69 @@ const handleSubmit = async (e) => {
       };
     }
 
-    // Verificar se código do produto existe
-    if (!updatedFormData.codigo || updatedFormData.codigo.trim() === "") {
-      alert("O código do produto é obrigatório");
-      setIsLoading(false);
-      return;
-    }
-
-    console.log("Enviando dados:", updatedFormData);
-    console.log("Lojas selecionadas:", selectedLojas);
-
-    // Se houver uma imagem, faz o upload e obtém a URL
-    let imageUrl = "";
-    if (updatedFormData.imagem && updatedFormData.imagem instanceof File) {
-      console.log("Iniciando upload da imagem...");
-      try {
-        imageUrl = await handleImageUpload(updatedFormData.imagem);
-        console.log("URL da imagem obtida:", imageUrl);
-      } catch (imageError) {
-        console.error("Erro no upload da imagem:", imageError);
-        alert(`Erro ao fazer upload da imagem: ${imageError.message}`);
-        setIsLoading(false);
-        return;
-      }
-    } else {
-      // Se não tem imagem e é obrigatória, mostrar alerta
-      alert("Por favor, selecione uma imagem para o produto");
-      setIsLoading(false);
-      return;
-    }
-
-    // Cria o objeto com os dados do formulário e a URL da imagem
-    const productData = {
-      ...updatedFormData,
-      imagem: imageUrl,
-      categoria: "armacao", // Categoria fixa
-      subcategoria: updatedFormData.subcategoria || "grau", // Subcategoria
-      avaria: updatedFormData.avaria || false,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      createdBy: userData?.nome || 'Sistema'
-    };
-
-    console.log("Produto a ser salvo:", productData);
-
-    // Para cada loja selecionada, salvar o produto na estrutura correta
-    for (const loja of selectedLojas) {
-      // Converter o nome da loja para o ID usado no Firebase
-      const lojaId = loja.includes("Loja 1") ? "loja1" :
-        loja.includes("Loja 2") ? "loja2" : loja.toLowerCase().replace(/\s+/g, '');
-      
-      console.log(`Salvando no estoque da ${loja} (ID: ${lojaId})`);
-
-      // Caminho para o documento do produto na estrutura correta do estoque
-      const docRef = doc(
-        firestore,
-        `lojas/${lojaId}/estoque/armacoes/${updatedFormData.codigo}` // Caminho corrigido
-      );
-
-      try {
-        await setDoc(docRef, productData);
-        console.log(`Produto salvo no estoque da ${loja} com sucesso!`);
-      } catch (saveError) {
-        console.error(`Erro ao salvar na loja ${loja}:`, saveError);
-        alert(`Erro ao salvar o produto na ${loja}: ${saveError.message}`);
-        // Continuar tentando salvar nas outras lojas
-      }
-    }
-
-    // Também salva uma cópia na temp_image para compatibilidade com a página de confirmação
     try {
+      // Se houver uma imagem, faz o upload para o servidor local
+      let imagePath = "";
+
+      if (updatedFormData.imagem) {
+        const fileName = `${Date.now()}_${updatedFormData.codigo}_${updatedFormData.imagem.name.replace(/\s+/g, '_')}`;
+        imagePath = `/images/armacoes/${fileName}`;
+
+        const uploadFormData = new FormData();
+        uploadFormData.append('image', updatedFormData.imagem);
+        uploadFormData.append('fileName', fileName);
+        uploadFormData.append('productCode', updatedFormData.codigo);
+
+        try {
+          const response = await fetch('/api/upload-image', {
+            method: 'POST',
+            body: uploadFormData,
+          });
+
+          if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Falha no upload da imagem');
+          }
+
+          const result = await response.json();
+          console.log('Imagem enviada com sucesso:', result);
+        } catch (uploadError) {
+          console.error('Erro no upload da imagem:', uploadError);
+          alert(`Erro ao fazer upload da imagem: ${uploadError.message}`);
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      // Criar objeto de dados do produto (sem o objeto File)
+      const { imagem, ...productDataWithoutFile } = updatedFormData;
+      const productData = {
+        ...productDataWithoutFile,
+        imagemUrl: imagePath, // Usar o caminho da imagem
+        categoria: "armacao", // Categoria fixa
+        subcategoria: updatedFormData.subcategoria || "grau", // Subcategoria
+        avaria: updatedFormData.avaria || false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        createdBy: userData?.nome || 'Sistema',
+        lojas: selectedLojas // Incluir lojas no objeto de dados
+      };
+
+      // Salvar uma cópia na temp_image para persistência temporária
       const tempRef = doc(firestore, "temp_image", updatedFormData.codigo);
-      await setDoc(tempRef, {
-        ...productData,
-        lojas: selectedLojas // Incluir lojas na cópia temporária
-      });
-      console.log("Cópia temporária salva com sucesso!");
+      await setDoc(tempRef, productData);
 
-      // Redirecionar para a página de confirmação
-      router.push(
-        `/products_and_services/frames/confirm?formData=${encodeURIComponent(
-          JSON.stringify({ ...productData, lojas: selectedLojas })
-        )}`
-      );
-    } catch (tempError) {
-      console.error("Erro ao salvar cópia temporária:", tempError);
-      alert(`Produto salvo, mas ocorreu um erro ao finalizar: ${tempError.message}`);
-      // Mesmo com erro na cópia temp, o produto foi salvo
-      router.push("/products_and_services/frames");
-    }
-  } catch (error) {
-    console.error("Erro geral ao enviar os dados:", error);
-    alert(`Erro ao salvar o produto: ${error.message}`);
-  } finally {
-    setIsLoading(false);
-  }
-};
+      // Em vez de redirecionar, definimos o produto para confirmação e mostramos o modal
+      setProductToConfirm(productData);
+      setShowConfirmModal(true);
+      setIsLoading(false);
 
-// Função corrigida para upload de imagem
-const handleImageUpload = async (imageFile) => {
-  if (!imageFile) {
-    throw new Error("Nenhuma imagem selecionada");
-  }
-  
-  console.log("Iniciando upload da imagem:", imageFile.name);
-  
-  try {
-    // Criar um objeto FormData para enviar a imagem
-    const formData = new FormData();
-    formData.append('file', imageFile);
-    
-    // Enviar a imagem para a API Route
-    const response = await fetch('/api/upload', {
-      method: 'POST',
-      body: formData,
-    });
-    
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Erro ao fazer upload da imagem');
+    } catch (error) {
+      console.error("Erro ao processar os dados:", error);
+      alert(`Erro ao processar o produto: ${error.message}`);
+      setIsLoading(false);
     }
-    
-    const data = await response.json();
-    console.log("Upload concluído, URL:", data.url);
-    return data.url;
-  } catch (error) {
-    console.error("Erro durante o upload:", error);
-    throw error;
-  }
-};
+  };
 
   return (
     <div>
@@ -888,18 +849,20 @@ const handleImageUpload = async (imageFile) => {
                 Selecionar Loja
               </label>
               <select
-                value={selectedLoja || ''}
+                value={selectedLoja || userPermissions.lojas[0] || ''}
                 onChange={(e) => {
-                  setSelectedLoja(e.target.value);
-                  if (e.target.value === "ambas") {
-                    setSelectedLojas(["Loja 1", "Loja 2"]);
+                  const lojaValue = e.target.value;
+                  setSelectedLoja(lojaValue);
+                  if (lojaValue === "ambas") {
+                    setSelectedLojas(["Loja 1 - Centro", "Loja 2 - Caramuru"]);
+                  } else if (lojaValue) {
+                    setSelectedLojas([renderLojaName(lojaValue)]);
                   } else {
-                    setSelectedLojas([renderLojaName(e.target.value)]);
+                    setSelectedLojas([]);
                   }
                 }}
                 className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black mt-1"
               >
-                <option value="">Selecione uma loja</option>
                 {userPermissions.lojas.map((loja) => (
                   <option key={loja} value={loja}>
                     {renderLojaName(loja)}
@@ -960,13 +923,14 @@ const handleImageUpload = async (imageFile) => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
                 {/* Data */}
-                <div>
-                  <label className="text-[#81059e] font-medium">Data</label>
-                  <div className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black bg-gray-100">
-                    {format(new Date(), 'dd/MM/yyyy', { locale: ptBR })}
-                  </div>
-                  <input type="hidden" name="data" value={formData.data} />
-                </div>
+                <input
+                  type="date"
+                  name="data"
+                  value={formData.data}
+                  readOnly
+                  disabled // Adicionando disabled para garantir
+                  className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black bg-gray-100"
+                />
 
                 {/* Subcategoria - SUBSTITUI O CAMPO CATEGORIA */}
                 <div>
@@ -1467,12 +1431,38 @@ const handleImageUpload = async (imageFile) => {
             <div className="p-4 bg-gray-50 rounded-lg mb-6">
               <h3 className="text-lg font-semibold text-[#81059e] mb-4">Imagem do Produto</h3>
 
-              <input
-                type="file"
-                name="imagem"
-                accept="image/*"
-                onChange={(e) => setFormData({ ...formData, imagem: e.target.files[0] })}
-              />
+              <div className="flex flex-col">
+                <input
+                  type="file"
+                  name="imagem"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                      // Atualizar o formData com o arquivo
+                      setFormData(prev => ({ ...prev, imagem: file }));
+
+                      // Criar um URL para visualização
+                      const objectUrl = URL.createObjectURL(file);
+                      setPreviewUrl(objectUrl);
+                    }
+                  }}
+                  className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black bg-gray-100"
+                  required
+                />
+
+                {/* Pré-visualização da imagem */}
+                {previewUrl && (
+                  <div className="mt-4">
+                    <p className="text-sm text-gray-600 mb-2">Pré-visualização:</p>
+                    <img
+                      src={previewUrl}
+                      alt="Pré-visualização"
+                      className="max-w-xs h-auto object-contain border border-gray-300 rounded-md"
+                    />
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Botões de ação */}
@@ -1480,7 +1470,7 @@ const handleImageUpload = async (imageFile) => {
               <button
                 type="submit"
                 className="bg-[#81059e] p-3 px-6 rounded-sm text-white flex items-center gap-2"
-                disabled={isLoading}
+                disabled={isLoading || !formData.imagem}
               >
                 {isLoading ? 'PROCESSANDO...' : 'CONFIRMAR'}
               </button>
@@ -1500,6 +1490,15 @@ const handleImageUpload = async (imageFile) => {
           <div className="fixed bottom-4 right-4 bg-green-500 text-white p-4 rounded-lg shadow-lg">
             <p>Produto enviado com sucesso!</p>
           </div>
+        )}
+
+        {showConfirmModal && (
+          <ProductConfirmModal
+            isOpen={showConfirmModal}
+            onClose={() => setShowConfirmModal(false)}
+            productData={productToConfirm}
+            setIsLoading={setIsLoading}
+          />
         )}
       </Layout>
     </div>

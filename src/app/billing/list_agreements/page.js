@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { collection, getDocs, getDoc, query, where, doc, updateDoc } from "firebase/firestore"; 
-import { firestore } from '@/lib/firebaseConfig'; 
+import { collection, getDocs, getDoc, query, where, doc, updateDoc } from "firebase/firestore";
+import { firestore } from '@/lib/firebaseConfig';
 import Sidebar from '@/components/Sidebar';
-import { FaPencilAlt } from 'react-icons/fa'; 
+import { FaPencilAlt } from 'react-icons/fa';
 import { Popover } from '@headlessui/react';
 import Layout from '@/components/Layout';
 
@@ -75,13 +75,13 @@ export default function ListAgreementsPage() {
                     <div>
                         <div>
                             <h1 className="text-purple-700 text-xl font-bold mb-4">Lista de Acordos</h1>
-                            
+
                             {/* Resto do conteúdo permanece igual */}
                             <div className="mb-6">
                                 <label className="block text-sm font-bold text-gray-700 mb-2">Selecione a Loja:</label>
-                                <select 
-                                    value={selectedStore} 
-                                    onChange={(e) => setSelectedStore(e.target.value)} 
+                                <select
+                                    value={selectedStore}
+                                    onChange={(e) => setSelectedStore(e.target.value)}
                                     className="border rounded w-full py-2 px-3 text-gray-700"
                                 >
                                     <option value="both">Ambas as Lojas</option>
@@ -93,19 +93,19 @@ export default function ListAgreementsPage() {
                             <div className="mb-6 flex flex-col sm:flex-row gap-4">
                                 <div>
                                     <label className="block text-sm font-bold text-gray-700 mb-2">Data Inicial:</label>
-                                    <input 
-                                        type="date" 
-                                        value={startDate} 
-                                        onChange={(e) => setStartDate(e.target.value)} 
+                                    <input
+                                        type="date"
+                                        value={startDate}
+                                        onChange={(e) => setStartDate(e.target.value)}
                                         className="border rounded w-full py-2 px-3 text-gray-700"
                                     />
                                 </div>
                                 <div>
                                     <label className="block text-sm font-bold text-gray-700 mb-2">Data Final:</label>
-                                    <input 
-                                        type="date" 
-                                        value={endDate} 
-                                        onChange={(e) => setEndDate(e.target.value)} 
+                                    <input
+                                        type="date"
+                                        value={endDate}
+                                        onChange={(e) => setEndDate(e.target.value)}
                                         className="border rounded w-full py-2 px-3 text-gray-700"
                                     />
                                 </div>
@@ -113,9 +113,9 @@ export default function ListAgreementsPage() {
 
                             <div className="mb-6">
                                 <label className="block text-sm font-bold text-gray-700 mb-2">Status:</label>
-                                <select 
-                                    value={statusFilter} 
-                                    onChange={(e) => setStatusFilter(e.target.value)} 
+                                <select
+                                    value={statusFilter}
+                                    onChange={(e) => setStatusFilter(e.target.value)}
                                     className="border rounded w-full py-2 px-3 text-gray-700"
                                 >
                                     <option value="all">Todos</option>
@@ -144,12 +144,12 @@ function AgreementList({ agreements, fetchAgreements }) {
 
     const handleStatusChange = async (agreementId, newStatus, loja) => {
         setSavingStatus(true);
-        
+
         // Determine a loja a partir do nome da loja no documento
         const lojaDoc = loja === "Óticas Popular 1" ? "loja1" : "loja2"; // Altere aqui para usar a propriedade correta
-        
+
         const docRef = doc(firestore, lojaDoc, 'agreements', 'acordos', agreementId);
-        
+
         try {
             // Verifica se o documento existe
             const docSnap = await getDoc(docRef);
@@ -157,7 +157,7 @@ function AgreementList({ agreements, fetchAgreements }) {
                 console.error('Documento não encontrado!', docRef.path);
                 return;
             }
-    
+
             // Atualiza o documento
             await updateDoc(docRef, { status: newStatus });
             console.log('Status atualizado com sucesso!');
@@ -178,11 +178,11 @@ function AgreementList({ agreements, fetchAgreements }) {
                             <div className="flex justify-between items-center">
                                 <span className="text-sm font-bold text-purple-700">ID #{agreement.id}</span>
                                 <p className="mt-1 text-gray-700">
-    <strong>Validade: </strong>
-    {agreement.data && agreement.data.seconds 
-        ? new Date(agreement.data.seconds * 1000).toLocaleDateString('pt-BR') 
-        : 'Não disponível'}
-</p>
+                                    <strong>Validade: </strong>
+                                    {agreement.data && agreement.data.seconds
+                                        ? new Date(agreement.data.seconds * 1000).toLocaleDateString('pt-BR')
+                                        : 'Não disponível'}
+                                </p>
 
                             </div>
                             <p className="mt-2 text-gray-700"><strong>Pessoa: </strong>{agreement.pessoa}</p>
@@ -199,8 +199,8 @@ function AgreementList({ agreements, fetchAgreements }) {
                                     <p><strong>ID: </strong>{agreement.id}</p>
                                     <p><strong>Pessoa: </strong>{agreement.pessoa}</p>
                                     <p><strong>Valor: </strong>R$ {agreement.valor}</p>
-                                    <p><strong>Validade: </strong>{agreement.data && agreement.data.seconds 
-                                        ? new Date(agreement.data.seconds * 1000).toLocaleDateString('pt-BR') 
+                                    <p><strong>Validade: </strong>{agreement.data && agreement.data.seconds
+                                        ? new Date(agreement.data.seconds * 1000).toLocaleDateString('pt-BR')
                                         : 'Não disponível'}</p>
                                     <div className="mt-2">
                                         <label>Status: </label>

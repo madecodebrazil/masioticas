@@ -72,7 +72,7 @@ export default function ProductsPage() {
                         height={50}
                         className="object-contain mr-4"
                       />
-                      <span className="text-white font-bold text-lg text-left flex-grow">
+                      <span className="font-semibold text-sm sm:text-base lg:text-lg flex-grow text-left">
                         {item.label}
                       </span>
                     </div>

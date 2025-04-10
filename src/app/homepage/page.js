@@ -197,9 +197,9 @@ export default function Home() {
 
     const items = [
         { label: <>Financeiro</>, img: '/images/homepage/Coins.png', href: '/finance' },
-        { label: <>Vendas</>, img: '/images/homepage/Product.png', href: '/commercial/sales' },
+        { label: <>Vendas</>, img: '/images/homepage/Product.png', href: '/sales' },
         { label: <>Estoque</>, img: '/images/homepage/Boxes.png', href: '/stock' },
-        { label: <>Serviços</>, img: '/images/homepage/Product.png', href: '/products_and_services' },
+        { label: <>Produtos</>, img: '/images/homepage/Product.png', href: '/products_and_services' },
         { label: <>Cadastros</>, img: '/images/homepage/Task.png', href: '/register' },
         { label: <>Consultas</>, img: '/images/homepage/Stethoscope.png', href: '/consultation' },
         { label: <>Clientes</>, img: '/images/homepage/User.png', href: 'register/consumers' },

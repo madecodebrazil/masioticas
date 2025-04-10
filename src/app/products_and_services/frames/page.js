@@ -56,7 +56,7 @@ export default function ListaArmacoes() {
         // Usar o caminho correto para lojas específicas
         if (selectedLoja !== 'Ambas') {
           // Caminho para uma loja específica
-          const armacoesDocRef = collection(firestore, `lojas/estoque/${selectedLoja}/armacoes/items`);
+          const armacoesDocRef = collection(firestore, `/estoque/${selectedLoja}/armacoes/`);
           const armacoesSnapshot = await getDocs(armacoesDocRef);
 
           armacoesSnapshot.docs.forEach((docItem) => {
@@ -72,7 +72,7 @@ export default function ListaArmacoes() {
           const lojas = userPermissions?.lojas || [];
 
           for (const loja of lojas) {
-            const armacoesDocRef = collection(firestore, `lojas/estoque/${loja}/armacoes/items`);
+            const armacoesDocRef = collection(firestore, `/estoque/${loja}/armacoes`);
             const armacoesSnapshot = await getDocs(armacoesDocRef);
 
             armacoesSnapshot.docs.forEach((docItem) => {
@@ -319,7 +319,7 @@ export default function ListaArmacoes() {
           const armacao = armacoes.find(a => a.id === armacaoId);
           if (armacao && armacao.loja) {
             // Excluir a armação
-            const armacaoRef = doc(firestore, `lojas/estoque/${armacao.loja}/armacoes/items`, armacaoId);
+            const armacaoRef = doc(firestore, `/estoque/${armacao.loja}/armacoes/items`, armacaoId);
             await deleteDoc(armacaoRef);
           }
         }
