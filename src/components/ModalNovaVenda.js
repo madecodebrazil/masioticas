@@ -29,6 +29,31 @@ import {
 import { FaBitcoin, FaEthereum } from 'react-icons/fa';
 import ClientForm from './ClientForm';
 
+function removerValoresUndefined(obj) {
+    // Se for null, undefined ou não for um objeto, retornar null
+    if (obj === null || obj === undefined || typeof obj !== 'object') {
+        return obj === undefined ? null : obj;
+    }
+
+    // Se for um array, processar cada item
+    if (Array.isArray(obj)) {
+        return obj.map(item => removerValoresUndefined(item));
+    }
+
+    // Se for um objeto, processar cada propriedade
+    const resultado = {};
+    for (const chave in obj) {
+        if (Object.prototype.hasOwnProperty.call(obj, chave)) {
+            // Substituir undefined por null
+            const valor = obj[chave] === undefined ? null : removerValoresUndefined(obj[chave]);
+            resultado[chave] = valor;
+        }
+    }
+
+    return resultado;
+}
+
+
 const ModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
     // Estado para gerenciamento de clientes
     const [searchTerm, setSearchTerm] = useState('');
@@ -269,12 +294,12 @@ const ModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
         }
     }, [productSearchTerm, products]);
 
-   // Calcular subtotal
-const calculateSubtotal = () => {
-    return cartItems.reduce((total, item) =>
-      total + ((item.preco || item.info_geral?.preco || 0) * item.quantity), 0
-    );
-  };
+    // Calcular subtotal
+    const calculateSubtotal = () => {
+        return cartItems.reduce((total, item) =>
+            total + ((item.preco || item.info_geral?.preco || 0) * item.quantity), 0
+        );
+    };
 
     // Calcular desconto
     const calculateDiscount = () => {
@@ -675,7 +700,7 @@ const calculateSubtotal = () => {
                     status: payment.method === 'boleto' || payment.method === 'ted' || payment.method === 'crypto'
                         ? 'pendente'
                         : 'aprovado',
-                    data_processamento: serverTimestamp(),
+                    data_processamento: new Date(), // Modificar se estava usando serverTimestamp()
                     dados_especificos: dadosEspecificos
                 };
             });
@@ -724,73 +749,82 @@ const calculateSubtotal = () => {
                 historico_status: [
                     {
                         status: statusVenda,
-                        data: serverTimestamp(),
+                        data: new Date(), // Modificado de serverTimestamp()
                         responsavel: {
                             id: user?.uid,
                             nome: vendedor
                         }
                     }
-                ]
+                ],
             };
 
             // 2. Registrar venda no Firebase
-            const vendaRef = collection(firestore, `lojas/${selectedLoja}/vendas/items`);
+            const vendaRef = collection(firestore, `lojas/${selectedLoja}/vendas/items/items`);
             const novaVendaRef = await addDoc(vendaRef, venda);
 
             // 3. Atualizar estoque apenas se o pagamento for aprovado ou for crediário
             if (statusVenda === 'paga') {
                 await Promise.all(cartItems.map(async (item) => {
-                  // Caminho correto para atualizar o estoque
-                  const productRef = doc(firestore, `estoque/${selectedLoja}/${item.categoria}`, item.id);
-                  
-                  try {
-                    const productDoc = await getDoc(productRef);
-              
-                    if (productDoc.exists()) {
-                      const productData = productDoc.data();
-                      const currentStock = productData.quantidade || 0;
-                      
-                      // Garantir que não ficará negativo
-                      const newStock = Math.max(0, currentStock - item.quantity);
-              
-                      // Atualizar estoque
-                      await updateDoc(productRef, {
-                        quantidade: newStock
-                      });
-                      
-                      console.log(`Estoque atualizado: ${item.nome || item.id} - Novo estoque: ${newStock}`);
-                    } else {
-                      console.warn(`Produto não encontrado no estoque: ${item.id} (${item.categoria})`);
+                    // Caminho correto para atualizar o estoque
+                    const productRef = doc(firestore, `estoque/${selectedLoja}/${item.categoria}`, item.id);
+
+                    try {
+                        const productDoc = await getDoc(productRef);
+
+                        if (productDoc.exists()) {
+                            const productData = productDoc.data();
+                            const currentStock = productData.quantidade || 0;
+
+                            // Garantir que não ficará negativo
+                            const newStock = Math.max(0, currentStock - item.quantity);
+
+                            // Atualizar estoque
+                            await updateDoc(productRef, {
+                                quantidade: newStock
+                            });
+
+                            console.log(`Estoque atualizado: ${item.nome || item.id} - Novo estoque: ${newStock}`);
+                        } else {
+                            console.warn(`Produto não encontrado no estoque: ${item.id} (${item.categoria})`);
+                        }
+                    } catch (error) {
+                        console.error(`Erro ao atualizar estoque do produto ${item.id}:`, error);
+                        // Continuar mesmo com erro em um produto específico
                     }
-                  } catch (error) {
-                    console.error(`Erro ao atualizar estoque do produto ${item.id}:`, error);
-                    // Continuar mesmo com erro em um produto específico
-                  }
                 }));
-              }
+            }
 
             // 4. Registrar ordem de serviço apenas se pagamento aprovado ou crediário
             if (statusVenda === 'paga') {
-                const osRef = collection(firestore, `lojas/${selectedLoja}/servicos/items`);
-                await addDoc(osRef, {
-                    id_os: newOsId,
-                    id_venda: novaVendaRef.id,
-                    cliente: {
-                        id: selectedClient.id,
-                        nome: selectedClient.nome,
-                        cpf: selectedClient.cpf,
-                        contato: selectedClient.telefone || ''
-                    },
-                    status: 'aguardando_montagem',
-                    data_criacao: serverTimestamp(),
-                    data_previsao: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000), // +2 dias
-                    produtos: cartItems.map(item => ({
-                        id: item.id,
-                        nome: item.info_geral?.nome,
-                        marca: item.info_geral?.marca
-                    })),
-                    observacoes: observation
-                });
+                if (statusVenda === 'paga') {
+                    // Prepare os dados da OS
+                    const dadosOS = {
+                        id_os: newOsId,
+                        id_venda: novaVendaRef.id,
+                        cliente: {
+                            id: selectedClient.id,
+                            nome: selectedClient.nome,
+                            cpf: selectedClient.cpf,
+                            contato: selectedClient.telefone || ''
+                        },
+                        status: 'aguardando_montagem',
+                        data_criacao: new Date(),
+                        data_previsao: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000), // +2 dias
+                        produtos: cartItems.map(item => ({
+                            id: item.id,
+                            nome: item.info_geral?.nome,
+                            marca: item.info_geral?.marca
+                        })),
+                        observacoes: observation
+                    };
+
+                    // Remover valores undefined
+                    const dadosOSLimpos = removerValoresUndefined(dadosOS);
+
+                    // E então use os dados limpos
+                    const osRef = collection(firestore, `lojas/${selectedLoja}/servicos/items/items`);
+                    await addDoc(osRef, dadosOSLimpos);
+                }
             }
 
             // 5. Registrar no controle de caixa para pagamentos imediatos
@@ -802,7 +836,7 @@ const calculateSubtotal = () => {
                         valor: payment.value,
                         descricao: `Venda #${novaVendaRef.id} - Cliente: ${selectedClient.nome} - Pagamento: ${payment.method}`,
                         formaPagamento: payment.method,
-                        data: serverTimestamp(),
+                        data: new Date(), // Modificar se estava usando serverTimestamp() dentro de algum array
                         registradoPor: {
                             id: user?.uid,
                             nome: vendedor
@@ -821,10 +855,10 @@ const calculateSubtotal = () => {
                         valor: payment.value,
                         descricao: `Venda #${novaVendaRef.id} - Cliente: ${selectedClient.nome}`,
                         forma_pagamento: payment.method,
-                        data_criacao: serverTimestamp(),
+                        data_criacao: new Date(), // Modificar se estava usando serverTimestamp() dentro de algum array
                         data_vencimento: payment.method === 'boleto' ?
                             (boletoVencimento ? new Date(boletoVencimento) : new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)) :
-                            new Date(Date.now() + 1 * 24 * 60 * 60 * 1000), // +1 dia para TED
+                            new Date(Date.now() + 1 * 24 * 60 * 60 * 1000),
                         status: 'pendente',
                         cliente: {
                             id: selectedClient.id,
@@ -897,28 +931,23 @@ const calculateSubtotal = () => {
             const temCrypto = paymentMethods.some(p => p.method === 'crypto');
             if (temCrypto) {
                 const cryptoRef = collection(firestore, `lojas/${selectedLoja}/financeiro/crypto_transacoes`);
-
-                for (const payment of paymentMethods) {
-                    if (payment.method === 'crypto') {
-                        await addDoc(cryptoRef, {
-                            venda_id: novaVendaRef.id,
-                            cliente_id: selectedClient.id,
-                            cliente_nome: selectedClient.nome,
-                            valor_brl: payment.value,
-                            moeda: payment.dados_especificos?.moeda || 'bitcoin',
-                            endereco: payment.dados_especificos?.endereco || '',
-                            valor_crypto: payment.dados_especificos?.valor_crypto || '0',
-                            taxa_cambio: payment.dados_especificos?.taxa_cambio || 0,
-                            status: 'aguardando_confirmacao',
-                            data_criacao: serverTimestamp(),
-                            data_confirmacao: null,
-                            registrado_por: {
-                                id: user?.uid,
-                                nome: vendedor
-                            }
-                        });
+                await addDoc(cryptoRef, {
+                    venda_id: novaVendaRef.id,
+                    cliente_id: selectedClient.id,
+                    cliente_nome: selectedClient.nome,
+                    valor_brl: payment.value,
+                    moeda: payment.dados_especificos?.moeda || 'bitcoin',
+                    endereco: payment.dados_especificos?.endereco || '',
+                    valor_crypto: payment.dados_especificos?.valor_crypto || '0',
+                    taxa_cambio: payment.dados_especificos?.taxa_cambio || 0,
+                    status: 'aguardando_confirmacao',
+                    data_criacao: new Date(), // Modificar se estava usando serverTimestamp() dentro de algum array
+                    data_confirmacao: null,
+                    registrado_por: {
+                        id: user?.uid,
+                        nome: vendedor
                     }
-                }
+                });
             }
 
             setSaleId(novaVendaRef.id);

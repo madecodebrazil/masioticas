@@ -1,19 +1,20 @@
 // components/CarrinhoCompras.js
 import { useState, useEffect, useRef } from 'react';
-import { 
-  FiSearch, FiPlus, FiMinus, FiTrash2, FiInfo, 
+import {
+  FiSearch, FiPlus, FiMinus, FiTrash2, FiInfo,
   FiShoppingBag, FiBarChart2, FiTag, FiPackage,
   FiAlertCircle
 } from 'react-icons/fi';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs } from 'firebase/firestore';
 import { firestore } from '@/lib/firebaseConfig';
+import { useAuth } from '@/hooks/useAuth';
 
-const CarrinhoCompras = ({ 
-  products = [],  
-  cartItems = [], 
+const CarrinhoCompras = ({
+  products = [],
+  cartItems = [],
   setCartItems,
-  selectedLoja,
-  updateCartValue // Função para atualizar valores externos
+  selectedLoja, // Esta prop ainda é útil para filtrar por loja específica
+  updateCartValue
 }) => {
   // Estados para busca de produtos
   const [productSearchTerm, setProductSearchTerm] = useState('');
@@ -29,93 +30,90 @@ const CarrinhoCompras = ({
   const [categorias] = useState(['armacoes', 'lentes', 'solares']);
   const [estoqueData, setEstoqueData] = useState([]);
   const [debug, setDebug] = useState(null);
+  const { userPermissions } = useAuth();
 
   // Buscar produtos do estoque
   useEffect(() => {
-    if (selectedLoja) {
+    if (userPermissions) {  // Verifique se userPermissions está disponível
       fetchProductsFromEstoque();
     }
-  }, [selectedLoja]);
+  }, [selectedLoja, userPermissions]);
 
-  // Buscar produtos do estoque no Firebase - CAMINHO CORRIGIDO
+  // Buscar produtos do estoque no Firebase - CORRIGIDO
   const fetchProductsFromEstoque = async () => {
     try {
       setLoading(true);
       setError('');
-      let allProducts = [];
-      let debugInfo = {}; // Para armazenar informações de debug
+      const produtosData = [];
+      let debugInfo = {};
 
-      // Percorrer cada categoria (armacoes, lentes, solares)
-      for (const categoria of categorias) {
-        try {
-          // CAMINHO CORRIGIDO com base na captura de tela: estoque > loja1 > armacoes
-          const productsRef = collection(firestore, `estoque/${selectedLoja}/${categoria}`);
-          
-          // Capturar informações para debug
-          debugInfo[categoria] = {
-            path: `estoque/${selectedLoja}/${categoria}`,
-            attempt: true
-          };
-          
-          const querySnapshot = await getDocs(productsRef);
-          
-          debugInfo[categoria].docsCount = querySnapshot.size;
-          debugInfo[categoria].success = true;
-          
-          // Mapear documentos para objetos de produto
-          const categoryProducts = querySnapshot.docs.map(doc => {
-            const data = doc.data();
-            return {
-              id: doc.id,
-              categoria: categoria,
-              nome: data.nome || data.info_geral?.nome || `Produto ${doc.id}`,
-              marca: data.marca || data.info_geral?.marca || "Sem marca",
-              codigo: data.codigo || data.info_geral?.codigo || doc.id,
-              preco: data.preco || data.info_geral?.preco || 0,
-              quantidade: data.quantidade || 0,
-              info_geral: data.info_geral || {
-                nome: data.nome || `Produto ${doc.id}`,
-                marca: data.marca || "Sem marca",
-                codigo: data.codigo || doc.id,
-                preco: data.preco || 0
-              },
-              info_adicional: data.info_adicional || {}
+      // Determinar quais lojas o usuário tem acesso
+      const lojasAcessiveis = userPermissions?.isAdmin || userPermissions?.acesso_total
+        ? ['loja1', 'loja2']  // Admin ou acesso total vê todas as lojas
+        : userPermissions?.lojas || []; // Usuário normal vê apenas suas lojas designadas
+
+      // Se selectedLoja for especificado e o usuário tiver acesso, use apenas essa loja
+      const lojasParaBuscar = selectedLoja && lojasAcessiveis.includes(selectedLoja)
+        ? [selectedLoja]
+        : lojasAcessiveis;
+
+      // Buscar produtos para cada loja e categoria
+      for (const loja of lojasParaBuscar) {
+        for (const categoria of categorias) {
+          try {
+            // Caminho correto para o Firestore
+            const produtosRef = collection(firestore, `estoque/${loja}/${categoria}`);
+
+            // Registrar informações para debug
+            debugInfo[`${loja}-${categoria}`] = {
+              path: `estoque/${loja}/${categoria}`,
+              attempt: true
             };
-          });
-          
-          allProducts = [...allProducts, ...categoryProducts];
-        } catch (err) {
-          debugInfo[categoria].error = err.message;
-          debugInfo[categoria].success = false;
-          console.error(`Erro ao buscar categoria ${categoria}:`, err);
+
+            const produtosSnapshot = await getDocs(produtosRef);
+            debugInfo[`${loja}-${categoria}`].docsCount = produtosSnapshot.size;
+            debugInfo[`${loja}-${categoria}`].success = true;
+
+            // Mapear documentos para o formato correto
+            produtosSnapshot.docs.forEach((docProduto) => {
+              const produtoData = docProduto.data();
+              produtosData.push({
+                id: docProduto.id,
+                ...produtoData,
+                loja: loja, // Importante incluir a loja de origem
+                categoria: categoria
+              });
+            });
+          } catch (err) {
+            debugInfo[`${loja}-${categoria}`] = {
+              path: `estoque/${loja}/${categoria}`,
+              error: err.message,
+              success: false
+            };
+            console.error(`Erro ao buscar produtos da categoria ${categoria} na loja ${loja}:`, err);
+          }
         }
       }
 
       // Definir as informações de debug
       setDebug(debugInfo);
 
-      // Filtrar produtos com quantidade disponível
-      const productsList = allProducts.filter(product => 
-        (product.quantidade || 0) > 0
-      );
+      // Filtrar produtos com quantidade > 0
+      const produtosComEstoque = produtosData.filter(p => parseInt(p.quantidade) > 0);
 
-      // Se não houver produtos, tentar buscar sem filtro de quantidade
-      if (productsList.length === 0 && allProducts.length > 0) {
-        setEstoqueData(allProducts);
+      if (produtosComEstoque.length === 0 && produtosData.length > 0) {
+        setEstoqueData(produtosData); // Mostrar todos mesmo sem estoque
         setError('Aviso: Mostrando produtos sem estoque disponível');
+      } else if (produtosComEstoque.length > 0) {
+        setEstoqueData(produtosComEstoque);
       } else {
-        setEstoqueData(productsList);
+        setError(`Nenhum produto encontrado no estoque da loja ${selectedLoja}. Verifique a estrutura do banco de dados.`);
       }
 
-      // Se não encontrou nenhum produto, mostrar mensagem
-      if (allProducts.length === 0) {
-        setError(`Nenhum produto encontrado no estoque. Verifique a estrutura do banco de dados.`);
-      }
-      
     } catch (err) {
-      console.error('Erro ao buscar produtos:', err);
-      setError('Falha ao carregar produtos do estoque. Verifique o console para mais detalhes.');
-      setDebug({error: err.message});
+      console.error('Erro ao carregar os produtos do estoque:', err);
+      setError(`Erro ao carregar os dados do estoque: ${err.message}`);
+      setDebug({ error: err.message });
     } finally {
       setLoading(false);
     }
@@ -138,11 +136,11 @@ const CarrinhoCompras = ({
       return acc;
     }, {});
     setGroupedCart(grouped);
-    
+
     // Calcular e propagar os valores do carrinho para o componente pai
     if (typeof updateCartValue === 'function') {
-      const subtotal = cartItems.reduce((total, item) => 
-        total + ((item.preco || item.info_geral?.preco || 0) * item.quantity), 0
+      const subtotal = cartItems.reduce((total, item) =>
+        total + ((item.valor || item.preco || 0) * item.quantity), 0
       );
       updateCartValue(subtotal);
     }
@@ -154,15 +152,17 @@ const CarrinhoCompras = ({
       setFilteredProducts([]);
     } else {
       const searchTermLower = productSearchTerm.toLowerCase();
-      // Busca nos produtos do estoque
+      // Busca nos produtos do estoque - CORRIGIDO para usar os mesmos campos que o componente de estoque
       const filtered = estoqueData.filter(product => {
-        const nome = (product.nome || product.info_geral?.nome || '').toLowerCase();
-        const codigo = (product.codigo || product.info_geral?.codigo || '').toLowerCase();
-        const marca = (product.marca || product.info_geral?.marca || '').toLowerCase();
-        
-        return nome.includes(searchTermLower) || 
-               codigo.includes(searchTermLower) || 
-               marca.includes(searchTermLower);
+        const titulo = (product.titulo || '').toLowerCase();
+        const codigo = (product.codigo || '').toLowerCase();
+        const marca = (product.marca || '').toLowerCase();
+        const sku = (product.sku || '').toLowerCase();
+
+        return titulo.includes(searchTermLower) ||
+          codigo.includes(searchTermLower) ||
+          marca.includes(searchTermLower) ||
+          sku.includes(searchTermLower);
       });
       setFilteredProducts(filtered);
     }
@@ -181,8 +181,9 @@ const CarrinhoCompras = ({
     if (!product) return;
 
     // Verificar se tem estoque disponível (ignorar se estivermos mostrando produtos sem estoque)
-    if ((product.quantidade || 0) < newProductQty && error !== 'Aviso: Mostrando produtos sem estoque disponível') {
-      setError(`Quantidade solicitada excede o estoque disponível (${product.quantidade || 0})`);
+    const quantidadeEstoque = parseInt(product.quantidade) || 0;
+    if (quantidadeEstoque < newProductQty && error !== 'Aviso: Mostrando produtos sem estoque disponível') {
+      setError(`Quantidade solicitada excede o estoque disponível (${quantidadeEstoque})`);
       setTimeout(() => setError(''), 3000);
       return;
     }
@@ -192,13 +193,13 @@ const CarrinhoCompras = ({
 
     setTimeout(() => {
       // Verificar se o produto já está no carrinho
-      const existingItem = cartItems.find(item => item.id === product.id);
+      const existingItem = cartItems.find(item => item.id === product.id && item.categoria === product.categoria);
 
       if (existingItem) {
         // Verificar se a nova quantidade total excede o estoque
         const newTotalQty = existingItem.quantity + newProductQty;
-        if ((product.quantidade || 0) < newTotalQty && error !== 'Aviso: Mostrando produtos sem estoque disponível') {
-          setError(`Quantidade total excede o estoque disponível (${product.quantidade || 0})`);
+        if (quantidadeEstoque < newTotalQty && error !== 'Aviso: Mostrando produtos sem estoque disponível') {
+          setError(`Quantidade total excede o estoque disponível (${quantidadeEstoque})`);
           setLoadingStates(prev => ({ ...prev, [product.id]: false }));
           setTimeout(() => setError(''), 3000);
           return;
@@ -206,27 +207,25 @@ const CarrinhoCompras = ({
 
         // Aumentar a quantidade se já estiver no carrinho
         setCartItems(cartItems.map(item =>
-          item.id === product.id
+          (item.id === product.id && item.categoria === product.categoria)
             ? { ...item, quantity: newTotalQty }
             : item
         ));
       } else {
-        // Adicionar novo item ao carrinho
+        // Adicionar novo item ao carrinho - CORRIGIDO para usar a mesma estrutura do componente de estoque
         const produtoFormatado = {
           id: product.id,
           categoria: product.categoria,
-          nome: product.nome || product.info_geral?.nome,
-          marca: product.marca || product.info_geral?.marca,
-          codigo: product.codigo || product.info_geral?.codigo,
-          preco: product.preco || product.info_geral?.preco || 0,
-          info_geral: {
-            nome: product.nome || product.info_geral?.nome,
-            marca: product.marca || product.info_geral?.marca,
-            codigo: product.codigo || product.info_geral?.codigo,
-            preco: product.preco || product.info_geral?.preco || 0
-          },
-          info_adicional: product.info_adicional || {},
-          quantidade: product.quantidade || 0,
+          loja: product.loja || selectedLoja,
+          titulo: product.titulo || '',
+          nome: product.titulo || '', // Manter compatibilidade com ambos os campos
+          codigo: product.codigo || '',
+          marca: product.marca || '',
+          sku: product.sku || '',
+          valor: parseFloat(product.valor) || 0,
+          preco: parseFloat(product.valor) || 0, // Manter compatibilidade com ambos os campos
+          custo: parseFloat(product.custo) || 0,
+          quantidade: product.quantidade,
           quantity: newProductQty // Quantidade no carrinho
         };
 
@@ -238,7 +237,7 @@ const CarrinhoCompras = ({
       setFilteredProducts([]);
       setNewProductQty(1);
       setLoadingStates(prev => ({ ...prev, [product.id]: false }));
-      
+
       if (produtoInputRef.current) {
         produtoInputRef.current.focus();
       }
@@ -246,12 +245,12 @@ const CarrinhoCompras = ({
   };
 
   // Atualizar quantidade no carrinho
-  const updateQuantity = (productId, newQuantity) => {
+  const updateQuantity = (productId, categoria, newQuantity) => {
     if (newQuantity < 1) return;
 
     // Verificar se a quantidade não excede o estoque
-    const product = estoqueData.find(p => p.id === productId);
-    const stockQuantity = product?.quantidade || 0;
+    const product = estoqueData.find(p => p.id === productId && p.categoria === categoria);
+    const stockQuantity = parseInt(product?.quantidade) || 0;
 
     if (newQuantity > stockQuantity && error !== 'Aviso: Mostrando produtos sem estoque disponível') {
       setError(`Quantidade máxima disponível: ${stockQuantity}`);
@@ -260,15 +259,15 @@ const CarrinhoCompras = ({
     }
 
     setCartItems(cartItems.map(item =>
-      item.id === productId
+      (item.id === productId && item.categoria === categoria)
         ? { ...item, quantity: newQuantity }
         : item
     ));
   };
 
   // Remover produto do carrinho
-  const removeFromCart = (productId) => {
-    setCartItems(cartItems.filter(item => item.id !== productId));
+  const removeFromCart = (productId, categoria) => {
+    setCartItems(cartItems.filter(item => !(item.id === productId && item.categoria === categoria)));
   };
 
   // Limpar carrinho
@@ -280,21 +279,21 @@ const CarrinhoCompras = ({
 
   // Calcular totais por categoria
   const calculateCategoryTotal = (category) => {
-    return groupedCart[category]?.reduce((total, item) => 
-      total + ((item.preco || item.info_geral?.preco || 0) * item.quantity), 0
+    return groupedCart[category]?.reduce((total, item) =>
+      total + ((item.valor || item.preco || 0) * item.quantity), 0
     ) || 0;
   };
 
   // Calcular total do carrinho
   const calculateTotal = () => {
-    return cartItems.reduce((total, item) => 
-      total + ((item.preco || item.info_geral?.preco || 0) * item.quantity), 0
+    return cartItems.reduce((total, item) =>
+      total + ((item.valor || item.preco || 0) * item.quantity), 0
     );
   };
 
   // Determinar ícone da categoria
   const getCategoryIcon = (category) => {
-    switch(category) {
+    switch (category) {
       case 'armacoes':
         return <FiPackage />;
       case 'lentes':
@@ -305,7 +304,7 @@ const CarrinhoCompras = ({
         return <FiShoppingBag />;
     }
   };
-  
+
   // Traduzir nome da categoria
   const getCategoryName = (category) => {
     const translations = {
@@ -325,7 +324,7 @@ const CarrinhoCompras = ({
           <FiAlertCircle className="mr-2" />
           {error}
           {error.includes('estrutura') && (
-            <button 
+            <button
               onClick={showDebugInfo}
               className="ml-2 underline text-blue-600 text-xs"
             >
@@ -334,7 +333,34 @@ const CarrinhoCompras = ({
           )}
         </div>
       )}
-      
+
+      {/* Botões de seleção de loja - ADICIONE AQUI */}
+      <div className="flex justify-between items-center p-2 bg-gray-50 border-b border-gray-200">
+        <span className="text-sm text-gray-500">Selecionar loja:</span>
+        <div className="flex gap-2">
+          <button
+            onClick={() => {
+              console.log("Buscando produtos da loja1");
+              const newSelectedLoja = "loja1";
+              fetchProductsFromEstoque(newSelectedLoja);
+            }}
+            className="px-2 py-1 text-xs bg-purple-100 text-purple-700 rounded"
+          >
+            Loja 1
+          </button>
+          <button
+            onClick={() => {
+              console.log("Buscando produtos da loja2");
+              const newSelectedLoja = "loja2";
+              fetchProductsFromEstoque(newSelectedLoja);
+            }}
+            className="px-2 py-1 text-xs bg-purple-100 text-purple-700 rounded"
+          >
+            Loja 2
+          </button>
+        </div>
+      </div>
+
       {/* Barra de Busca de Produtos */}
       <div className="p-4 border-b border-gray-200 bg-gray-50">
         <div className="flex gap-2 items-center">
@@ -347,7 +373,7 @@ const CarrinhoCompras = ({
               value={productSearchTerm}
               onChange={(e) => setProductSearchTerm(e.target.value)}
               className="border-2 border-[#81059e] pl-10 p-2 rounded-lg w-full"
-              placeholder="Buscar produto por nome, código ou marca"
+              placeholder="Buscar produto por título, código ou marca"
               ref={produtoInputRef}
             />
             {filteredProducts.length > 0 && (
@@ -357,19 +383,19 @@ const CarrinhoCompras = ({
                 </div>
                 {filteredProducts.map(product => (
                   <div
-                    key={product.id}
+                    key={`${product.id}-${product.categoria}`}
                     className="p-3 hover:bg-purple-50 cursor-pointer border-b last:border-b-0 transition-colors"
                     onClick={() => addToCart(product)}
                   >
                     <div className="flex justify-between items-center">
                       <div className="flex-1">
                         <div className="font-medium text-[#81059e]">
-                          {product.nome || product.info_geral?.nome || "Produto sem nome"}
+                          {product.titulo || "Produto sem título"}
                         </div>
                         <div className="flex justify-between text-sm">
                           <span className="text-gray-600">
-                            {product.marca || product.info_geral?.marca || "Sem marca"} | 
-                            Cód: {product.codigo || product.info_geral?.codigo || "N/A"}
+                            {product.marca || "Sem marca"} |
+                            Cód: {product.codigo || "N/A"}
                           </span>
                         </div>
                         <div className="text-xs text-gray-500 mt-1">
@@ -378,9 +404,9 @@ const CarrinhoCompras = ({
                       </div>
                       <div className="flex flex-col items-end">
                         <span className="font-semibold text-[#81059e]">
-                          {formatCurrency(product.preco || product.info_geral?.preco || 0)}
+                          {formatCurrency(product.valor || 0)}
                         </span>
-                        <button 
+                        <button
                           className="mt-1 text-xs bg-[#81059e] text-white px-2 py-1 rounded flex items-center gap-1"
                           disabled={loadingStates[product.id]}
                         >
@@ -406,7 +432,7 @@ const CarrinhoCompras = ({
             )}
           </div>
           <div className="flex items-center border-2 border-[#81059e] rounded-lg overflow-hidden">
-            <button 
+            <button
               onClick={() => setNewProductQty(prev => Math.max(1, prev - 1))}
               className="px-3 py-2 bg-gray-100 text-[#81059e] hover:bg-gray-200 border-r border-[#81059e]"
             >
@@ -419,7 +445,7 @@ const CarrinhoCompras = ({
               onChange={(e) => setNewProductQty(parseInt(e.target.value) || 1)}
               className="w-14 text-center p-2 focus:outline-none focus:ring-2 focus:ring-[#81059e] focus:ring-opacity-50"
             />
-            <button 
+            <button
               onClick={() => setNewProductQty(prev => prev + 1)}
               className="px-3 py-2 bg-gray-100 text-[#81059e] hover:bg-gray-200 border-l border-[#81059e]"
             >
@@ -448,7 +474,7 @@ const CarrinhoCompras = ({
             </div>
             <h3 className="text-lg font-medium text-gray-900 mb-1">Seu carrinho está vazio</h3>
             <p className="text-gray-500 mb-4">Busque produtos para adicionar à venda</p>
-            
+
             {/* Status do estoque */}
             <div className="mt-4 text-sm text-gray-500">
               {estoqueData.length === 0 ? (
@@ -456,7 +482,7 @@ const CarrinhoCompras = ({
               ) : (
                 <p>{estoqueData.length} produtos disponíveis para venda</p>
               )}
-              <button 
+              <button
                 onClick={() => {
                   setProductSearchTerm('a');
                   setTimeout(() => setProductSearchTerm(''), 100);
@@ -472,7 +498,7 @@ const CarrinhoCompras = ({
             {/* Produtos organizados por categoria */}
             {Object.keys(groupedCart).map(category => (
               <div key={category} className="border-b border-gray-200 last:border-b-0">
-                <div 
+                <div
                   className={`p-3 cursor-pointer ${expandedGroup === category ? 'bg-purple-50' : 'bg-gray-50'}`}
                   onClick={() => setExpandedGroup(expandedGroup === category ? null : category)}
                 >
@@ -488,10 +514,10 @@ const CarrinhoCompras = ({
                       <span className="font-semibold text-[#81059e]">
                         {formatCurrency(calculateCategoryTotal(category))}
                       </span>
-                      <svg 
-                        className={`w-5 h-5 text-gray-500 transition-transform ${expandedGroup === category ? 'transform rotate-180' : ''}`} 
-                        fill="none" 
-                        stroke="currentColor" 
+                      <svg
+                        className={`w-5 h-5 text-gray-500 transition-transform ${expandedGroup === category ? 'transform rotate-180' : ''}`}
+                        fill="none"
+                        stroke="currentColor"
                         viewBox="0 0 24 24"
                       >
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
@@ -504,23 +530,23 @@ const CarrinhoCompras = ({
                 {expandedGroup === category && (
                   <div className="divide-y divide-gray-100">
                     {groupedCart[category].map(item => (
-                      <div key={item.id} className="p-4 hover:bg-gray-50 transition-colors">
+                      <div key={`${item.id}-${item.categoria}`} className="p-4 hover:bg-gray-50 transition-colors">
                         <div className="flex items-start gap-4">
                           {/* Imagem do produto (placeholder) */}
                           <div className="w-16 h-16 bg-gray-100 flex items-center justify-center rounded border border-gray-200 flex-shrink-0">
                             {getCategoryIcon(category)}
                           </div>
-                          
+
                           {/* Detalhes do produto */}
                           <div className="flex-1">
                             <div className="flex justify-between">
                               <h3 className="font-medium text-gray-900">
-                                {item.nome || item.info_geral?.nome || "Produto sem nome"}
+                                {item.titulo || item.nome || "Produto sem título"}
                               </h3>
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  removeFromCart(item.id);
+                                  removeFromCart(item.id, item.categoria);
                                 }}
                                 className="text-red-500 hover:text-red-700 p-1"
                                 title="Remover produto"
@@ -528,14 +554,14 @@ const CarrinhoCompras = ({
                                 <FiTrash2 size={16} />
                               </button>
                             </div>
-                            
+
                             <div className="text-sm text-gray-500 mb-2">
-                              Marca: {item.marca || item.info_geral?.marca || "N/A"} | 
-                              Código: {item.codigo || item.info_geral?.codigo || "N/A"}
+                              Marca: {item.marca || "N/A"} |
+                              Código: {item.codigo || "N/A"}
                             </div>
-                            
+
                             {/* Informações adicionais (expansível) */}
-                            {showDetails === item.id && (
+                            {showDetails === `${item.id}-${item.categoria}` && (
                               <div className="mt-2 text-sm text-gray-600 bg-gray-50 p-3 rounded-lg border border-gray-200">
                                 <div className="grid grid-cols-2 gap-2">
                                   <div>
@@ -544,22 +570,28 @@ const CarrinhoCompras = ({
                                   <div>
                                     <span className="font-semibold">Estoque disponível:</span> {item.quantidade || "N/A"}
                                   </div>
-                                  {item.info_adicional && Object.entries(item.info_adicional).map(([key, value]) => (
-                                    <div key={key}>
-                                      <span className="font-semibold">{key}:</span> {value}
+                                  <div>
+                                    <span className="font-semibold">Loja:</span> {item.loja === 'loja1' ? 'Loja 1' : 'Loja 2'}
+                                  </div>
+                                  <div>
+                                    <span className="font-semibold">Valor de custo:</span> {formatCurrency(item.custo || 0)}
+                                  </div>
+                                  {item.sku && (
+                                    <div>
+                                      <span className="font-semibold">SKU:</span> {item.sku}
                                     </div>
-                                  ))}
+                                  )}
                                 </div>
                               </div>
                             )}
-                            
+
                             {/* Controles e preço */}
                             <div className="flex justify-between items-center mt-2">
                               <div className="flex items-center">
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    updateQuantity(item.id, item.quantity - 1);
+                                    updateQuantity(item.id, item.categoria, item.quantity - 1);
                                   }}
                                   className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-l-md bg-gray-50 text-gray-600 hover:bg-gray-100"
                                   disabled={item.quantity <= 1}
@@ -570,23 +602,23 @@ const CarrinhoCompras = ({
                                   type="number"
                                   min="1"
                                   value={item.quantity}
-                                  onChange={(e) => updateQuantity(item.id, parseInt(e.target.value) || 1)}
+                                  onChange={(e) => updateQuantity(item.id, item.categoria, parseInt(e.target.value) || 1)}
                                   className="w-12 h-8 border-t border-b border-gray-300 text-center text-sm focus:outline-none focus:ring-1 focus:ring-[#81059e]"
                                 />
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    updateQuantity(item.id, item.quantity + 1);
+                                    updateQuantity(item.id, item.categoria, item.quantity + 1);
                                   }}
                                   className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-r-md bg-gray-50 text-gray-600 hover:bg-gray-100"
                                 >
                                   <FiPlus size={14} />
                                 </button>
-                                
+
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    setShowDetails(showDetails === item.id ? null : item.id);
+                                    setShowDetails(showDetails === `${item.id}-${item.categoria}` ? null : `${item.id}-${item.categoria}`);
                                   }}
                                   className="ml-2 p-1 text-gray-500 hover:text-[#81059e]"
                                   title="Mostrar detalhes"
@@ -594,13 +626,13 @@ const CarrinhoCompras = ({
                                   <FiInfo size={18} />
                                 </button>
                               </div>
-                              
+
                               <div className="text-right">
                                 <div className="text-sm text-gray-500">
-                                  {formatCurrency(item.preco || item.info_geral?.preco || 0)} x {item.quantity}
+                                  {formatCurrency(item.valor || item.preco || 0)} x {item.quantity}
                                 </div>
                                 <div className="font-medium text-[#81059e]">
-                                  {formatCurrency((item.preco || item.info_geral?.preco || 0) * item.quantity)}
+                                  {formatCurrency((item.valor || item.preco || 0) * item.quantity)}
                                 </div>
                               </div>
                             </div>
@@ -617,7 +649,7 @@ const CarrinhoCompras = ({
             <div className="p-4 bg-gray-50 flex justify-between items-center">
               <div>
                 <span className="text-sm text-gray-500">Total de itens: {cartItems.length}</span>
-                <button 
+                <button
                   onClick={clearCart}
                   className="ml-4 text-red-500 hover:text-red-700 text-sm flex items-center gap-1"
                 >

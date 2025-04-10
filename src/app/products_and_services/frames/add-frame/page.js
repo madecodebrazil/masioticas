@@ -180,16 +180,10 @@ export function FormularioLoja() {
 
   // Definir loja inicial baseado nas permissões
   useEffect(() => {
-    if (userPermissions) {
-      // Se não for admin, usa a primeira loja que tem acesso
-      if (!userPermissions.isAdmin && userPermissions.lojas.length > 0) {
-        setSelectedLoja(userPermissions.lojas[0]);
-        setSelectedLojas([renderLojaName(userPermissions.lojas[0])]);
-      }
-      // Se for admin, usa a primeira loja da lista
-      else if (userPermissions.isAdmin && userPermissions.lojas.length > 0) {
-        setSelectedLoja(userPermissions.lojas[0]);
-      }
+    if (userPermissions && userPermissions.lojas && userPermissions.lojas.length > 0) {
+      const defaultLoja = userPermissions.lojas[0];
+      setSelectedLoja(defaultLoja);
+      setSelectedLojas([renderLojaName(defaultLoja)]);
     }
   }, [userPermissions]);
 
@@ -332,9 +326,17 @@ export function FormularioLoja() {
 
     try {
       // Determinar a loja para salvar
-      const lojaToUse = selectedLoja ||
-        (selectedLojas[0]?.includes("Loja 1") ? "loja1" :
-          selectedLojas[0]?.includes("Loja 2") ? "loja2" : "loja1");
+      let lojaToUse;
+      if (selectedLoja === "ambas") {
+        lojaToUse = "loja1"; // Default para "ambas"
+      } else if (selectedLoja) {
+        lojaToUse = selectedLoja;
+      } else if (selectedLojas.length > 0) {
+        lojaToUse = selectedLojas[0]?.includes("Loja 1") ? "loja1" :
+          selectedLojas[0]?.includes("Loja 2") ? "loja2" : "loja1";
+      } else {
+        lojaToUse = "loja1"; // Default final
+      }
 
       // Salva na estrutura específica do estoque da loja
       const lojaPath = `/estoque/${lojaToUse}/armacoes/configuracoes/armacoes_marcas`;
@@ -747,7 +749,7 @@ export function FormularioLoja() {
     e.preventDefault();
     setIsLoading(true);
 
-    if (selectedLojas.length === 0) {
+    if (!selectedLoja && selectedLojas.length === 0) {
       alert("Selecione ao menos uma loja antes de enviar o formulário");
       setIsLoading(false);
       return;
@@ -847,18 +849,20 @@ export function FormularioLoja() {
                 Selecionar Loja
               </label>
               <select
-                value={selectedLoja || ''}
+                value={selectedLoja || userPermissions.lojas[0] || ''}
                 onChange={(e) => {
-                  setSelectedLoja(e.target.value);
-                  if (e.target.value === "ambas") {
-                    setSelectedLojas(["Loja 1", "Loja 2"]);
+                  const lojaValue = e.target.value;
+                  setSelectedLoja(lojaValue);
+                  if (lojaValue === "ambas") {
+                    setSelectedLojas(["Loja 1 - Centro", "Loja 2 - Caramuru"]);
+                  } else if (lojaValue) {
+                    setSelectedLojas([renderLojaName(lojaValue)]);
                   } else {
-                    setSelectedLojas([renderLojaName(e.target.value)]);
+                    setSelectedLojas([]);
                   }
                 }}
                 className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black mt-1"
               >
-                <option value="">Selecione uma loja</option>
                 {userPermissions.lojas.map((loja) => (
                   <option key={loja} value={loja}>
                     {renderLojaName(loja)}
