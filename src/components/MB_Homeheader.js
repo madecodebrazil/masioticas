@@ -15,7 +15,24 @@ const MenuItem = ({ icon, label, href }) => (
     >
         <Link href={href} className="flex items-center gap-4 w-full p-4 border border-[rgba(255, 20, 147, 0.1)] rounded-lg">
             <div className="flex-shrink-0">
-                <Image src={icon} width={30} height={30} alt={label} className="object-contain" />
+                {typeof icon === 'string' ? (
+                    <Image
+                        src={icon}
+                        width={30}
+                        height={30}
+                        alt={label}
+                        className="object-contain"
+                    />
+                ) : (
+                    <Image
+                        src="/images/default_icon.png"
+                        width={30}
+                        height={30}
+                        alt="Ícone padrão"
+                        className="object-contain"
+                    />
+                )}
+
             </div>
             <span className="text-white font-semibold">{label}</span>
         </Link>

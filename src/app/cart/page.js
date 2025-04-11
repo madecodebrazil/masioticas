@@ -217,7 +217,12 @@ const ProdutosRegistrados = () => {
               <ul>
                 {cartItems.map((item, index) => (
                   <li key={index} className="text-black mb-2 flex items-center space-x-4">
-                    <img src={item.imagem} alt={item.produto} className="w-16 h-16 object-cover rounded-md" /> {/* Exibe a imagem */}
+                    <img
+                      src={typeof item.imagem === 'string' ? item.imagem : '/images/default_icon.png'}
+                      alt={item.produto || 'Produto'}
+                      className="w-16 h-16 object-cover rounded-md"
+                    />
+
                     <div>
                       <p><strong>Produto:</strong> {item.produto}</p>
                       <p><strong>Valor:</strong> R$ {item.valor}</p>
