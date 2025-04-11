@@ -213,8 +213,8 @@ export default function Home() {
 
     if (authLoading) {
         return (
-            <div className="flex justify-center items-center w-full h-screen">
-               <SimpleSpinner />
+            <div className="flex justify-center items-center py-10">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#81059e]"></div>
             </div>
         );
     }
@@ -249,9 +249,9 @@ export default function Home() {
             <div className="flex-1 flex flex-col bg-white p-0 md:p-4 overflow-auto shadow-xl rounded-tl-xl rounded-bl-xl md:ml-[300px] lg:ml-[350px]">
                 {/* Feedback de carregamento */}
                 {(loadingOS || loadingVendas) && (
-                    <div className="flex justify-center items-center  bg-[#81059e] text-white rounded-xl">
-                        <p>Carregando...</p>
-                    </div>
+                    <div className="flex justify-center items-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#81059e]"></div>
+                  </div>
                 )}
 
                 <Dashboard />

@@ -25,7 +25,7 @@ export default function AdminRegisterPage() {
     checkAdminStatus();
   }, []);
 
-  if (loading) return <div>Carregando...</div>;
+  if (loading) return <div> <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#81059e]"></div></div>;
   if (!isAdmin) return null;
 
   return <AdminRegisterForm />;

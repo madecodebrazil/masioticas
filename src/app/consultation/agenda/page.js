@@ -42,12 +42,12 @@ const CalendarConsultation = () => {
       querySnapshot.forEach((doc) => {
         const data = doc.data();
         // Garantir que a data seja tratada corretamente
-        const consultationDate = data.data_consulta?.toDate ? 
-          data.data_consulta.toDate() : 
+        const consultationDate = data.data_consulta?.toDate ?
+          data.data_consulta.toDate() :
           (typeof data.data_consulta === 'string' ? parseISO(data.data_consulta) : new Date());
 
-        consultationsData.push({ 
-          id: doc.id, 
+        consultationsData.push({
+          id: doc.id,
           ...data,
           dataFormatada: format(consultationDate, 'dd/MM/yyyy'),
           dataObj: consultationDate
@@ -68,7 +68,7 @@ const CalendarConsultation = () => {
       // Se for admin, pode escolher a loja
       if (userPermissions.isAdmin) {
         fetchConsultations(currentLoja);
-      } 
+      }
       // Se não for admin, usa a primeira loja disponível
       else if (userPermissions.lojas && userPermissions.lojas.length > 0) {
         const lojaId = userPermissions.lojas[0];
@@ -132,7 +132,7 @@ const CalendarConsultation = () => {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen">
-        <p>Carregando...</p>
+        <p> <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#81059e]"></div></p>
       </div>
     );
   }
@@ -157,11 +157,10 @@ const CalendarConsultation = () => {
               {userPermissions.lojas.map((loja) => (
                 <button
                   key={loja}
-                  className={`px-4 py-2 rounded-md ${
-                    currentLoja === loja
+                  className={`px-4 py-2 rounded-md ${currentLoja === loja
                       ? "bg-[#9a5fc7] text-white"
                       : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                  }`}
+                    }`}
                   onClick={() => handleLojaChange(loja)}
                 >
                   {loja === "loja1" ? "Loja 1" : "Loja 2"}
@@ -172,7 +171,7 @@ const CalendarConsultation = () => {
         )}
 
         {/* Navegação do mês */}
-        <motion.div 
+        <motion.div
           className="bg-white rounded-xl shadow-lg p-6 mb-6"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -212,9 +211,8 @@ const CalendarConsultation = () => {
             {daysOfWeek.map((day, index) => (
               <div
                 key={day}
-                className={`text-center font-semibold py-2 ${
-                  index === 0 ? "text-red-500" : "text-[#9a5fc7]"
-                }`}
+                className={`text-center font-semibold py-2 ${index === 0 ? "text-red-500" : "text-[#9a5fc7]"
+                  }`}
               >
                 {day}
               </div>
@@ -255,7 +253,7 @@ const CalendarConsultation = () => {
         </motion.div>
 
         {/* Lista de consultas para o dia selecionado */}
-        <motion.div 
+        <motion.div
           className="bg-white rounded-xl shadow-lg p-6"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -303,14 +301,13 @@ const CalendarConsultation = () => {
                         {consultation.profissional || "Não atribuído"}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm">
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          consultation.status === "concluida" ? "bg-green-100 text-green-800" :
-                          consultation.status === "cancelada" ? "bg-red-100 text-red-800" :
-                          "bg-yellow-100 text-yellow-800"
-                        }`}>
+                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${consultation.status === "concluida" ? "bg-green-100 text-green-800" :
+                            consultation.status === "cancelada" ? "bg-red-100 text-red-800" :
+                              "bg-yellow-100 text-yellow-800"
+                          }`}>
                           {consultation.status === "concluida" ? "Concluída" :
-                           consultation.status === "cancelada" ? "Cancelada" :
-                           "Agendada"}
+                            consultation.status === "cancelada" ? "Cancelada" :
+                              "Agendada"}
                         </span>
                       </td>
                     </tr>
@@ -326,8 +323,8 @@ const CalendarConsultation = () => {
                 </svg>
               </div>
               <p className="text-gray-600 text-center">
-                {selectedDay 
-                  ? "Não há consultas agendadas para este dia." 
+                {selectedDay
+                  ? "Não há consultas agendadas para este dia."
                   : "Selecione um dia no calendário para visualizar as consultas."}
               </p>
               {selectedDay && (

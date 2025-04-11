@@ -315,8 +315,8 @@ export default function FormularioLentes() {
                                     type="button"
                                     onClick={() => handleLojaClick(loja)}
                                     className={`py-2 px-4 border-2 rounded-lg font-bold transition-all duration-300 whitespace-nowrap ${selectedLojas.includes(loja)
-                                            ? 'border-[#800080] text-white bg-[#754099]'
-                                            : 'border-[#800080] text-black hover:bg-[#81059e] hover:text-white'
+                                        ? 'border-[#800080] text-white bg-[#754099]'
+                                        : 'border-[#800080] text-black hover:bg-[#81059e] hover:text-white'
                                         }`}
                                 >
                                     {loja.toUpperCase()}
@@ -607,7 +607,7 @@ export default function FormularioLentes() {
                                 }`}
                             disabled={isLoading}
                         >
-                            {isLoading ? 'Carregando...' : 'REGISTRAR LENTE'}
+                            {isLoading ? ' <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#81059e]"></div>' : 'REGISTRAR LENTE'}
                         </button>
                     </div>
 

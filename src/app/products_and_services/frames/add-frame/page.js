@@ -98,6 +98,24 @@ export function FormularioLoja() {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [productToConfirm, setProductToConfirm] = useState(null);
 
+  const generateProductTitle = (marca, cor, genero, material) => {
+    // Verificar se todos os campos necessários estão preenchidos
+    if (!marca || !cor || !genero || !material) {
+      return ""; // Retorna vazio se algum dos campos estiver faltando
+    }
+
+    // Formatar cada parte para garantir consistência
+    const marcaFormatted = marca.trim().toUpperCase();
+    const corFormatted = cor.trim().charAt(0).toUpperCase() + cor.trim().slice(1).toLowerCase();
+    const generoFormatted = genero === "Unissex" ? "Unissex" :
+      genero === "Masculino" ? "Masculino" : "Feminino";
+    const materialFormatted = material.trim().charAt(0).toUpperCase() + material.trim().slice(1).toLowerCase();
+
+    // Construir o título
+    return `Armação ${marcaFormatted} ${corFormatted} ${generoFormatted} ${materialFormatted}`;
+  };
+
+
   const renderLojaName = (lojaId) => {
     const lojaNames = {
       'loja1': 'Loja 1 - Centro',
@@ -604,6 +622,11 @@ export function FormularioLoja() {
       };
 
       // Nova lógica: se o percentual de lucro ou custo mudar, recalcula o valor de venda
+      if (name === "titulo") {
+        updatedData.tituloAutomatico = false;
+      }
+
+      // Nova lógica: se o percentual de lucro ou custo mudar, recalcula o valor de venda
       if (name === "percentual_lucro" && updatedData.custo) {
         const valorCusto = parseFloat(updatedData.custo);
         const percentualLucro = parseFloat(value);
@@ -651,6 +674,25 @@ export function FormularioLoja() {
     });
   };
 
+  useEffect(() => {
+    if (!formData.titulo || formData.tituloAutomatico) {
+      const novoTitulo = generateProductTitle(
+        formData.marca,
+        formData.cor,
+        formData.genero,
+        formData.material
+      );
+
+      if (novoTitulo) {
+        setFormData(prev => ({
+          ...prev,
+          titulo: novoTitulo,
+          tituloAutomatico: true // Marca que o título foi gerado automaticamente
+        }));
+      }
+    }
+  }, [formData.marca, formData.cor, formData.genero, formData.material]);
+
   // Função para limpar o formulário
   const handleClearSelection = () => {
     const now = new Date();
@@ -675,13 +717,13 @@ export function FormularioLoja() {
       NCM: "",
       custo: "",
       valor: "",
-      titulo: "", // Limpa o campo de título
-      percentual_lucro: "", // Limpa o percentual de lucro
+      titulo: "",
+      tituloAutomatico: true, // Adicionado para controlar a geração automática
+      percentual_lucro: "",
       quantidade: "",
       imagem: null,
       codigoBarras: "",
       codigoFabricante: "",
-      unidade: "",
       CEST: "",
       aliquota_icms: "",
       base_calculo_icms: "",
@@ -695,7 +737,6 @@ export function FormularioLoja() {
       peso_bruto: "",
       peso_liquido: "",
       csosn: "",
-      subcategoria: "grau", // Reset para o valor padrão da subcategoria
     });
     setSelectedLojas([]);
   };
@@ -894,7 +935,14 @@ export function FormularioLoja() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Título do Produto - NOVO CAMPO */}
                 <div>
-                  <label className="text-[#81059e] font-medium">Título do Produto</label>
+                  <label className="text-[#81059e] font-medium">
+                    Título do Produto
+                    {formData.tituloAutomatico && (
+                      <span className="ml-2 text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
+                        Gerado automaticamente
+                      </span>
+                    )}
+                  </label>
                   <input
                     type="text"
                     id="titulo"
@@ -902,8 +950,8 @@ export function FormularioLoja() {
                     value={formData.titulo || ""}
                     onChange={handleChange}
                     className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
-                    placeholder="Ex: Armação Ray-Ban Wayfarer"
-                    required
+                    placeholder="Gerado automaticamente"
+                    required disabled
                   />
                 </div>
 
@@ -928,25 +976,20 @@ export function FormularioLoja() {
                   name="data"
                   value={formData.data}
                   readOnly
-                  disabled // Adicionando disabled para garantir
+                  disabled
                   className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black bg-gray-100"
                 />
 
-                {/* Subcategoria - SUBSTITUI O CAMPO CATEGORIA */}
                 <div>
-                  <label className="text-[#81059e] font-medium">Tipo de Armação</label>
-                  <select
-                    name="subcategoria"
-                    value={formData.subcategoria}
-                    onChange={handleChange}
+                  <label className="text-[#81059e] font-medium">Código do Produto</label>
+                  <input
+                    type="text"
+                    name="codigo"
+                    value={formData.codigo || ""}
+                    onChange={(e) => setFormData({ ...formData, codigo: e.target.value })}
                     className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
-                  >
-                    <option value="grau">Armação de Grau</option>
-                    <option value="solar">Óculos Solar</option>
-                    <option value="clip-on">Armação com Clip-on</option>
-                    <option value="infantil">Armação Infantil</option>
-                    <option value="esportiva">Armação Esportiva</option>
-                  </select>
+                    required
+                  />
                 </div>
               </div>
 
@@ -972,21 +1015,6 @@ export function FormularioLoja() {
                     name="codigoFabricante"
                     value={formData.codigoFabricante || ""}
                     onChange={(e) => setFormData({ ...formData, codigoFabricante: e.target.value })}
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-1 gap-6 mt-4">
-                {/* Código do Produto */}
-                <div>
-                  <label className="text-[#81059e] font-medium">Código do Produto</label>
-                  <input
-                    type="text"
-                    name="codigo"
-                    value={formData.codigo || ""}
-                    onChange={(e) => setFormData({ ...formData, codigo: e.target.value })}
                     className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
                     required
                   />
@@ -1217,17 +1245,6 @@ export function FormularioLoja() {
                     required
                   />
                 </div>
-              </div>
-
-              {/* Unidade com opção de adicionar */}
-              <div className="mt-4">
-                <SelectWithAddOption
-                  label="Unidade"
-                  options={unidades}
-                  value={formData.unidade}
-                  onChange={(value) => setFormData({ ...formData, unidade: value })}
-                  addNewOption={(value) => addNewItem("armacoes_unidades", value)}
-                />
               </div>
             </div>
 
@@ -1507,7 +1524,7 @@ export function FormularioLoja() {
 
 export default function Page() {
   return (
-    <Suspense fallback={<div>Carregando...</div>}>
+    <Suspense fallback={<div> <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#81059e]"></div></div>}>
       <FormularioLoja />
     </Suspense>
   );

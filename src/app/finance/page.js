@@ -3,8 +3,6 @@
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import Sidebar from '@/components/Sidebar';
-import BottomMobileNav from '@/components/MB_BottomNav';
 import Layout from '@/components/Layout';
 import ContasPagarModal from '@/components/ContasPagarModal';
 import { motion } from 'framer-motion';
@@ -19,8 +17,8 @@ export default function FinancesPage() {
 
     if (loading) {
         return (
-            <div className="flex justify-center items-center h-screen">
-                <p>Carregando...</p>
+            <div className="flex justify-center items-center py-10">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#81059e]"></div>
             </div>
         );
     }

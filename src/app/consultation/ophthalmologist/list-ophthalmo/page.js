@@ -88,7 +88,7 @@ const ListOphthalmologist = () => {
         {/* Tabela de resultados */}
         <div className="p-4 overflow-x-auto">
           {isLoading ? (
-            <p className="text-center">Carregando...</p>
+            <p className="text-center"> <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#81059e]"></div></p>
           ) : (
             <table className="min-w-full bg-white rounded-lg">
               <thead>

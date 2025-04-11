@@ -254,8 +254,8 @@ export function AddBreakdown() {
                   type="button"
                   onClick={() => setFormData({ ...formData, tipoAvaria: tipo })}
                   className={`px-4 py-2 border rounded-lg ${formData.tipoAvaria === tipo
-                      ? 'bg-[#81059e] text-white'
-                      : 'border-[#81059e] text-black'
+                    ? 'bg-[#81059e] text-white'
+                    : 'border-[#81059e] text-black'
                     }`}
                   style={{ backgroundColor: formData.tipoAvaria === tipo ? '#81059e' : 'transparent' }}
                 >
@@ -283,7 +283,7 @@ export function AddBreakdown() {
 }
 export default function Page() {
   return (
-    <Suspense fallback={<div>Carregando...</div>}>
+    <Suspense fallback={<div> <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#81059e]"></div></div>}>
       <AddBreakdown />
     </Suspense>
   );

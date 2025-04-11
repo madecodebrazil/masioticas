@@ -457,7 +457,7 @@ export default function ContasPagar() {
                     <option value="boleto">Boleto</option>
                     <option value="cartao">Cartão de Débito/Crédito</option>
                     <option value="dinheiro">Dinheiro</option>
-                    <option value="TED">TED</option>
+                    <option value="TED">TEV</option>
                     <option value="pix">PIX</option>
                   </select>
                 </div>

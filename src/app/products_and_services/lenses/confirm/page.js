@@ -365,7 +365,7 @@ export function ConfirmLensesPage() {
               <p>
                 <span className="font-semibold">Tecnologia:</span>
                 {Array.isArray(formData.tecnologia) &&
-                formData.tecnologia.length > 0
+                  formData.tecnologia.length > 0
                   ? formData.tecnologia.join(", ")
                   : "Nenhuma tecnologia"}
               </p>
@@ -419,7 +419,7 @@ export function ConfirmLensesPage() {
 
 export default function Page() {
   return (
-    <Suspense fallback={<div>Carregando...</div>}>
+    <Suspense fallback={<div> <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#81059e]"></div></div>}>
       <ConfirmLensesPage />
     </Suspense>
   );

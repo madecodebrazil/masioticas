@@ -43,7 +43,7 @@ const SuppliersTable = () => {
         // Usar o caminho correto: lojas/fornecedores/users
         const suppliersCollection = collection(firestore, 'lojas/fornecedores/users');
         const snapshot = await getDocs(suppliersCollection);
-        
+
         snapshot.docs.forEach((doc) => {
           fetchedSuppliers.push({
             id: doc.id,
@@ -172,16 +172,16 @@ const SuppliersTable = () => {
   // Estatísticas para os cards
   const recentSuppliers = suppliers.filter(supplier => {
     if (!supplier.dataCadastro) return false;
-    
+
     const cadastroDate = typeof supplier.dataCadastro === 'string'
       ? new Date(supplier.dataCadastro)
       : supplier.dataCadastro.seconds
         ? new Date(supplier.dataCadastro.seconds * 1000)
         : null;
-    
+
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    
+
     return cadastroDate && cadastroDate >= thirtyDaysAgo;
   }).length;
 
@@ -190,7 +190,7 @@ const SuppliersTable = () => {
       <div className="min-h-screen p-0 md:p-2 mb-20">
         <div className="w-full max-w-5xl mx-auto rounded-lg">
           <div className="mb-4">
-            <h2 
+            <h2
               className="text-3xl font-bold mb-8 mt-8"
               style={{ color: "#81059e" }}
             >
@@ -310,7 +310,7 @@ const SuppliersTable = () => {
 
           {/* Tabela de fornecedores */}
           {loading ? (
-            <p>Carregando...</p>
+            <p> <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#81059e]"></div></p>
           ) : error ? (
             <p>{error}</p>
           ) : (
@@ -446,7 +446,7 @@ const SuppliersTable = () => {
                 <h3 className="text-xl font-bold mb-4" style={{ color: "#81059e" }}>
                   Dados do Fornecedor
                 </h3>
-                
+
                 <div className="space-y-2">
                   <p className="text-black">
                     <strong>ID:</strong> {selectedSupplier.id}
@@ -472,7 +472,7 @@ const SuppliersTable = () => {
                   <p className="text-black">
                     <strong>Celular:</strong> {selectedSupplier.celular || 'N/A'}
                   </p>
-                  
+
                   <div className="pt-2 border-t mt-4">
                     <p className="text-black font-semibold">Endereço</p>
                     <p className="text-black">

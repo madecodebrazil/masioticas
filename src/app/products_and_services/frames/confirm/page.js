@@ -72,7 +72,7 @@ export function ConfirmPage() {
       categoria || "sem categoria",
       codigo || "Sem Codigo",
       genero || "Sem genero",
-      
+
     ].join("  "); // Concatena todas as informações com ' - ' entre elas
 
     return nomeCompleto;
@@ -171,7 +171,7 @@ export function ConfirmPage() {
     formData.marca,
     formData.cor,
     formData.categoria,
-    formData.codigo,    
+    formData.codigo,
   ]); // Monitora as mudanças em cada campo relevante
 
   return (
@@ -327,7 +327,7 @@ export function ConfirmPage() {
 }
 export default function Page() {
   return (
-    <Suspense fallback={<div>Carregando...</div>}>
+    <Suspense fallback={<div> <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#81059e]"></div></div>}>
       <ConfirmPage />
     </Suspense>
   );

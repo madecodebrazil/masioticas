@@ -10,7 +10,7 @@ export function ConfirmSolar() {
   const searchParams = useSearchParams();
 
   const [formData, setFormData] = useState({
-    unidade:"",
+    unidade: "",
     fabricante: "",
     fornecedor: "",
     marca: "",
@@ -59,7 +59,7 @@ export function ConfirmSolar() {
       categoria || "Sem Categoria",
       codigo || "Sem Código",
       genero || "Sem Gênero",
-      
+
     ].join("  ");
     return nomeCompleto;
   };
@@ -301,7 +301,7 @@ export function ConfirmSolar() {
 
 export default function Page() {
   return (
-    <Suspense fallback={<div>Carregando...</div>}>
+    <Suspense fallback={<div> <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#81059e]"></div></div>}>
       <ConfirmSolar />
     </Suspense>
   );

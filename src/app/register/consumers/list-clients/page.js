@@ -43,7 +43,7 @@ const ClientsTable = () => {
         // Usar o caminho correto: lojas/clientes/users
         const clientsCollection = collection(firestore, 'lojas/clientes/users');
         const snapshot = await getDocs(clientsCollection);
-        
+
         snapshot.docs.forEach((doc) => {
           fetchedClients.push({
             id: doc.id,
@@ -175,30 +175,30 @@ const ClientsTable = () => {
   const currentMonth = new Date().getMonth() + 1;
   const birthdaysThisMonth = clients.filter(client => {
     if (!client.dataNascimento) return false;
-    
+
     // Converter string de data para objeto Date se necessário
-    const birthDate = typeof client.dataNascimento === 'string' 
-      ? new Date(client.dataNascimento) 
-      : client.dataNascimento.seconds 
+    const birthDate = typeof client.dataNascimento === 'string'
+      ? new Date(client.dataNascimento)
+      : client.dataNascimento.seconds
         ? new Date(client.dataNascimento.seconds * 1000)
         : null;
-    
+
     return birthDate && birthDate.getMonth() + 1 === currentMonth;
   }).length;
 
   // Calcular clientes recentes (últimos 30 dias)
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-  
+
   const recentClients = clients.filter(client => {
     if (!client.dataCadastro) return false;
-    
+
     const cadastroDate = typeof client.dataCadastro === 'string'
       ? new Date(client.dataCadastro)
       : client.dataCadastro.seconds
         ? new Date(client.dataCadastro.seconds * 1000)
         : null;
-    
+
     return cadastroDate && cadastroDate >= thirtyDaysAgo;
   }).length;
 
@@ -207,7 +207,7 @@ const ClientsTable = () => {
       <div className="min-h-screen p-0 md:p-2 mb-20">
         <div className="w-full max-w-5xl mx-auto rounded-lg">
           <div className="mb-4">
-            <h2 
+            <h2
               className="text-3xl font-bold mb-8 mt-8"
               style={{ color: "#81059e" }}
             >
@@ -327,7 +327,7 @@ const ClientsTable = () => {
 
           {/* Tabela de clientes */}
           {loading ? (
-            <p>Carregando...</p>
+            <p> <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#81059e]"></div></p>
           ) : error ? (
             <p>{error}</p>
           ) : (
@@ -465,7 +465,7 @@ const ClientsTable = () => {
                 <h3 className="text-xl font-bold mb-4" style={{ color: "#81059e" }}>
                   Dados do Cliente
                 </h3>
-                
+
                 <div className="space-y-2">
                   <p className="text-black">
                     <strong>ID:</strong> {selectedClient.id}
@@ -487,10 +487,10 @@ const ClientsTable = () => {
                   </p>
                   <p className="text-black">
                     <strong>Data de Nascimento:</strong>{" "}
-                    {selectedClient.dataNascimento ? 
+                    {selectedClient.dataNascimento ?
                       (typeof selectedClient.dataNascimento === 'string' ?
                         selectedClient.dataNascimento :
-                        new Date(selectedClient.dataNascimento.seconds * 1000).toLocaleDateString('pt-BR')) 
+                        new Date(selectedClient.dataNascimento.seconds * 1000).toLocaleDateString('pt-BR'))
                       : 'N/A'}
                   </p>
                   <p className="text-black">

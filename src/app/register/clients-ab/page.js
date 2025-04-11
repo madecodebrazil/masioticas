@@ -54,7 +54,7 @@ export default function ConveniosPage() {
                 <div className="mb-8">
                     <h2 className="text-2xl font-semibold text-[#800080] mb-4">Convênios</h2>
                     {isLoading ? (
-                        <p className="text-center text-gray-500">Carregando...</p>
+                        <p className="text-center text-gray-500"> <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#81059e]"></div></p>
                     ) : (
                         <ul className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                             {convenios.map((convenio) => (

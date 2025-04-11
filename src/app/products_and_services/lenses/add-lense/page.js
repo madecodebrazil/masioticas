@@ -776,7 +776,7 @@ export function FormularioLentes() {
           `lojas/estoque/${lojaId}/lentes`,
           updatedFormData.codigo
         );
-        
+
 
         await setDoc(docRef, productData);
 
@@ -1044,8 +1044,8 @@ export function FormularioLentes() {
                     type="button"
                     onClick={() => handleToggle("tipo", tipo)}
                     className={`px-4 py-2 rounded-lg border-2 ${Array.isArray(formData.tipo) && formData.tipo.includes(tipo)
-                        ? "bg-[#81059e] text-white border-[#81059e]"
-                        : "bg-transparent text-[#81059e] border-[#81059e]"
+                      ? "bg-[#81059e] text-white border-[#81059e]"
+                      : "bg-transparent text-[#81059e] border-[#81059e]"
                       }`}
                   >
                     {tipo}
@@ -1064,8 +1064,8 @@ export function FormularioLentes() {
                     type="button"
                     onClick={() => handleToggle("tecnologia", tecnologia)}
                     className={`px-4 py-2 rounded-lg border-2 ${Array.isArray(formData.tecnologia) && formData.tecnologia.includes(tecnologia)
-                        ? "bg-[#81059e] text-white border-[#81059e]"
-                        : "bg-transparent text-[#81059e] border-[#81059e]"
+                      ? "bg-[#81059e] text-white border-[#81059e]"
+                      : "bg-transparent text-[#81059e] border-[#81059e]"
                       }`}
                   >
                     {tecnologia}
@@ -1084,8 +1084,8 @@ export function FormularioLentes() {
                     type="button"
                     onClick={() => handleToggle("tratamento", tratamento)}
                     className={`px-4 py-2 rounded-lg border-2 ${Array.isArray(formData.tratamento) && formData.tratamento.includes(tratamento)
-                        ? "bg-[#81059e] text-white border-[#81059e]"
-                        : "bg-transparent text-[#81059e] border-[#81059e]"
+                      ? "bg-[#81059e] text-white border-[#81059e]"
+                      : "bg-transparent text-[#81059e] border-[#81059e]"
                       }`}
                   >
                     {tratamento}
@@ -1104,8 +1104,8 @@ export function FormularioLentes() {
                     type="button"
                     onClick={() => handleToggle("corredor", corredor)}
                     className={`px-4 py-2 rounded-lg border-2 ${Array.isArray(formData.corredor) && formData.corredor.includes(corredor)
-                        ? "bg-[#81059e] text-white border-[#81059e]"
-                        : "bg-transparent text-[#81059e] border-[#81059e]"
+                      ? "bg-[#81059e] text-white border-[#81059e]"
+                      : "bg-transparent text-[#81059e] border-[#81059e]"
                       }`}
                   >
                     {corredor}
@@ -1591,7 +1591,7 @@ export function FormularioLentes() {
 
 export default function Page() {
   return (
-    <Suspense fallback={<div>Carregando...</div>}>
+    <Suspense fallback={<div> <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#81059e]"></div></div>}>
       <FormularioLentes />
     </Suspense>
   );

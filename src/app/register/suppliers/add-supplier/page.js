@@ -41,11 +41,11 @@ export function AddSupplierPage() {
   const cleanCNPJ = (cnpj) => {
     return cnpj.replace(/[^\d]/g, ""); // Remove tudo que não for dígito
   };
-  
+
   // Função para formatar o CNPJ conforme o usuário digita
   const formatCNPJ = (value) => {
     const cleanValue = cleanCNPJ(value);
-    
+
     if (cleanValue.length <= 2) {
       return cleanValue;
     }
@@ -60,45 +60,45 @@ export function AddSupplierPage() {
     }
     return `${cleanValue.slice(0, 2)}.${cleanValue.slice(2, 5)}.${cleanValue.slice(5, 8)}/${cleanValue.slice(8, 12)}-${cleanValue.slice(12, 14)}`;
   };
-  
+
   // Função de validação de CNPJ
   const validateCNPJ = (cnpj) => {
     const stripped = cleanCNPJ(cnpj);
-    
+
     if (stripped.length !== 14) return false;
-    
+
     // Verifica se todos os dígitos são iguais (CNPJs como 00.000.000/0000-00 são inválidos)
     if (/^(\d)\1+$/.test(stripped)) return false;
-    
+
     // Algoritmo de validação de CNPJ
     let sum = 0;
     let weight = 2;
-    
+
     // Primeiro dígito verificador
     for (let i = 11; i >= 0; i--) {
       sum += parseInt(stripped.charAt(i)) * weight;
       weight = weight === 9 ? 2 : weight + 1;
     }
-    
+
     let digit = 11 - (sum % 11);
     if (digit > 9) digit = 0;
-    
+
     if (parseInt(stripped.charAt(12)) !== digit) return false;
-    
+
     // Segundo dígito verificador
     sum = 0;
     weight = 2;
-    
+
     for (let i = 12; i >= 0; i--) {
       sum += parseInt(stripped.charAt(i)) * weight;
       weight = weight === 9 ? 2 : weight + 1;
     }
-    
+
     digit = 11 - (sum % 11);
     if (digit > 9) digit = 0;
-    
+
     if (parseInt(stripped.charAt(13)) !== digit) return false;
-    
+
     return true;
   };
 
@@ -113,11 +113,11 @@ export function AddSupplierPage() {
       const response = await fetch(
         `https://publica.cnpj.ws/cnpj/${cleanedCNPJ}`
       );
-      
+
       if (!response.ok) {
         throw new Error("Falha ao buscar dados da empresa");
       }
-      
+
       const data = await response.json();
 
       // Verifique se a resposta contém os campos necessários e trate valores nulos
@@ -164,7 +164,7 @@ export function AddSupplierPage() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    
+
     // Aplicar formatação para o campo CNPJ
     if (name === "cnpj") {
       const formattedCNPJ = formatCNPJ(value);
@@ -172,7 +172,7 @@ export function AddSupplierPage() {
         ...formData,
         [name]: formattedCNPJ,
       });
-      
+
       // Se o CNPJ tiver 14 dígitos (completo), buscar dados automaticamente
       if (cleanCNPJ(value).length === 14) {
         fetchCompanyData(value);
@@ -190,7 +190,7 @@ export function AddSupplierPage() {
       const cleanedCNPJ = cnpj.replace(/[^\d]/g, "");
       // Usar o caminho correto para verificar duplicação: lojas/fornecedores/users
       const q = query(
-        collection(firestore, "lojas/fornecedores/users"), 
+        collection(firestore, "lojas/fornecedores/users"),
         where("cnpj", "==", cleanedCNPJ)
       );
       const querySnapshot = await getDocs(q);
@@ -221,7 +221,7 @@ export function AddSupplierPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!userPermissions?.isAdmin) {
       alert("Apenas administradores podem registrar fornecedores");
       return;
@@ -231,17 +231,17 @@ export function AddSupplierPage() {
       alert("CNPJ e Razão Social são campos obrigatórios");
       return;
     }
-    
+
     const cleanedCNPJ = cleanCNPJ(formData.cnpj);
-    
+
     // Verificar se o CNPJ é válido
     if (!validateCNPJ(cleanedCNPJ)) {
       alert("CNPJ inválido. Por favor, verifique o número informado.");
       return;
     }
-    
+
     setIsLoading(true);
-    
+
     try {
       // Verificar se o CNPJ já está cadastrado
       const isDuplicate = await checkDuplicateCNPJ(cleanedCNPJ);
@@ -273,7 +273,7 @@ export function AddSupplierPage() {
 
       // Usar o caminho correto para adicionar o documento: lojas/fornecedores/users
       await addDoc(collection(firestore, "lojas/fornecedores/users"), supplierData);
-      
+
       alert("Fornecedor cadastrado com sucesso!");
       handleClear();
       router.push('/fornecedores');
@@ -289,7 +289,7 @@ export function AddSupplierPage() {
     return (
       <Layout>
         <div className="flex justify-center items-center h-screen">
-          <p className="text-xl">Carregando...</p>
+          <p className="text-xl"> <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#81059e]"></div></p>
         </div>
       </Layout>
     );
@@ -508,7 +508,7 @@ export function AddSupplierPage() {
 
 export default function Page() {
   return (
-    <Suspense fallback={<div>Carregando...</div>}>
+    <Suspense fallback={<div> <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#81059e]"></div></div>}>
       <AddSupplierPage />
     </Suspense>
   );

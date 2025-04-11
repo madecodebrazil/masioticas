@@ -89,7 +89,7 @@ export default function ListaArmacoes() {
         // Extrair marcas e materiais disponíveis para filtros
         const marcas = ['Todas'];
         const materiais = ['Todos'];
-        
+
         fetchedArmacoes.forEach(armacao => {
           if (armacao.marca && !marcas.includes(armacao.marca)) {
             marcas.push(armacao.marca);
@@ -98,7 +98,7 @@ export default function ListaArmacoes() {
             materiais.push(armacao.material);
           }
         });
-        
+
         setAvailableMarcas(marcas);
         setAvailableMateriais(materiais);
 
@@ -141,21 +141,21 @@ export default function ListaArmacoes() {
 
       // Filtro por marca
       if (marcaFilter !== 'Todas') {
-        filtered = filtered.filter(armacao => 
+        filtered = filtered.filter(armacao =>
           armacao.marca === marcaFilter
         );
       }
 
       // Filtro por gênero
       if (generoFilter !== 'Todos') {
-        filtered = filtered.filter(armacao => 
+        filtered = filtered.filter(armacao =>
           armacao.genero === generoFilter
         );
       }
 
       // Filtro por material
       if (materialFilter !== 'Todos') {
-        filtered = filtered.filter(armacao => 
+        filtered = filtered.filter(armacao =>
           armacao.material === materialFilter
         );
       }
@@ -228,7 +228,7 @@ export default function ListaArmacoes() {
   // Função para formatar data
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
-    
+
     try {
       const date = new Date(dateString);
       return date.toLocaleDateString('pt-BR');
@@ -298,7 +298,7 @@ export default function ListaArmacoes() {
 
     // Encontrar a armação selecionada
     const armacaoToEdit = armacoes.find(armacao => armacao.id === selectedForDeletion[0]);
-    
+
     if (armacaoToEdit) {
       // Navegar para a página de formulário passando os dados da armação
       router.push(`/products_and_services/frames/add?cloneId=${armacaoToEdit.codigo}&loja=${armacaoToEdit.loja}`);
@@ -496,7 +496,7 @@ export default function ListaArmacoes() {
                   <span className="text-lg font-medium text-gray-700 flex-grow ml-3">Valor do Estoque</span>
                 </div>
                 <p className="text-2xl font-semibold text-center mt-2">
-                  R$ {armacoes.reduce((total, armacao) => 
+                  R$ {armacoes.reduce((total, armacao) =>
                     total + (parseFloat(armacao.valor || 0) * parseInt(armacao.quantidade || 0)), 0).toFixed(2)}
                 </p>
               </div>
@@ -689,7 +689,7 @@ export default function ListaArmacoes() {
 
           {/* Tabela de armações */}
           {loading ? (
-            <p>Carregando...</p>
+            <p> <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#81059e]"></div></p>
           ) : error ? (
             <p>{error}</p>
           ) : (
@@ -852,14 +852,14 @@ export default function ListaArmacoes() {
                 <div className="space-y-3 p-4 overflow-y-auto flex-grow">
                   {selectedArmacao.imagem && (
                     <div className="flex justify-center mb-4">
-                      <img 
-                        src={selectedArmacao.imagem} 
-                        alt={`Imagem de ${selectedArmacao.marca}`} 
+                      <img
+                        src={selectedArmacao.imagem}
+                        alt={`Imagem de ${selectedArmacao.marca}`}
                         className="max-h-32 object-contain rounded"
                       />
                     </div>
                   )}
-                  
+
                   <p><strong>
                     Código:</strong> {selectedArmacao.codigo || 'N/A'}
                   </p>
@@ -899,7 +899,7 @@ export default function ListaArmacoes() {
                   <p>
                     <strong>Loja:</strong> {renderLojaName(selectedArmacao.loja)}
                   </p>
-                  
+
                   {/* Dimensões */}
                   <div className="mt-4 pt-2 border-t border-gray-200">
                     <h4 className="font-semibold text-[#81059e]">Dimensões</h4>
@@ -918,7 +918,7 @@ export default function ListaArmacoes() {
                       </div>
                     </div>
                   </div>
-                  
+
                   {/* Dados Fiscais */}
                   <div className="mt-4 pt-2 border-t border-gray-200">
                     <h4 className="font-semibold text-[#81059e]">Informações Fiscais</h4>
@@ -961,7 +961,7 @@ export default function ListaArmacoes() {
                         Editar
                       </button>
                     </Link>
-                    
+
                     <button
                       onClick={() => {
                         if (confirm('Tem certeza que deseja excluir esta armação?')) {

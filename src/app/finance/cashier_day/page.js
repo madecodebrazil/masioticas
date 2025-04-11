@@ -770,7 +770,7 @@ export default function ControleCaixa() {
               <tbody className="text-black">
                 {loading ? (
                   <tr>
-                    <td colSpan="10" className="px-4 py-4 text-center">Carregando...</td>
+                    <td colSpan="10" className="px-4 py-4 text-center"> <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#81059e]"></div></td>
                   </tr>
                 ) : currentMovimentacoes.length > 0 ? (
                   currentMovimentacoes.map((mov) => (

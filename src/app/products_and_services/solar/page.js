@@ -1315,28 +1315,29 @@ export function FormularioLoja() {
           <div className="flex justify-center mt-4">
             <button
               type="submit"
-              className={`bg-[#9f206b] text-white font-bold px-6 py-2 rounded-lg shadow hover:bg-[#850f56] transition ${
-                isLoading ? "opacity-50 cursor-not-allowed" : ""
-              }`}
+              className={`bg-[#9f206b] text-white font-bold px-6 py-2 rounded-lg shadow hover:bg-[#850f56] transition ${isLoading ? "opacity-50 cursor-not-allowed" : ""
+                }`}
               disabled={isLoading}
             >
-              {isLoading ? "Carregando..." : "REGISTRAR SOLAR"}
-            </button>
-          </div>
-
-          {showSuccessPopup && (
-            <div className="fixed bottom-4 right-4 bg-green-500 text-white p-4 rounded-lg shadow-lg">
-              <p>Produto enviado com sucesso!</p>
-            </div>
-          )}
-        </form>
-      </Layout>
+              {isLoading ? " <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#81059e]"></div>" : "REGISTRAR SOLAR"}
+        </button>
     </div>
+
+          {
+    showSuccessPopup && (
+      <div className="fixed bottom-4 right-4 bg-green-500 text-white p-4 rounded-lg shadow-lg">
+        <p>Produto enviado com sucesso!</p>
+      </div>
+    )
+  }
+        </form >
+      </Layout >
+    </div >
   );
 }
 export default function Page() {
   return (
-    <Suspense fallback={<div>Carregando...</div>}>
+    <Suspense fallback={<div> <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#81059e]"></div></div>}>
       <FormularioLoja />
     </Suspense>
   );

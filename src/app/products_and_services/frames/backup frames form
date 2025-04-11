@@ -331,7 +331,7 @@
         className={`bg-[#9f206b] text-white px-6 py-2 rounded-lg shadow hover:bg-[#850f56] transition ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
         disabled={isLoading}
     >
-        {isLoading ? 'Carregando...' : 'Salvar'}
+        {isLoading ? ' <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#81059e]"></div>' : 'Salvar'}
     </button>
 </div>
 

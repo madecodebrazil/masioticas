@@ -263,13 +263,13 @@ export default function ListaContas() {
   // Formata data do Firebase
   const formatFirestoreDate = (firestoreDate) => {
     if (!firestoreDate) return 'N/A';
-    
+
     // Se for um timestamp do Firestore (com seconds e nanoseconds)
     if (firestoreDate && typeof firestoreDate === 'object' && firestoreDate.seconds) {
       const date = new Date(firestoreDate.seconds * 1000);
       return date.toLocaleDateString('pt-BR');
     }
-    
+
     // Se já for uma string de data, retorne como está
     return firestoreDate;
   };
@@ -467,7 +467,7 @@ export default function ListaContas() {
     } else {
       document.body.style.overflow = '';
     }
-    
+
     return () => {
       document.body.style.overflow = '';
     };
@@ -801,7 +801,7 @@ export default function ListaContas() {
           <FilterActiveBadges />
           {/* Tabela de contas */}
           {loading ? (
-            <p>Carregando...</p>
+            <p> <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#81059e]"></div></p>
           ) : error ? (
             <p>{error}</p>
           ) : (
