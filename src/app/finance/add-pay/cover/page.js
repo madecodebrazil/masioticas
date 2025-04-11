@@ -105,69 +105,73 @@ export default function ContasPagar() {
                     onClick={fetchContas}
                     className="ml-2 px-4 py-2 bg-[#81059e] text-white rounded-md"
                   >
-                    {loading ? " <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#81059e]"></div>" : "Buscar Contas"}
-              </button>
+                    {loading ? (
+                      <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-white"></div>
+                    ) : (
+                      "Buscar Contas"
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[#81059e]">Caixa</label>
+                <select
+                  className="w-full mt-1 p-2 border border-gray-300 rounded-md text-black"
+                >
+                  <option value="">Selecionar</option>
+                </select>
+              </div>
             </div>
-        </div>
 
-        <div>
-          <label className="block text-[#81059e]">Caixa</label>
-          <select
-            className="w-full mt-1 p-2 border border-gray-300 rounded-md text-black"
-          >
-            <option value="">Selecionar</option>
-          </select>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label className="block text-[#81059e]">Data da Entrada</label>
+                <input
+                  type="date"
+                  className="w-full mt-1 p-2 border border-gray-300 rounded-md text-black"
+                />
+              </div>
+              <div>
+                <label className="block text-[#81059e]">Hora</label>
+                <input
+                  type="time"
+                  className="w-full mt-1 p-2 border border-gray-300 rounded-md text-black"
+                />
+              </div>
+              <div>
+                <label className="block text-[#81059e]">Valor</label>
+                <input
+                  type="text"
+                  className="w-full mt-1 p-2 border border-gray-300 rounded-md text-black"
+                  placeholder="R$"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label className="block text-[#81059e]">Data de Vencimento</label>
+                <input
+                  type="date"
+                  className="w-full mt-1 p-2 border border-gray-300 rounded-md text-black"
+                />
+              </div>
+              <div>
+                <label className="block text-[#81059e]">Hora</label>
+                <input
+                  type="time"
+                  className="w-full mt-1 p-2 border border-gray-300 rounded-md text-black"
+                />
+              </div>
+            </div>
+
+            <button className="mt-4 w-full bg-[#81059e] text-white py-2 rounded-md">
+              REGISTRAR
+            </button>
+          </form>
         </div>
       </div>
-
-      <div className="grid grid-cols-3 gap-4">
-        <div>
-          <label className="block text-[#81059e]">Data da Entrada</label>
-          <input
-            type="date"
-            className="w-full mt-1 p-2 border border-gray-300 rounded-md text-black"
-          />
-        </div>
-        <div>
-          <label className="block text-[#81059e]">Hora</label>
-          <input
-            type="time"
-            className="w-full mt-1 p-2 border border-gray-300 rounded-md text-black"
-          />
-        </div>
-        <div>
-          <label className="block text-[#81059e]">Valor</label>
-          <input
-            type="text"
-            className="w-full mt-1 p-2 border border-gray-300 rounded-md text-black"
-            placeholder="R$"
-          />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-3 gap-4">
-        <div>
-          <label className="block text-[#81059e]">Data de Vencimento</label>
-          <input
-            type="date"
-            className="w-full mt-1 p-2 border border-gray-300 rounded-md text-black"
-          />
-        </div>
-        <div>
-          <label className="block text-[#81059e]">Hora</label>
-          <input
-            type="time"
-            className="w-full mt-1 p-2 border border-gray-300 rounded-md text-black"
-          />
-        </div>
-      </div>
-
-      <button className="mt-4 w-full bg-[#81059e] text-white py-2 rounded-md">
-        REGISTRAR
-      </button>
-    </form>
-        </div >
-      </div >
-    </Layout >
+    </Layout>
   );
 }

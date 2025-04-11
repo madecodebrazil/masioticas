@@ -1319,25 +1319,27 @@ export function FormularioLoja() {
                 }`}
               disabled={isLoading}
             >
-              {isLoading ? " <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#81059e]"></div>" : "REGISTRAR SOLAR"}
-        </button>
-    </div>
+              {loading ? (
+                <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-white"></div>
+              ) : (
+                "REGISTRAR SOLAR"
+              )}
+            </button>
+          </div>
 
-          {
-    showSuccessPopup && (
-      <div className="fixed bottom-4 right-4 bg-green-500 text-white p-4 rounded-lg shadow-lg">
-        <p>Produto enviado com sucesso!</p>
-      </div>
-    )
-  }
-        </form >
-      </Layout >
-    </div >
+          {showSuccessPopup && (
+            <div className="fixed bottom-4 right-4 bg-green-500 text-white p-4 rounded-lg shadow-lg">
+              <p>Produto enviado com sucesso!</p>
+            </div>
+          )}
+        </form>
+      </Layout>
+    </div>
   );
 }
 export default function Page() {
   return (
-    <Suspense fallback={<div> <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#81059e]"></div></div>}>
+    <Suspense fallback={<div>Carregando...</div>}>
       <FormularioLoja />
     </Suspense>
   );
