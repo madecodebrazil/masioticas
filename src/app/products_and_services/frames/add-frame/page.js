@@ -8,9 +8,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
-import DatePicker from "react-datepicker";
+import { format, parseISO } from 'date-fns';
+import { useRef } from "react";
+import { ptBR } from 'date-fns/locale';
 import "react-datepicker/dist/react-datepicker.css";
-import { FiPlus, FiChevronDown } from 'react-icons/fi';
+import { FiPlus, FiX } from 'react-icons/fi';
 import ProductConfirmModal from '@/components/ProductConfirmModal';
 
 const SelectWithAddOption = ({ label, options, value, onChange, collectionName, addNewOption, canAddNew = true }) => {
@@ -57,9 +59,6 @@ const SelectWithAddOption = ({ label, options, value, onChange, collectionName, 
             ))}
             {canAddNew && <option value="add_new">+ ADICIONAR NOVO</option>}
           </select>
-          <div className="absolute right-4 top-1/2 transform -translate-y-1/2 pointer-events-none">
-            <FiChevronDown className="text-[#81059e]" />
-          </div>
         </div>
       ) : (
         <div className="flex items-center gap-2">
@@ -97,6 +96,16 @@ export function FormularioLoja() {
   const [selectedLoja, setSelectedLoja] = useState(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [productToConfirm, setProductToConfirm] = useState(null);
+  const [dataExibicao, setDataExibicao] = useState('');
+  const [searchFornecedor, setSearchFornecedor] = useState("");
+  const [listaFornecedores, setListaFornecedores] = useState([]);
+  const [isLoadingFornecedores, setIsLoadingFornecedores] = useState(false);
+  const imageInputRef = useRef(null);
+
+  useEffect(() => {
+    fetchFornecedoresDinamico();
+  }, [searchFornecedor]);
+
 
   const generateProductTitle = (marca, cor, genero, material) => {
     // Verificar se todos os campos necessários estão preenchidos
@@ -223,7 +232,6 @@ export function FormularioLoja() {
   const [aros, setAros] = useState([]);
   const [materiais, setMateriais] = useState([]);
   const [cores, setCores] = useState([]);
-  const [lentes, setLentes] = useState([]);
   const [pontes, setPontes] = useState([]);
   const [hastes, setHastes] = useState([]);
 
@@ -247,7 +255,7 @@ export function FormularioLoja() {
       if (ncmSnapshot.empty) {
         console.log("Coleção NCM vazia, tentando caminho alternativo...");
         // Tente outro caminho que poderia conter os dados NCM
-        const altNcmSnapshot = await getDocs(collection(firestore, "/estoque/configuracoes/atributos/ncm"));
+        const altNcmSnapshot = await getDocs(collection(firestore, "/estoque/${loja}/configuracoes/ncm"));
 
         if (!altNcmSnapshot.empty) {
           const ncmList = altNcmSnapshot.docs.map((doc) => {
@@ -299,6 +307,17 @@ export function FormularioLoja() {
     return `${productName}-${productCode}-${randomPart}`;
   };
 
+
+  const parseValorMonetario = (valorFormatado) => {
+    if (!valorFormatado) return 0;
+
+    return parseFloat(
+      valorFormatado
+        .replace(/[^\d,]/g, '') // remove R$ e pontos
+        .replace(',', '.')      // converte vírgula em ponto
+    );
+  };
+
   // Atualiza o SKU automaticamente quando o código ou nome do produto muda
   useEffect(() => {
     const sku = generateSKU();
@@ -308,6 +327,7 @@ export function FormularioLoja() {
     }));
   }, [formData.codigo, formData.titulo]);
 
+
   useEffect(() => {
     if (router.state?.formData) {
       setFormData(router.state.formData);
@@ -316,23 +336,19 @@ export function FormularioLoja() {
 
   useEffect(() => {
     const now = new Date();
+    const formattedDate = format(now, 'yyyy-MM-dd');
+    // Formato para exibição (DD/MM/YYYY)
+    const displayDate = format(now, 'dd/MM/yyyy');
 
-    // Formatando a data diretamente no formato YYYY-MM-DD para o input type="date"
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0'); // Mês começa do 0 no JS
-    const day = String(now.getDate()).padStart(2, '0');
-    const date = `${year}-${month}-${day}`;
 
-    // Formatando a hora
-    const hours = String(now.getHours()).padStart(2, '0');
-    const minutes = String(now.getMinutes()).padStart(2, '0');
-    const time = `${hours}:${minutes}`;
-
-    setFormData((prevData) => ({
+    setFormData(prevData => ({
       ...prevData,
-      data: date,
-      hora: time,
+      data: formattedDate,
+      hora: format(now, 'HH:mm')
     }));
+
+    // Define a data formatada em um estado separado
+    setDataExibicao(displayDate);
   }, []);
 
   // Funções para adicionar novos itens às coleções
@@ -357,7 +373,7 @@ export function FormularioLoja() {
       }
 
       // Salva na estrutura específica do estoque da loja
-      const lojaPath = `/estoque/${lojaToUse}/armacoes/configuracoes/armacoes_marcas`;
+      const lojaPath = `/estoque/${lojaToUse}/armacoes/configuracoes/${collectionName}`;
       const lojaItemRef = doc(firestore, lojaPath, value.toLowerCase().replace(/\s+/g, '_'));
 
       await setDoc(lojaItemRef, {
@@ -425,7 +441,7 @@ export function FormularioLoja() {
           selectedLojas[0]?.includes("Loja 2") ? "loja2" : "loja1");
 
       // Salva na estrutura específica do estoque da loja
-      const lojaPath = `/estoque/${lojaToUse}/armacoes/${collectionName}`;
+      const lojaPath = `/estoque/${lojaToUse}/armacoes/configuracoes/${collectionName}`;
       const lojaItemRef = doc(firestore, lojaPath, value.toString().replace(/\./g, '_'));
 
       await setDoc(lojaItemRef, {
@@ -464,9 +480,11 @@ export function FormularioLoja() {
   // Funções para buscar dados
   const fetchAros = async () => {
     try {
-      const arosSnapshot = await getDocs(collection(firestore, "configuracoes/atributos/armacoes_aros"));
-      const arosList = arosSnapshot.docs.map((doc) => doc.data().name);
-      setAros(arosList);
+      const loja = selectedLoja || "loja1";
+      const path = `estoque/${loja}/armacoes/configuracoes/armacoes_aros`;
+      const snapshot = await getDocs(collection(firestore, path));
+      const list = snapshot.docs.map(doc => doc.data().name);
+      setAros(list);
     } catch (error) {
       console.error("Erro ao buscar aros:", error);
     }
@@ -474,9 +492,11 @@ export function FormularioLoja() {
 
   const fetchCores = async () => {
     try {
-      const corSnapshot = await getDocs(collection(firestore, "configuracoes/atributos/armacoes_cores"));
-      const corList = corSnapshot.docs.map((doc) => doc.data().name);
-      setCores(corList);
+      const loja = selectedLoja || "loja1";
+      const path = `estoque/${loja}/armacoes/configuracoes/armacoes_cores`;
+      const snapshot = await getDocs(collection(firestore, path));
+      const list = snapshot.docs.map(doc => doc.data().name);
+      setCores(list);
     } catch (error) {
       console.error("Erro ao buscar cores:", error);
     }
@@ -484,11 +504,11 @@ export function FormularioLoja() {
 
   const fetchFabricantes = async () => {
     try {
-      const fabricantesSnapshot = await getDocs(collection(firestore, "configuracoes/atributos/armacoes_fabricantes"));
-      const fabricantesList = fabricantesSnapshot.docs.map(
-        (doc) => doc.data().name
-      );
-      setFabricantes(fabricantesList);
+      const loja = selectedLoja || "loja1";
+      const path = `estoque/${loja}/armacoes/configuracoes/armacoes_fabricantes`;
+      const snapshot = await getDocs(collection(firestore, path));
+      const list = snapshot.docs.map(doc => doc.data().name);
+      setFabricantes(list);
     } catch (error) {
       console.error("Erro ao buscar fabricantes:", error);
     }
@@ -496,9 +516,11 @@ export function FormularioLoja() {
 
   const fetchHastes = async () => {
     try {
-      const hasteSnapshot = await getDocs(collection(firestore, "configuracoes/atributos/armacoes_hastes"));
-      const hasteList = hasteSnapshot.docs.map((doc) => doc.data().value);
-      setHastes(hasteList);
+      const loja = selectedLoja || "loja1";
+      const path = `estoque/${loja}/armacoes/configuracoes/armacoes_hastes`;
+      const snapshot = await getDocs(collection(firestore, path));
+      const list = snapshot.docs.map(doc => doc.data().name);
+      setHastes(list);
     } catch (error) {
       console.error("Erro ao buscar hastes:", error);
     }
@@ -506,9 +528,11 @@ export function FormularioLoja() {
 
   const fetchLentes = async () => {
     try {
-      const lenteSnapshot = await getDocs(collection(firestore, "configuracoes/atributos/armacoes_largura_lentes"));
-      const lentesList = lenteSnapshot.docs.map((doc) => doc.data().value);
-      setLentes(lentesList);
+      const loja = selectedLoja || "loja1";
+      const path = `estoque/${loja}/armacoes/configuracoes/armacoes_lentes`;
+      const snapshot = await getDocs(collection(firestore, path));
+      const list = snapshot.docs.map(doc => doc.data().name);
+      setLentes(list);
     } catch (error) {
       console.error("Erro ao buscar lentes:", error);
     }
@@ -516,9 +540,11 @@ export function FormularioLoja() {
 
   const fetchMarcas = async () => {
     try {
-      const marcasSnapshot = await getDocs(collection(firestore, "configuracoes/atributos/armacoes_marcas"));
-      const marcasList = marcasSnapshot.docs.map((doc) => doc.data().name);
-      setMarcas(marcasList);
+      const loja = selectedLoja || "loja1";
+      const path = `estoque/${loja}/armacoes/configuracoes/armacoes_marcas`;
+      const snapshot = await getDocs(collection(firestore, path));
+      const list = snapshot.docs.map(doc => doc.data().name);
+      setMarcas(list);
     } catch (error) {
       console.error("Erro ao buscar marcas:", error);
     }
@@ -526,9 +552,11 @@ export function FormularioLoja() {
 
   const fetchMateriais = async () => {
     try {
-      const materiaisSnapshot = await getDocs(collection(firestore, "configuracoes/atributos/armacoes_materiais"));
-      const materiaisList = materiaisSnapshot.docs.map((doc) => doc.data().name);
-      setMateriais(materiaisList);
+      const loja = selectedLoja || "loja1";
+      const path = `estoque/${loja}/armacoes/configuracoes/armacoes_materiais`;
+      const snapshot = await getDocs(collection(firestore, path));
+      const list = snapshot.docs.map(doc => doc.data().name);
+      setMateriais(list);
     } catch (error) {
       console.error("Erro ao buscar materiais:", error);
     }
@@ -536,9 +564,11 @@ export function FormularioLoja() {
 
   const fetchPontes = async () => {
     try {
-      const pontesSnapshot = await getDocs(collection(firestore, "configuracoes/atributos/armacoes_pontes"));
-      const ponteList = pontesSnapshot.docs.map((doc) => doc.data().value);
-      setPontes(ponteList);
+      const loja = selectedLoja || "loja1";
+      const path = `estoque/${loja}/armacoes/configuracoes/armacoes_pontes`;
+      const snapshot = await getDocs(collection(firestore, path));
+      const list = snapshot.docs.map(doc => doc.data().name);
+      setPontes(list);
     } catch (error) {
       console.error("Erro ao buscar pontes:", error);
     }
@@ -546,50 +576,57 @@ export function FormularioLoja() {
 
   const fetchFormatos = async () => {
     try {
-      const formatosSnapshot = await getDocs(collection(firestore, "configuracoes/atributos/armacoes_formatos"));
-      const formatosList = formatosSnapshot.docs.map((doc) => doc.data().name);
-      setFormatos(formatosList);
+      const loja = selectedLoja || "loja1";
+      const path = `estoque/${loja}/armacoes/configuracoes/armacoes_formatos`;
+      const snapshot = await getDocs(collection(firestore, path));
+      const list = snapshot.docs.map(doc => doc.data().name);
+      setFormatos(list);
     } catch (error) {
       console.error("Erro ao buscar formatos:", error);
     }
   };
 
   // Nova função para buscar fornecedores da estrutura correta do banco
-  const fetchFornecedores = async () => {
-    try {
-      // Busca fornecedores no caminho correto conforme estrutura do banco
-      const fornecedoresSnapshot = await getDocs(collection(firestore, "lojas/fornecedores/users"));
-      const fornecedoresList = fornecedoresSnapshot.docs.map((doc) => {
-        const data = doc.data();
-        const nomeFantasia = data.nomeFantasia || "";
-        const razaoSocial = data.razaoSocial || "";
-        const representante = data.representante || "";
+  const fetchFornecedoresDinamico = async () => {
+    if (!searchFornecedor.trim()) {
+      setListaFornecedores([]);
+      return;
+    }
 
-        // Se nome fantasia e razão social forem similares
-        if (nomeFantasia && razaoSocial && nomeFantasia.trim() === razaoSocial.trim()) {
+    setIsLoadingFornecedores(true);
+    try {
+      const fornecedoresRef = collection(firestore, 'lojas/fornecedores/users');
+      const snapshot = await getDocs(fornecedoresRef);
+
+      const fornecedoresData = snapshot.docs
+        .map(doc => {
+          const data = doc.data();
+          const nome = data.nomeFantasia || data.razaoSocial || "Fornecedor";
+          const representante = data.representante || "";
+          const nomeCompleto = nome + (representante ? ` - ${representante}` : "");
           return {
             id: doc.id,
-            nome: representante ? `${nomeFantasia} - ${representante}` : nomeFantasia
+            nome: nomeCompleto.toLowerCase(),
           };
-        }
+        })
+        .filter(f => f.nome.includes(searchFornecedor.toLowerCase()));
 
-        // Caso padrão: mostrar ambos
-        return {
-          id: doc.id,
-          nome: razaoSocial ? `${nomeFantasia} (${razaoSocial})` : nomeFantasia
-        };
-      });
-      setFornecedores(fornecedoresList);
+      setListaFornecedores(fornecedoresData);
     } catch (error) {
       console.error("Erro ao buscar fornecedores:", error);
+      setListaFornecedores([]);
+    } finally {
+      setIsLoadingFornecedores(false);
     }
   };
+
+
 
   useEffect(() => {
     fetchAros();
     fetchCores();
     fetchFabricantes();
-    fetchFornecedores();
+    fetchFornecedoresDinamico();
     fetchLentes();
     fetchMarcas();
     fetchMateriais();
@@ -628,7 +665,7 @@ export function FormularioLoja() {
 
       // Nova lógica: se o percentual de lucro ou custo mudar, recalcula o valor de venda
       if (name === "percentual_lucro" && updatedData.custo) {
-        const valorCusto = parseFloat(updatedData.custo);
+        const valorCusto = parseValorMonetario(updatedData.custo);
         const percentualLucro = parseFloat(value);
 
         if (valorCusto > 0 && !isNaN(percentualLucro)) {
@@ -692,6 +729,36 @@ export function FormularioLoja() {
       }
     }
   }, [formData.marca, formData.cor, formData.genero, formData.material]);
+
+  const handleCustoChange = (e) => {
+    const raw = e.target.value.replace(/\D/g, '');
+
+    if (raw === '') {
+      setFormData(prev => ({ ...prev, custo: '', valor: '', custo_medio: '' }));
+      return;
+    }
+
+    const valorCusto = Number(raw) / 100;
+
+    const custoFormatado = valorCusto.toLocaleString('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    });
+
+    const percentual = parseFloat(formData.percentual_lucro?.toString().replace(',', '.')) || 0;
+
+    const valorVenda = valorCusto * (1 + percentual / 100);
+    const custoMedio = (valorCusto + valorVenda) / 2;
+
+    setFormData(prev => ({
+      ...prev,
+      custo: custoFormatado,
+      valor: valorVenda.toFixed(2),
+      custo_medio: custoMedio.toFixed(2)
+    }));
+  };
+
+
 
   // Função para limpar o formulário
   const handleClearSelection = () => {
@@ -849,16 +916,19 @@ export function FormularioLoja() {
 
       // Criar objeto de dados do produto (sem o objeto File)
       const { imagem, ...productDataWithoutFile } = updatedFormData;
+      const now = new Date();
       const productData = {
         ...productDataWithoutFile,
-        imagemUrl: imagePath, // Usar o caminho da imagem
-        categoria: "armacao", // Categoria fixa
-        subcategoria: updatedFormData.subcategoria || "grau", // Subcategoria
+        imagemUrl: imagePath,
+        categoria: "armacao",
+        subcategoria: updatedFormData.subcategoria || "grau",
         avaria: updatedFormData.avaria || false,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        createdAt: now,
+        updatedAt: now,
+        dataFormatada: format(now, 'dd/MM/yyyy', { locale: ptBR }),
+        horaFormatada: format(now, 'HH:mm', { locale: ptBR }),
         createdBy: userData?.nome || 'Sistema',
-        lojas: selectedLojas // Incluir lojas no objeto de dados
+        lojas: selectedLojas
       };
 
       // Salvar uma cópia na temp_image para persistência temporária
@@ -970,15 +1040,16 @@ export function FormularioLoja() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-                {/* Data */}
-                <input
-                  type="date"
-                  name="data"
-                  value={formData.data}
-                  readOnly
-                  disabled
-                  className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black bg-gray-100"
-                />
+                <div>
+                  <label className="text-[#81059e] font-medium">Data de Cadastro</label>
+                  <input
+                    type="text"
+                    value={dataExibicao}
+                    readOnly
+                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black bg-gray-100"
+                  />
+                </div>
+
 
                 <div>
                   <label className="text-[#81059e] font-medium">Código do Produto</label>
@@ -1037,21 +1108,42 @@ export function FormularioLoja() {
                 />
 
                 {/* Fornecedor - Agora sem opção de adicionar */}
-                <div className="space-y-2">
-                  <h3 className="text-lg font-semibold text-[#81059e]">Fornecedor:</h3>
-                  <select
-                    value={formData.fornecedor || ""}
-                    onChange={(e) => setFormData({ ...formData, fornecedor: e.target.value })}
-                    className="bg-gray-100 w-full px-4 py-3 border-2 border-[#81059e] rounded-lg text-black focus:outline-none focus:border-[#81059e] focus:ring-1 focus:ring-[#81059e]"
-                  >
-                    <option value="">Selecione um fornecedor</option>
-                    {fornecedores.map((fornecedor) => (
-                      <option key={fornecedor.id} value={fornecedor.nome}>
-                        {fornecedor.nome.toUpperCase()}
-                      </option>
-                    ))}
-                  </select>
+                <div className="space-y-2 relative">
+                  <label className="text-lg font-semibold text-[#81059e]">Fornecedor:</label>
+                  <input
+                    type="text"
+                    value={searchFornecedor}
+                    onChange={(e) => {
+                      setSearchFornecedor(e.target.value);
+                      setFormData(prev => ({ ...prev, fornecedor: e.target.value }));
+                    }}
+                    placeholder="Buscar fornecedor"
+                    className="bg-gray-100 w-full px-4 py-3 border-2 border-[#81059e] rounded-lg text-black"
+                  />
+
+                  {searchFornecedor && listaFornecedores.length > 0 && (
+                    <ul className="absolute z-20 bg-white border border-gray-300 rounded-xl w-full max-h-60 overflow-y-auto shadow-md mt-2">
+                      {listaFornecedores.map((f) => (
+                        <li
+                          key={f.id}
+                          onClick={() => {
+                            setFormData(prev => ({ ...prev, fornecedor: f.nome }));
+                            setSearchFornecedor(f.nome);
+                            setListaFornecedores([]);
+                          }}
+                          className="px-4 py-2 hover:bg-[#f3e8fc] cursor-pointer text-gray-800 border-b last:border-none"
+                        >
+                          {f.nome}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+                  {isLoadingFornecedores && (
+                    <p className="text-sm text-gray-500 mt-1">Buscando fornecedores...</p>
+                  )}
                 </div>
+
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
@@ -1124,10 +1216,10 @@ export function FormularioLoja() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
                 {/* Ponte com opção de adicionar */}
                 <SelectWithAddOption
-                  label="Ponte"
+                  label="Ponte (mm)"
                   options={pontes}
                   value={formData.ponte}
                   onChange={(value) => setFormData({ ...formData, ponte: value })}
@@ -1136,21 +1228,13 @@ export function FormularioLoja() {
 
                 {/* Haste com opção de adicionar */}
                 <SelectWithAddOption
-                  label="Haste"
+                  label="Hastes (mm)"
                   options={hastes}
                   value={formData.haste}
                   onChange={(value) => setFormData({ ...formData, haste: value })}
                   addNewOption={(value) => addNewValueItem("armacoes_hastes", value)}
                 />
 
-                {/* Lente com opção de adicionar */}
-                <SelectWithAddOption
-                  label="Lente"
-                  options={lentes}
-                  value={formData.lente}
-                  onChange={(value) => setFormData({ ...formData, lente: value })}
-                  addNewOption={(value) => addNewValueItem("armacoes_largura_lentes", value)}
-                />
               </div>
             </div>
 
@@ -1165,14 +1249,14 @@ export function FormularioLoja() {
                   <div className="flex items-center border-2 border-[#81059e] rounded-lg">
                     <span className="px-2 text-gray-400">R$</span>
                     <input
-                      type="number"
+                      type="text"
                       name="custo"
                       value={formData.custo}
-                      onChange={handleChange}
-                      placeholder="0,00"
-                      className="w-full px-2 py-3 text-black focus:outline-none focus:border-[#81059e] focus:ring-1 focus:ring-[#81059e] rounded-lg"
-                      required
+                      onChange={handleCustoChange}
+                      placeholder="R$ 0,00"
+                      className="w-full px-2 py-3 text-black border-2 border-[#81059e] rounded-lg"
                     />
+
                   </div>
                 </div>
 
@@ -1453,32 +1537,47 @@ export function FormularioLoja() {
                   type="file"
                   name="imagem"
                   accept="image/*"
+                  ref={imageInputRef} // 👈 aqui
                   onChange={(e) => {
                     const file = e.target.files[0];
                     if (file) {
-                      // Atualizar o formData com o arquivo
                       setFormData(prev => ({ ...prev, imagem: file }));
-
-                      // Criar um URL para visualização
-                      const objectUrl = URL.createObjectURL(file);
-                      setPreviewUrl(objectUrl);
+                      setPreviewUrl(URL.createObjectURL(file));
                     }
                   }}
                   className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black bg-gray-100"
                   required
                 />
 
+
                 {/* Pré-visualização da imagem */}
                 {previewUrl && (
-                  <div className="mt-4">
+                  <div className="mt-4 relative inline-block">
                     <p className="text-sm text-gray-600 mb-2">Pré-visualização:</p>
                     <img
                       src={previewUrl}
                       alt="Pré-visualização"
                       className="max-w-xs h-auto object-contain border border-gray-300 rounded-md"
                     />
+
+                    {/* Botão de fechar (X) */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPreviewUrl(null);
+                        setFormData(prev => ({ ...prev, imagem: null }));
+                        if (imageInputRef.current) {
+                          imageInputRef.current.value = null; // 👈 força reset do input
+                        }
+                      }}
+                      className="absolute top-0 right-0 bg-white border border-gray-300 rounded-full p-1 shadow hover:bg-red-100"
+                      title="Remover imagem"
+                    >
+                      <FiX className="text-red-600 text-lg" />
+                    </button>
                   </div>
                 )}
+
               </div>
             </div>
 
@@ -1503,22 +1602,26 @@ export function FormularioLoja() {
           </form>
         </div>
 
-        {showSuccessPopup && (
-          <div className="fixed bottom-4 right-4 bg-green-500 text-white p-4 rounded-lg shadow-lg">
-            <p>Produto enviado com sucesso!</p>
-          </div>
-        )}
+        {
+          showSuccessPopup && (
+            <div className="fixed bottom-4 right-4 bg-green-500 text-white p-4 rounded-lg shadow-lg">
+              <p>Produto enviado com sucesso!</p>
+            </div>
+          )
+        }
 
-        {showConfirmModal && (
-          <ProductConfirmModal
-            isOpen={showConfirmModal}
-            onClose={() => setShowConfirmModal(false)}
-            productData={productToConfirm}
-            setIsLoading={setIsLoading}
-          />
-        )}
-      </Layout>
-    </div>
+        {
+          showConfirmModal && (
+            <ProductConfirmModal
+              isOpen={showConfirmModal}
+              onClose={() => setShowConfirmModal(false)}
+              productData={productToConfirm}
+              setIsLoading={setIsLoading}
+            />
+          )
+        }
+      </Layout >
+    </div >
   );
 }
 

@@ -1435,13 +1435,13 @@ const ModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
                                 </button>
                             </div>
 
-                            <div className="flex items-center space-x-2 mb-2">
-                                <label className="text-sm font-medium text-gray-700">Valor:</label>
+                            <div className="grid ">
+                                <label className="text-sm font-medium text-gray-700 mb-2">Valor:</label>
                                 <input
                                     type="text"
                                     value={formatCurrency(payment.value)}
                                     onChange={(e) => handlePaymentValueChange(index, e.target.value)}
-                                    className={`border p-2 rounded-lg flex-1 ${valueDistribution === 'auto' ? 'bg-gray-100' : ''
+                                    className={`border p-2 w-32 mb-4 ${valueDistribution === 'auto' ? 'bg-gray-100' : ''
                                         }`}
                                     readOnly={valueDistribution === 'auto'}
                                 />

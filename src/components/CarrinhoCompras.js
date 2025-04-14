@@ -8,6 +8,7 @@ import {
 import { collection, getDocs } from 'firebase/firestore';
 import { firestore } from '@/lib/firebaseConfig';
 import { useAuth } from '@/hooks/useAuth';
+import ProductDetailsModal from './ProductDetailsModal';
 
 const CarrinhoCompras = ({
   products = [],
@@ -31,6 +32,8 @@ const CarrinhoCompras = ({
   const [estoqueData, setEstoqueData] = useState([]);
   const [debug, setDebug] = useState(null);
   const { userPermissions } = useAuth();
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [showProductModal, setShowProductModal] = useState(false);
 
   // Buscar produtos do estoque
   useEffect(() => {
@@ -117,6 +120,26 @@ const CarrinhoCompras = ({
     } finally {
       setLoading(false);
     }
+  };
+
+  const handlePriceUpdate = (productId, categoria, newPrice) => {
+    // Atualizar o estado de estoqueData
+    setEstoqueData(prevData =>
+      prevData.map(prod =>
+        prod.id === productId && prod.categoria === categoria
+          ? { ...prod, valor: newPrice, preco: newPrice }
+          : prod
+      )
+    );
+
+    // Atualizar os itens no carrinho 
+    setCartItems(prevItems =>
+      prevItems.map(item =>
+        item.id === productId && item.categoria === categoria
+          ? { ...item, valor: newPrice, preco: newPrice }
+          : item
+      )
+    );
   };
 
   // Exibir informações de debug quando solicitado
@@ -335,26 +358,30 @@ const CarrinhoCompras = ({
       )}
 
       {/* Botões de seleção de loja - ADICIONE AQUI */}
-      <div className="flex justify-between items-center p-2 bg-gray-50 border-b border-gray-200">
-        <span className="text-sm text-gray-500">Selecionar loja:</span>
+      <div className="flex justify-between items-center p-3 bg-[#faf6ff] border-b border-gray-200">
+        <span className="text-sm font-medium text-[#81059e]">Selecionar loja:</span>
         <div className="flex gap-2">
           <button
             onClick={() => {
-              console.log("Buscando produtos da loja1");
               const newSelectedLoja = "loja1";
               fetchProductsFromEstoque(newSelectedLoja);
             }}
-            className="px-2 py-1 text-xs bg-purple-100 text-purple-700 rounded"
+            className={`px-3 py-2 text-sm rounded-md transition-all ${selectedLoja === 'loja1'
+              ? 'bg-[#81059e] text-white font-medium shadow-md'
+              : 'bg-purple-100 text-purple-700 hover:bg-purple-200'
+              }`}
           >
             Loja 1
           </button>
           <button
             onClick={() => {
-              console.log("Buscando produtos da loja2");
               const newSelectedLoja = "loja2";
               fetchProductsFromEstoque(newSelectedLoja);
             }}
-            className="px-2 py-1 text-xs bg-purple-100 text-purple-700 rounded"
+            className={`px-3 py-2 text-sm rounded-md transition-all ${selectedLoja === 'loja2'
+              ? 'bg-[#81059e] text-white font-medium shadow-md'
+              : 'bg-purple-100 text-purple-700 hover:bg-purple-200'
+              }`}
           >
             Loja 2
           </button>
@@ -376,8 +403,10 @@ const CarrinhoCompras = ({
               placeholder="Buscar produto por título, código ou marca"
               ref={produtoInputRef}
             />
+
+            
             {filteredProducts.length > 0 && (
-              <div className="absolute z-20 mt-1 w-[400px] bg-white shadow-xl rounded-md border border-gray-300 max-h-80 overflow-auto">
+              <div className="absolute z-20 mt-1 w-[440px] bg-white shadow-xl rounded-md border border-gray-300 max-h-40 overflow-auto">
                 <div className="sticky top-0 bg-[#81059e] text-white p-2 text-sm font-medium">
                   {filteredProducts.length} produtos encontrados
                 </div>
@@ -430,27 +459,6 @@ const CarrinhoCompras = ({
                 ))}
               </div>
             )}
-          </div>
-          <div className="flex items-center border-2 border-[#81059e] rounded-lg overflow-hidden">
-            <button
-              onClick={() => setNewProductQty(prev => Math.max(1, prev - 1))}
-              className="px-3 py-2 bg-gray-100 text-[#81059e] hover:bg-gray-200 border-r border-[#81059e]"
-            >
-              <FiMinus size={16} />
-            </button>
-            <input
-              type="number"
-              min="1"
-              value={newProductQty}
-              onChange={(e) => setNewProductQty(parseInt(e.target.value) || 1)}
-              className="w-14 text-center p-2 focus:outline-none focus:ring-2 focus:ring-[#81059e] focus:ring-opacity-50"
-            />
-            <button
-              onClick={() => setNewProductQty(prev => prev + 1)}
-              className="px-3 py-2 bg-gray-100 text-[#81059e] hover:bg-gray-200 border-l border-[#81059e]"
-            >
-              <FiPlus size={16} />
-            </button>
           </div>
         </div>
       </div>
@@ -618,7 +626,8 @@ const CarrinhoCompras = ({
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    setShowDetails(showDetails === `${item.id}-${item.categoria}` ? null : `${item.id}-${item.categoria}`);
+                                    setSelectedProduct(item);
+                                    setShowProductModal(true);
                                   }}
                                   className="ml-2 p-1 text-gray-500 hover:text-[#81059e]"
                                   title="Mostrar detalhes"
@@ -665,6 +674,15 @@ const CarrinhoCompras = ({
             </div>
           </>
         )}
+
+        {/* Modal de Detalhes do Produto */}
+        <ProductDetailsModal
+          product={selectedProduct}
+          isOpen={showProductModal}
+          onClose={() => setShowProductModal(false)}
+          selectedLoja={selectedLoja}
+          onPriceUpdate={handlePriceUpdate}
+        />
       </div>
     </div>
   );

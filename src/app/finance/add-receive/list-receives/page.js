@@ -719,10 +719,10 @@ export default function ListaRecebimentos() {
       <div className="min-h-screen p-0 md:p-2 mb-20">
         <div className="w-full max-w-5xl mx-auto rounded-lg">
           <div className="mb-4">
-            <h2 className="text-3xl font-bold text-[#81059e] mb-2 mt-8">
+            <h2 className="text-3xl font-bold text-[#81059e] mb-8 mt-8">
               {viewCompletedPayments ? "RECEBIMENTOS CONCLUÍDOS" : "RECEBIMENTOS PENDENTES"}
             </h2>
-            <div className="flex justify-end mb-4">
+            <div className="flex justify-start mb-8">
               <button
                 onClick={() => setViewCompletedPayments(!viewCompletedPayments)}
                 className="bg-[#81059e] text-white px-4 py-2 rounded-md hover:bg-[#690480] transition"

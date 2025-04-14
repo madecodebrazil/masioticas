@@ -8,6 +8,7 @@ import Sidebar from '@/components/Sidebar';
 import MobileNavSidebar from '@/components/MB_NavSidebar';
 import BottomMobileNav from '@/components/MB_BottomNav';
 import Image from 'next/image';
+import Head from 'next/head';
 
 const Layout = ({ children }) => {
     const { user, userData, loading, userPermissions, hasAccessToLoja } = useAuth();
@@ -47,16 +48,16 @@ const Layout = ({ children }) => {
     if (loading) {
         return (
             <div className="flex justify-center items-center h-screen">
-                <p> <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#81059e]"></div></p>
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#81059e]"></div>
             </div>
         );
     }
 
     return (
         <>
-            <head>
+            <Head>
                 <link rel="icon" type="image/x-icon" href="/favicon.ico" />
-            </head>
+            </Head>
             <div className={`${'lg:fixed lg:inset-0 lg:bg-[#81059e] lg:overflow-hidden'
                 } min-h-screen`}>
                 <div className="flex flex-col lg:flex-row h-full">

@@ -4,7 +4,6 @@ import { firestore } from "../../../lib/firebaseConfig";
 import { collection, getDocs, addDoc, getDoc, Timestamp, doc, setDoc, query, where } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
-import DatePicker from "react-datepicker";
 import InputMask from "react-input-mask";
 import "react-datepicker/dist/react-datepicker.css";
 import Layout from "../../../components/Layout";
@@ -62,56 +61,55 @@ export default function AddAccountPage() {
       setConsumers([]);
       return;
     }
-  
+
     setIsLoading(true);
     try {
-      // Buscar da coleção correta 'lojas/clientes/users'
       // O caminho deve ser o mesmo utilizado no ClientForm
       const clientesRef = collection(firestore, 'lojas/clientes/users');
       const querySnapshot = await getDocs(
-        query(clientesRef, 
+        query(clientesRef,
           where('nome', '>=', searchTerm),
           where('nome', '<=', searchTerm + '\uf8ff')
         )
       );
-  
+
       // Se não encontrar por nome, tenta por CPF
       let clientesData = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
-  
+
       // Se não encontrou por nome, tente por CPF
       if (clientesData.length === 0 && searchTerm.replace(/\D/g, '').length > 0) {
         const cpfQuerySnapshot = await getDocs(
           query(clientesRef, where('cpf', '==', searchTerm.replace(/\D/g, '')))
         );
-        
+
         clientesData = cpfQuerySnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
         }));
       }
-  
+
       setConsumers(clientesData);
     } catch (error) {
       console.error("Erro ao buscar clientes:", error);
-      
+
       // Plano B: Tentar buscar na coleção 'clientes' global se existir
       try {
         const clientesGlobalRef = collection(firestore, 'clientes');
         const globalQuerySnapshot = await getDocs(
-          query(clientesGlobalRef, 
+          query(clientesGlobalRef,
             where('nome', '>=', searchTerm),
             where('nome', '<=', searchTerm + '\uf8ff')
           )
         );
-        
+
         const clientesData = globalQuerySnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
         }));
-        
+
         setConsumers(clientesData);
       } catch (fallbackError) {
         console.error("Erro ao buscar no plano B:", fallbackError);
@@ -325,13 +323,13 @@ export default function AddAccountPage() {
 
           <div className='space-x-2 mb-6'>
             <Link href="/finance/add-receive/list-receives">
-              <button className="bg-[#81059e] p-3 rounded-sm text-white">
+              <button className="bg-[#81059e] p-2 rounded-sm text-white">
                 RECEBIMENTOS PENDENTES
               </button>
             </Link>
             <button
               onClick={handleClear}
-              className="text-[#81059e] px-4 py-2 border-2 border-[#81059e] font-bold text-base rounded-sm"
+              className="text-[#81059e] px-3 py-1 border-2 border-[#81059e] font-bold text-base rounded-sm"
             >
               Limpar
             </button>
@@ -426,7 +424,7 @@ export default function AddAccountPage() {
                     <option value="boleto">Boleto</option>
                     <option value="cartao">Cartão de Débito/Crédito</option>
                     <option value="dinheiro">Dinheiro</option>
-                    <option value="TED">TED</option>
+                    <option value="TEV">TEV</option>
                     <option value="pix">PIX</option>
                   </select>
                 </div>
@@ -479,12 +477,23 @@ export default function AddAccountPage() {
 
                 <div>
                   <label className="text-[#81059e] font-medium">Data de Emissão</label>
-                  <DatePicker
-                    selected={formData.dataCobranca}
-                    onChange={(date) => setFormData(prev => ({ ...prev, dataCobranca: date }))}
-                    dateFormat="dd/MM/yyyy"
+                  <input
+                    type="date"
+                    name="dataCobranca"
+                    placeholder="dd/mm/aaaa"
+                    value={
+                      formData.dataCobranca instanceof Date && !isNaN(formData.dataCobranca)
+                        ? formData.dataCobranca.toISOString().split('T')[0]
+                        : ''
+                    }
+                    onChange={(e) => {
+                      const selectedDate = e.target.value ? new Date(e.target.value) : null;
+                      setFormData((prev) => ({
+                        ...prev,
+                        dataCobranca: selectedDate,
+                      }));
+                    }}
                     className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
-                    placeholderText="Selecione a data"
                   />
                 </div>
                 <div>
@@ -564,23 +573,6 @@ export default function AddAccountPage() {
                   </select>
                 </div>
               </div>
-
-              <div className="mt-6">
-                <label className="text-[#81059e] font-medium">Conta Bancária</label>
-                <select
-                  name="contaBancaria"
-                  value={formData.contaBancaria}
-                  onChange={handleInputChange}
-                  className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
-                >
-                  <option value="">Selecione</option>
-                  <option value="01 BANCO ITAÚ">01 BANCO ITAÚ</option>
-                  <option value="02 BANCO BRADESCO">02 BANCO BRADESCO</option>
-                  <option value="03 BANCO CAIXA ECONOMICA">03 BANCO CAIXA ECONOMICA</option>
-                  <option value="04 BANCO DO BRASIL">04 BANCO DO BRASIL</option>
-                  <option value="05 BANCO SANTANDER">05 BANCO SANTANDER</option>
-                </select>
-              </div>
             </div>
 
             {/* Seção Observações */}
@@ -600,10 +592,10 @@ export default function AddAccountPage() {
             </div>
 
             {/* Botões de ação */}
-            <div className="flex justify-center gap-4 mt-8">
+            <div className="flex justify-center gap-6 mt-8">
               <button
                 type="submit"
-                className="bg-[#81059e] p-3 px-6 rounded-sm text-white flex items-center gap-2"
+                className="bg-[#81059e] p-2 px-3 rounded-sm text-white flex items-center gap-2"
                 disabled={isLoading}
               >
                 {isLoading ? 'PROCESSANDO...' : 'REGISTRAR'}
@@ -611,7 +603,7 @@ export default function AddAccountPage() {
               <button
                 type="button"
                 onClick={handleClear}
-                className="border-2 border-[#81059e] p-3 px-6 rounded-sm text-[#81059e] flex items-center gap-2"
+                className="border-2 border-[#81059e] p-2 px-3 rounded-sm text-[#81059e] flex items-center gap-2"
                 disabled={isLoading}
               >
                 CANCELAR

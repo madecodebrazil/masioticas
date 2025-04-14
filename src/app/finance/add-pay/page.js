@@ -30,8 +30,7 @@ export default function ContasPagar() {
     dataVencimento: '',
     horaVencimento: '',
     localPagamento: '', // Local de pagamento
-    categoriaDespesa: '', // Categoria de despesa (equivalente a "Conta" na imagem)
-    contaBancaria: '', // Conta bancária para pagamento
+    categoriaDespesa: '', 
     lancamentoNoCaixa: '', // Lançamento no caixa
     parcelaAtual: '1', // Parcela atual
     totalParcelas: '1', // Total de parcelas
@@ -587,23 +586,6 @@ export default function ContasPagar() {
                     <option value="OUTROS">OUTROS</option>
                   </select>
                 </div>
-              </div>
-
-              <div className="mt-6">
-                <label className="text-[#81059e] font-medium">Conta Bancária</label>
-                <select
-                  name="contaBancaria"
-                  value={formData.contaBancaria}
-                  onChange={handleInputChange}
-                  className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
-                >
-                  <option value="">Selecione</option>
-                  <option value="01 BANCO ITAÚ">01 BANCO ITAÚ</option>
-                  <option value="02 BANCO BRADESCO">02 BANCO BRADESCO</option>
-                  <option value="03 BANCO CAIXA ECONOMICA">03 BANCO CAIXA ECONOMICA</option>
-                  <option value="04 BANCO DO BRASIL">04 BANCO DO BRASIL</option>
-                  <option value="05 BANCO SANTANDER">05 BANCO SANTANDER</option>
-                </select>
               </div>
             </div>
 
