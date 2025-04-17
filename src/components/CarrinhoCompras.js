@@ -3,18 +3,21 @@ import { useState, useEffect, useRef } from 'react';
 import {
   FiSearch, FiPlus, FiMinus, FiTrash2, FiInfo,
   FiShoppingBag, FiBarChart2, FiTag, FiPackage,
-  FiAlertCircle
+  FiAlertCircle, FiLayers, FiPlusCircle, FiEye, FiCheckCircle
 } from 'react-icons/fi';
 import { collection, getDocs } from 'firebase/firestore';
 import { firestore } from '@/lib/firebaseConfig';
 import { useAuth } from '@/hooks/useAuth';
-import ProductDetailsModal from './ProductDetailsModal';
 
+// Substituir a declaração do componente e a definição de props
 const CarrinhoCompras = ({
   products = [],
   cartItems = [],
   setCartItems,
-  selectedLoja, // Esta prop ainda é útil para filtrar por loja específica
+  selectedLoja,
+  // Remova estas linhas que estão causando conflito com o useState interno
+  // collections = [],
+  // setCollections,
   updateCartValue
 }) => {
   // Estados para busca de produtos
@@ -32,8 +35,174 @@ const CarrinhoCompras = ({
   const [estoqueData, setEstoqueData] = useState([]);
   const [debug, setDebug] = useState(null);
   const { userPermissions } = useAuth();
-  const [selectedProduct, setSelectedProduct] = useState(null);
-  const [showProductModal, setShowProductModal] = useState(false);
+
+  // Mantenha o estado interno de collections
+  const [collections, setCollections] = useState([
+    {
+      id: 1,
+      name: "Coleção 1",
+      items: [],
+      requiresOS: true,
+      generateOS: true,
+      forceGenerateOS: false // Novo campo para forçar geração de OS mesmo sem kit completo
+    }
+  ]);
+  const [activeCollection, setActiveCollection] = useState(1);
+  const [showOSForm, setShowOSForm] = useState(false);
+  const [generatedOS, setGeneratedOS] = useState([]);
+
+  // Exponha as collections para o componente pai
+  useEffect(() => {
+    // Se o componente pai tiver uma função para obter as collections
+    if (typeof updateCartValue === 'function') {
+      // Você pode adicionar um segundo parâmetro na função updateCartValue
+      // para passar as collections atualizadas para o componente pai
+      const subtotal = cartItems.reduce((total, item) =>
+        total + ((item.valor || item.preco || 0) * item.quantity), 0
+      );
+      updateCartValue(subtotal, collections);
+    }
+  }, [collections, cartItems, updateCartValue]);
+
+
+  const addCollection = () => {
+    const newCollectionId = collections.length + 1;
+    setCollections([
+      ...collections,
+      {
+        id: newCollectionId,
+        name: `Coleção ${newCollectionId}`,
+        items: [],
+        requiresOS: true,
+        generateOS: true,
+        forceGenerateOS: false
+      }
+    ]);
+    setActiveCollection(newCollectionId);
+  };
+
+  const toggleForceGenerateOS = (collectionId, value) => {
+    const updatedCollections = collections.map(c => {
+      if (c.id === collectionId) {
+        return {
+          ...c,
+          forceGenerateOS: value
+        };
+      }
+      return c;
+    });
+    setCollections(updatedCollections);
+  };
+
+
+  // Adicionar produto à coleção ativa
+  const addToCollection = (product) => {
+    if (!product) return;
+
+    // Verificar o tipo de produto
+    const productType = product.categoria;
+    const isFrame = productType === 'armacoes';
+    const isLens = productType === 'lentes';
+    const isSunglass = productType === 'solares';
+
+    // Se for óculos de sol, não precisa de OS
+    const requiresOS = !isSunglass;
+
+    // Encontrar a coleção ativa
+    const collection = collections.find(c => c.id === activeCollection);
+
+    // Verificar limitações da coleção
+    if (requiresOS) {
+      // Verificar se já existe uma armação na coleção
+      const hasFrame = collection.items.some(item => item.categoria === 'armacoes');
+      if (isFrame && hasFrame) {
+        setError('Esta coleção já possui uma armação. Crie uma nova coleção para adicionar outra armação.');
+        return false;
+      }
+
+      // Verificar se já existe uma lente na coleção
+      const hasLens = collection.items.some(item => item.categoria === 'lentes');
+      if (isLens && hasLens) {
+        setError('Esta coleção já possui lentes. Crie uma nova coleção para adicionar outras lentes.');
+        return false;
+      }
+    }
+
+    // Adicionar o produto à coleção ativa
+    const updatedCollections = collections.map(c => {
+      if (c.id === activeCollection) {
+        return {
+          ...c,
+          items: [...c.items, { ...product, quantity: newProductQty }],
+          requiresOS: requiresOS
+        };
+      }
+      return c;
+    });
+
+    setCollections(updatedCollections);
+    return true;
+  }
+
+
+  // Adicione esta função para atualizar a opção de gerar OS
+  const toggleGenerateOS = (collectionId, value) => {
+    const updatedCollections = collections.map(c => {
+      if (c.id === collectionId) {
+        return {
+          ...c,
+          generateOS: value
+        };
+      }
+      return c;
+    });
+    setCollections(updatedCollections);
+  };
+
+
+  // Função para remover item de uma coleção
+  const removeFromCollection = (collectionId, productId, categoria) => {
+    // Atualizar collections
+    const updatedCollections = collections.map(c => {
+      if (c.id === collectionId) {
+        return {
+          ...c,
+          items: c.items.filter(item => !(item.id === productId && item.categoria === categoria))
+        };
+      }
+      return c;
+    });
+
+    setCollections(updatedCollections);
+
+    // Atualizar também o cartItems para manter compatibilidade
+    setCartItems(cartItems.filter(item =>
+      !(item.id === productId && item.categoria === categoria && item.collectionId === collectionId)
+    ));
+  };
+
+
+
+  // Função para verificar quais coleções precisam de OS
+  // Modificar a função getOSCollections para permitir OS em outros casos
+  const getOSCollections = () => {
+    return collections.filter(c => {
+      // Verifica se tem armação E lentes (caso padrão)
+      const hasFrameAndLens = c.items.some(item => item.categoria === 'armacoes') &&
+        c.items.some(item => item.categoria === 'lentes');
+
+      // Verifica se tem apenas armação ou apenas lentes mas com forceGenerateOS ativado
+      const hasFrameOrLensAndForced = c.forceGenerateOS &&
+        (c.items.some(item => item.categoria === 'armacoes') ||
+          c.items.some(item => item.categoria === 'lentes'));
+
+      // Gera OS se: 
+      // 1. generateOS está ativo E
+      // 2. Tem armação E lentes OU tem armação OU lentes com força ativada
+      return c.generateOS && (hasFrameAndLens || hasFrameOrLensAndForced);
+    });
+  };
+
 
   // Buscar produtos do estoque
   useEffect(() => {
@@ -122,26 +291,6 @@ const CarrinhoCompras = ({
     }
   };
 
-  const handlePriceUpdate = (productId, categoria, newPrice) => {
-    // Atualizar o estado de estoqueData
-    setEstoqueData(prevData =>
-      prevData.map(prod =>
-        prod.id === productId && prod.categoria === categoria
-          ? { ...prod, valor: newPrice, preco: newPrice }
-          : prod
-      )
-    );
-
-    // Atualizar os itens no carrinho 
-    setCartItems(prevItems =>
-      prevItems.map(item =>
-        item.id === productId && item.categoria === categoria
-          ? { ...item, valor: newPrice, preco: newPrice }
-          : item
-      )
-    );
-  };
-
   // Exibir informações de debug quando solicitado
   const showDebugInfo = () => {
     console.log('DEBUG INFO:', debug);
@@ -200,6 +349,7 @@ const CarrinhoCompras = ({
   };
 
   // Adicionar produto ao carrinho
+  // Adicionar produto ao carrinho
   const addToCart = (product) => {
     if (!product) return;
 
@@ -215,6 +365,51 @@ const CarrinhoCompras = ({
     setLoadingStates(prev => ({ ...prev, [product.id]: true }));
 
     setTimeout(() => {
+      // Adicionar à coleção ativa
+      const collection = collections.find(c => c.id === activeCollection);
+
+      // Verificar o tipo de produto
+      const productType = product.categoria;
+      const isFrame = productType === 'armacoes';
+      const isLens = productType === 'lentes';
+      const isSunglass = productType === 'solares';
+
+      // Se for óculos de sol, não precisa de OS
+      const requiresOS = !isSunglass;
+
+      // Verificar limitações da coleção
+      if (requiresOS) {
+        // Verificar se já existe uma armação na coleção
+        const hasFrame = collection.items.some(item => item.categoria === 'armacoes');
+        if (isFrame && hasFrame) {
+          setError('Esta coleção já possui uma armação. Crie uma nova coleção para adicionar outra armação.');
+          setTimeout(() => setError(''), 3000);
+          return;
+        }
+
+        // Verificar se já existe uma lente na coleção
+        const hasLens = collection.items.some(item => item.categoria === 'lentes');
+        if (isLens && hasLens) {
+          setError('Esta coleção já possui lentes. Crie uma nova coleção para adicionar outras lentes.');
+          setTimeout(() => setError(''), 3000);
+          return;
+        }
+      }
+
+      // Adicionar o produto à coleção ativa
+      const updatedCollections = collections.map(c => {
+        if (c.id === activeCollection) {
+          return {
+            ...c,
+            items: [...c.items, { ...product, quantity: newProductQty }],
+            requiresOS: requiresOS
+          };
+        }
+        return c;
+      });
+
+      setCollections(updatedCollections);
+
       // Verificar se o produto já está no carrinho
       const existingItem = cartItems.find(item => item.id === product.id && item.categoria === product.categoria);
 
@@ -249,7 +444,8 @@ const CarrinhoCompras = ({
           preco: parseFloat(product.valor) || 0, // Manter compatibilidade com ambos os campos
           custo: parseFloat(product.custo) || 0,
           quantidade: product.quantidade,
-          quantity: newProductQty // Quantidade no carrinho
+          quantity: newProductQty, // Quantidade no carrinho
+          collectionId: activeCollection // Associar à coleção ativa
         };
 
         setCartItems([...cartItems, produtoFormatado]);
@@ -268,25 +464,44 @@ const CarrinhoCompras = ({
   };
 
   // Atualizar quantidade no carrinho
-  const updateQuantity = (productId, categoria, newQuantity) => {
-    if (newQuantity < 1) return;
+  
+// Modificação na função updateQuantity no CarrinhoCompras.js
+const updateQuantity = (productId, categoria, newQuantity) => {
+  if (newQuantity < 1) return;
 
-    // Verificar se a quantidade não excede o estoque
-    const product = estoqueData.find(p => p.id === productId && p.categoria === categoria);
-    const stockQuantity = parseInt(product?.quantidade) || 0;
+  // Verificar se a quantidade não excede o estoque
+  const product = estoqueData.find(p => p.id === productId && p.categoria === categoria);
+  const stockQuantity = parseInt(product?.quantidade) || 0;
 
-    if (newQuantity > stockQuantity && error !== 'Aviso: Mostrando produtos sem estoque disponível') {
-      setError(`Quantidade máxima disponível: ${stockQuantity}`);
-      setTimeout(() => setError(''), 3000);
-      return;
-    }
+  if (newQuantity > stockQuantity && error !== 'Aviso: Mostrando produtos sem estoque disponível') {
+    setError(`Quantidade máxima disponível: ${stockQuantity}`);
+    setTimeout(() => setError(''), 3000);
+    return;
+  }
 
-    setCartItems(cartItems.map(item =>
-      (item.id === productId && item.categoria === categoria)
-        ? { ...item, quantity: newQuantity }
+  // Atualizar a quantidade no carrinho
+  setCartItems(cartItems.map(item =>
+    (item.id === productId && item.categoria === categoria)
+      ? { ...item, quantity: newQuantity }
+      : item
+  ));
+
+  // IMPORTANTE: Atualizar também a quantidade na coleção correspondente
+  const updatedCollections = collections.map(collection => {
+    const updatedItems = collection.items.map(item => 
+      (item.id === productId && item.categoria === categoria) 
+        ? { ...item, quantity: newQuantity } 
         : item
-    ));
-  };
+    );
+    
+    return {
+      ...collection,
+      items: updatedItems
+    };
+  });
+  
+  setCollections(updatedCollections);
+};
 
   // Remover produto do carrinho
   const removeFromCart = (productId, categoria) => {
@@ -358,33 +573,65 @@ const CarrinhoCompras = ({
       )}
 
       {/* Botões de seleção de loja - ADICIONE AQUI */}
-      <div className="flex justify-between items-center p-3 bg-[#faf6ff] border-b border-gray-200">
-        <span className="text-sm font-medium text-[#81059e]">Selecionar loja:</span>
+      <div className="flex justify-between items-center p-2 bg-gray-50 border-b border-gray-200">
+        <span className="text-sm text-gray-500">Selecionar loja:</span>
         <div className="flex gap-2">
           <button
             onClick={() => {
+              console.log("Buscando produtos da loja1");
               const newSelectedLoja = "loja1";
               fetchProductsFromEstoque(newSelectedLoja);
             }}
-            className={`px-3 py-2 text-sm rounded-md transition-all ${selectedLoja === 'loja1'
-              ? 'bg-[#81059e] text-white font-medium shadow-md'
-              : 'bg-purple-100 text-purple-700 hover:bg-purple-200'
-              }`}
+            className="px-2 py-1 text-xs bg-purple-100 text-purple-700 rounded"
           >
             Loja 1
           </button>
           <button
             onClick={() => {
+              console.log("Buscando produtos da loja2");
               const newSelectedLoja = "loja2";
               fetchProductsFromEstoque(newSelectedLoja);
             }}
-            className={`px-3 py-2 text-sm rounded-md transition-all ${selectedLoja === 'loja2'
-              ? 'bg-[#81059e] text-white font-medium shadow-md'
-              : 'bg-purple-100 text-purple-700 hover:bg-purple-200'
-              }`}
+            className="px-2 py-1 text-xs bg-purple-100 text-purple-700 rounded"
           >
             Loja 2
           </button>
+        </div>
+      </div>
+
+      {/* Seleção de coleções */}
+      <div className="p-3 bg-gray-50 border-b border-gray-200">
+        <div className="flex justify-between items-center mb-2">
+          <h3 className="text-sm font-medium text-gray-700 flex items-center">
+            <FiLayers className="mr-2 text-[#81059e]" /> Coleções de Produtos
+          </h3>
+          <button
+            onClick={addCollection}
+            className="text-xs bg-[#81059e] text-white px-3 py-1 rounded flex items-center"
+          >
+            <FiPlusCircle className="mr-1" /> Nova Coleção
+          </button>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          {collections.map(collection => (
+            <button
+              key={collection.id}
+              onClick={() => setActiveCollection(collection.id)}
+              className={`px-3 py-1 text-xs rounded-full flex items-center ${activeCollection === collection.id
+                ? 'bg-[#81059e] text-white'
+                : 'bg-gray-200 text-gray-700'
+                }`}
+            >
+              {collection.name}
+              {getOSCollections().some(c => c.id === collection.id) && (
+                <FiCheckCircle className="ml-1 text-green-400" />
+              )}
+              <span className="ml-1 bg-gray-600 text-white text-xs px-1.5 rounded-full">
+                {collection.items.length}
+              </span>
+            </button>
+          ))}
         </div>
       </div>
 
@@ -403,10 +650,8 @@ const CarrinhoCompras = ({
               placeholder="Buscar produto por título, código ou marca"
               ref={produtoInputRef}
             />
-
-            
             {filteredProducts.length > 0 && (
-              <div className="absolute z-20 mt-1 w-[440px] bg-white shadow-xl rounded-md border border-gray-300 max-h-40 overflow-auto">
+              <div className="absolute z-20 mt-1 w-[400px] bg-white shadow-xl rounded-md border border-gray-300 max-h-80 overflow-auto">
                 <div className="sticky top-0 bg-[#81059e] text-white p-2 text-sm font-medium">
                   {filteredProducts.length} produtos encontrados
                 </div>
@@ -460,6 +705,27 @@ const CarrinhoCompras = ({
               </div>
             )}
           </div>
+          <div className="flex items-center border-2 border-[#81059e] rounded-lg overflow-hidden">
+            <button
+              onClick={() => setNewProductQty(prev => Math.max(1, prev - 1))}
+              className="px-3 py-2 bg-gray-100 text-[#81059e] hover:bg-gray-200 border-r border-[#81059e]"
+            >
+              <FiMinus size={16} />
+            </button>
+            <input
+              type="number"
+              min="1"
+              value={newProductQty}
+              onChange={(e) => setNewProductQty(parseInt(e.target.value) || 1)}
+              className="w-14 text-center p-2 focus:outline-none focus:ring-2 focus:ring-[#81059e] focus:ring-opacity-50"
+            />
+            <button
+              onClick={() => setNewProductQty(prev => prev + 1)}
+              className="px-3 py-2 bg-gray-100 text-[#81059e] hover:bg-gray-200 border-l border-[#81059e]"
+            >
+              <FiPlus size={16} />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -503,46 +769,107 @@ const CarrinhoCompras = ({
           </div>
         ) : (
           <>
-            {/* Produtos organizados por categoria */}
-            {Object.keys(groupedCart).map(category => (
-              <div key={category} className="border-b border-gray-200 last:border-b-0">
-                <div
-                  className={`p-3 cursor-pointer ${expandedGroup === category ? 'bg-purple-50' : 'bg-gray-50'}`}
-                  onClick={() => setExpandedGroup(expandedGroup === category ? null : category)}
-                >
-                  <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-2 text-[#81059e] font-medium">
-                      {getCategoryIcon(category)}
-                      <span>{getCategoryName(category)}</span>
-                      <span className="bg-[#81059e] text-white text-xs px-2 py-0.5 rounded-full">
-                        {groupedCart[category].length}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="font-semibold text-[#81059e]">
-                        {formatCurrency(calculateCategoryTotal(category))}
-                      </span>
-                      <svg
-                        className={`w-5 h-5 text-gray-500 transition-transform ${expandedGroup === category ? 'transform rotate-180' : ''}`}
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                      </svg>
+            {/* Lista de Produtos no Carrinho Agrupados por Coleção */}
+            {collections.map(collection => (
+              <div
+                key={collection.id}
+                className={`p-3 cursor-pointer ${expandedGroup === `collection-${collection.id}`
+                  ? 'bg-purple-50'
+                  : 'bg-gray-50'
+                  }`}
+                onClick={() => setExpandedGroup(
+                  expandedGroup === `collection-${collection.id}`
+                    ? null
+                    : `collection-${collection.id}`
+                )}
+              >
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-2 text-[#81059e] font-medium">
+                    <FiLayers />
+                    <span>{collection.name}</span>
+                    <span className="bg-[#81059e] text-white text-xs px-2 py-0.5 rounded-full">
+                      {collection.items.length}
+                    </span>
+
+                    {/* Controles para gerar OS, com novos checks para diferentes cenários */}
+                    <div className="flex items-center ml-2" onClick={(e) => e.stopPropagation()}>
+                      {/* Armação + Lentes = OS automática */}
+                      {collection.items.some(item => item.categoria === 'armacoes') &&
+                        collection.items.some(item => item.categoria === 'lentes') && (
+                          <label className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full flex items-center gap-1">
+                            <input
+                              type="checkbox"
+                              checked={collection.generateOS === true}
+                              onChange={(e) => toggleGenerateOS(collection.id, e.target.checked)}
+                              className="form-checkbox h-3 w-3 text-[#81059e]"
+                            />
+                            Gerar OS (Kit completo)
+                          </label>
+                        )}
+
+                      {/* Apenas armação ou apenas lentes = OS opcional */}
+                      {((collection.items.some(item => item.categoria === 'armacoes') &&
+                        !collection.items.some(item => item.categoria === 'lentes')) ||
+                        (!collection.items.some(item => item.categoria === 'armacoes') &&
+                          collection.items.some(item => item.categoria === 'lentes'))) && (
+                          <label className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full flex items-center gap-1 ml-1">
+                            <input
+                              type="checkbox"
+                              checked={collection.forceGenerateOS === true}
+                              onChange={(e) => toggleForceGenerateOS(collection.id, e.target.checked)}
+                              className="form-checkbox h-3 w-3 text-[#81059e]"
+                            />
+                            Gerar OS (Kit incompleto)
+                          </label>
+                        )}
+
+                      {/* Nem armação nem lentes */}
+                      {!collection.items.some(item => item.categoria === 'armacoes') &&
+                        !collection.items.some(item => item.categoria === 'lentes') && (
+                          <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
+                            Sem produtos para OS
+                          </span>
+                        )}
+
+                      {/* Óculos solares - Nunca gera OS */}
+                      {collection.items.some(item => item.categoria === 'solares') &&
+                        !collection.items.some(item => item.categoria === 'armacoes') &&
+                        !collection.items.some(item => item.categoria === 'lentes') && (
+                          <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
+                            Sem OS (Solar)
+                          </span>
+                        )}
                     </div>
                   </div>
-                </div>
 
-                {/* Produtos da categoria (expandível) */}
-                {expandedGroup === category && (
+                  <div className="flex items-center gap-3">
+                    <span className="font-semibold text-[#81059e]">
+                      {formatCurrency(
+                        collection.items.reduce((total, item) =>
+                          total + ((item.valor || item.preco || 0) * item.quantity), 0
+                        )
+                      )}
+                    </span>
+                    <svg
+                      className={`w-5 h-5 text-gray-500 transition-transform ${expandedGroup === `collection-${collection.id}` ? 'transform rotate-180' : ''
+                        }`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
+                </div>
+                {expandedGroup === `collection-${collection.id}` && (
                   <div className="divide-y divide-gray-100">
-                    {groupedCart[category].map(item => (
+                    {collection.items.map(item => (
                       <div key={`${item.id}-${item.categoria}`} className="p-4 hover:bg-gray-50 transition-colors">
+                        {/* Renderização do item como já feito anteriormente */}
                         <div className="flex items-start gap-4">
                           {/* Imagem do produto (placeholder) */}
                           <div className="w-16 h-16 bg-gray-100 flex items-center justify-center rounded border border-gray-200 flex-shrink-0">
-                            {getCategoryIcon(category)}
+                            {getCategoryIcon(item.categoria)}
                           </div>
 
                           {/* Detalhes do produto */}
@@ -554,7 +881,7 @@ const CarrinhoCompras = ({
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  removeFromCart(item.id, item.categoria);
+                                  removeFromCollection(collection.id, item.id, item.categoria);
                                 }}
                                 className="text-red-500 hover:text-red-700 p-1"
                                 title="Remover produto"
@@ -564,8 +891,11 @@ const CarrinhoCompras = ({
                             </div>
 
                             <div className="text-sm text-gray-500 mb-2">
-                              Marca: {item.marca || "N/A"} |
-                              Código: {item.codigo || "N/A"}
+                              {item.categoria === 'armacoes' ? 'Armação' :
+                                item.categoria === 'lentes' ? 'Lentes' :
+                                  item.categoria === 'solares' ? 'Óculos Solar' : 'Outro Produto'}
+                              {item.marca && ` | Marca: ${item.marca}`}
+                              {item.codigo && ` | Código: ${item.codigo}`}
                             </div>
 
                             {/* Informações adicionais (expansível) */}
@@ -626,8 +956,7 @@ const CarrinhoCompras = ({
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    setSelectedProduct(item);
-                                    setShowProductModal(true);
+                                    setShowDetails(showDetails === `${item.id}-${item.categoria}` ? null : `${item.id}-${item.categoria}`);
                                   }}
                                   className="ml-2 p-1 text-gray-500 hover:text-[#81059e]"
                                   title="Mostrar detalhes"
@@ -674,17 +1003,8 @@ const CarrinhoCompras = ({
             </div>
           </>
         )}
-
-        {/* Modal de Detalhes do Produto */}
-        <ProductDetailsModal
-          product={selectedProduct}
-          isOpen={showProductModal}
-          onClose={() => setShowProductModal(false)}
-          selectedLoja={selectedLoja}
-          onPriceUpdate={handlePriceUpdate}
-        />
       </div>
-    </div>
+    </div >
   );
 };
 

@@ -1,3 +1,4 @@
+//add-frame
 "use client";
 import React, { Suspense, useEffect, useState } from "react";
 import Layout from "@/components/Layout";
@@ -1254,7 +1255,7 @@ export function FormularioLoja() {
                       value={formData.custo}
                       onChange={handleCustoChange}
                       placeholder="R$ 0,00"
-                      className="w-full px-2 py-3 text-black border-2 border-[#81059e] rounded-lg"
+                      className="w-full px-2 py-3 text-black rounded-lg"
                     />
 
                   </div>

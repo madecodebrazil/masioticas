@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Layout from "@/components/Layout";
@@ -12,24 +12,63 @@ import { useAuth } from "@/hooks/useAuth";
 export default function SalesPage() {
   const router = useRouter();
   const { userPermissions } = useAuth();
-  // Criar estados separados para cada modal
+  
+  // Inicializar estados com null para garantir um valor definido
   const [isVendaModalOpen, setIsVendaModalOpen] = useState(false);
   const [isOrcamentoModalOpen, setIsOrcamentoModalOpen] = useState(false);
   const [selectedLoja, setSelectedLoja] = useState(
     userPermissions?.lojas?.[0] || "loja1"
   );
+  
+  // Estado para controlar renderização condicional do modal
+  const [renderVendaModal, setRenderVendaModal] = useState(false);
+  const [renderOrcamentoModal, setRenderOrcamentoModal] = useState(false);
+
+  // Abrir modal de venda apenas quando o botão for clicado
+  const handleOpenVendaModal = () => {
+    setRenderVendaModal(true); // Primeiro ativa a renderização do componente
+    // Pequeno timeout para garantir que o componente seja montado antes de abrir
+    setTimeout(() => {
+      setIsVendaModalOpen(true);
+    }, 50);
+  };
+
+  // Fechar modal de venda
+  const handleCloseVendaModal = () => {
+    setIsVendaModalOpen(false);
+    // Remover o componente do DOM após a animação de fechamento
+    setTimeout(() => {
+      setRenderVendaModal(false);
+    }, 300);
+  };
+
+  // Abrir modal de orçamento apenas quando o botão for clicado
+  const handleOpenOrcamentoModal = () => {
+    setRenderOrcamentoModal(true);
+    setTimeout(() => {
+      setIsOrcamentoModalOpen(true);
+    }, 50);
+  };
+
+  // Fechar modal de orçamento
+  const handleCloseOrcamentoModal = () => {
+    setIsOrcamentoModalOpen(false);
+    setTimeout(() => {
+      setRenderOrcamentoModal(false);
+    }, 300);
+  };
 
   // Opções de vendas com ícones e rotas
   const salesOptions = [
     {
       icon: "/images/financeiro/vendas.png",
       label: "Nova Venda",
-      action: () => setIsVendaModalOpen(true)
+      action: handleOpenVendaModal
     },
     {
       icon: "/images/financeiro/receber.png",
       label: "Novo orçamento",
-      action: () => setIsOrcamentoModalOpen(true)
+      action: handleOpenOrcamentoModal
     },
     {
       icon: "/images/financeiro/receber.png",
@@ -60,7 +99,7 @@ export default function SalesPage() {
           <main>
             <div className="w-full">
               <div className="grid items-center grid-cols-2 gap-8 sm:grid-cols-3 md:grid-cols-2">
-              <h1 className="text-4xl ml-0 md:ml-4 font-bold text-[#9a5fc7] text-center md:text-left">Vendas</h1>
+                <h1 className="text-4xl ml-0 md:ml-4 font-bold text-[#9a5fc7] text-center md:text-left">Vendas</h1>
 
                 {salesOptions.map((item, index) => (
                   <div
@@ -103,19 +142,23 @@ export default function SalesPage() {
                   </div>
                 ))}
               </div>
-              {/* Modal de Nova Venda */}
-              <ModalNovaVenda
-                isOpen={isVendaModalOpen}
-                onClose={() => setIsVendaModalOpen(false)}
-                selectedLoja={selectedLoja}
-              />
+              
+              {/* Renderização condicional dos modais */}
+              {renderVendaModal && (
+                <ModalNovaVenda
+                  isOpen={isVendaModalOpen}
+                  onClose={handleCloseVendaModal}
+                  selectedLoja={selectedLoja}
+                />
+              )}
 
-              {/* Modal de Novo Orçamento */}
-              <ModalNovoOrcamento
-                isOpen={isOrcamentoModalOpen}
-                onClose={() => setIsOrcamentoModalOpen(false)}
-                selectedLoja={selectedLoja}
-              />
+              {renderOrcamentoModal && (
+                <ModalNovoOrcamento
+                  isOpen={isOrcamentoModalOpen}
+                  onClose={handleCloseOrcamentoModal}
+                  selectedLoja={selectedLoja}
+                />
+              )}
             </div>
           </main>
         </div>
