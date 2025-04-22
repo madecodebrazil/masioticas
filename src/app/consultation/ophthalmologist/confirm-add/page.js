@@ -5,12 +5,15 @@ import Image from 'next/image'; // Para usar as imagens
 import { getFirestore, collection, doc, setDoc } from 'firebase/firestore'; // Importa o Firestore
 import { app } from '@/lib/firebaseConfig'; // Certifique-se de que o Firebase está corretamente inicializado
 import Layout from '@/components/Layout'; // Seu layout instanciado
+import { useAuth } from '@/hooks/useAuth';
+import { FiUser, FiMapPin, FiEdit2, FiCheck } from 'react-icons/fi';
 
 const db = getFirestore(app); // Inicializando Firestore
 
 const ConfirmAddOphthalmologist = () => {
   const searchParams = useSearchParams(); // Para pegar os parâmetros da URL
   const router = useRouter();
+  const { userPermissions, userData } = useAuth();
   const [isLoading, setIsLoading] = useState(false); // Estado de carregamento
   const [showPopup, setShowPopup] = useState(false); // Estado do popup de confirmação
 
@@ -39,7 +42,12 @@ const ConfirmAddOphthalmologist = () => {
       const docRef = doc(collection(db, 'oftalmologistas'), formData.crm);
 
       // Salvando os dados no Firestore
-      await setDoc(docRef, formData);
+      await setDoc(docRef, {
+        ...formData,
+        registradoPor: userData?.nome || 'Sistema',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
       console.log('Dados confirmados e enviados ao Firestore:', formData);
 
       // Exibe o popup de confirmação
@@ -57,69 +65,84 @@ const ConfirmAddOphthalmologist = () => {
 
   return (
     <Layout>
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="w-full max-w-4xl p-8 bg-white rounded-lg shadow-md">
-          <h2 className="text-2xl font-semibold text-[#81059e] mb-6">CONFIRMAR REGISTRO</h2>
+      <div className="min-h-screen mb-32">
+        <div className="w-full max-w-5xl mx-auto rounded-lg">
+          <h2 className="text-3xl font-bold text-[#81059e] mb-8 mt-8">CONFIRMAR REGISTRO</h2>
 
-          <div className="space-y-4">
-            <div>
-              <span className="font-bold text-[#81059e]">Nome do Médico</span>
-              <p className="text-black">{formData.nomeMedico}</p>
+          <div className="space-y-6">
+            {/* Seção Informações Pessoais */}
+            <div className="p-4 bg-gray-50 rounded-lg">
+              <h3 className="text-lg font-semibold text-[#81059e] mb-4 flex items-center gap-2">
+                <FiUser /> Informações Pessoais
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <span className="text-[#81059e] font-medium">Nome do Médico</span>
+                  <p className="text-black mt-1">{formData.nomeMedico}</p>
+                </div>
+                <div>
+                  <span className="text-[#81059e] font-medium">CRM</span>
+                  <p className="text-black mt-1">{formData.crm}</p>
+                </div>
+                <div>
+                  <span className="text-[#81059e] font-medium">Email</span>
+                  <p className="text-black mt-1">{formData.email}</p>
+                </div>
+                <div>
+                  <span className="text-[#81059e] font-medium">Telefone</span>
+                  <p className="text-black mt-1">{formData.telefone}</p>
+                </div>
+                <div>
+                  <span className="text-[#81059e] font-medium">Gênero</span>
+                  <p className="text-black mt-1">{formData.genero}</p>
+                </div>
+              </div>
             </div>
-            <div>
-              <span className="font-bold text-[#81059e]">CRM</span>
-              <p className="text-black">{formData.crm}</p>
-            </div>
-            <div>
-              <span className="font-bold text-[#81059e]">Gênero</span>
-              <p className="text-black">{formData.genero}</p>
-            </div>
-            <div>
-              <span className="font-bold text-[#81059e]">Email</span>
-              <p className="text-black">{formData.email}</p>
-            </div>
-            <div>
-              <span className="font-bold text-[#81059e]">Telefone</span>
-              <p className="text-black">{formData.telefone}</p>
-            </div>
-            <div>
-              <span className="font-bold text-[#81059e]">Logradouro</span>
-              <p className="text-black">{formData.logradouro}</p>
-            </div>
-            <div>
-              <span className="font-bold text-[#81059e]">Bairro</span>
-              <p className="text-black">{formData.bairro}</p>
-            </div>
-          </div>
 
-          <div className="mt-6 flex space-x-4">
-            <button
-              className="flex-1 px-4 py-2 bg-[#81059e] text-white rounded hover:bg-[#820f76] flex items-center justify-center"
-              onClick={handleEdit}
-              disabled={isLoading} // Desabilita o botão durante o carregamento
-            >
-              <Image src="/images/edit.png" alt="Editar" width={20} height={20} className="mr-2" />
-              EDITAR
-            </button>
-            <button
-              className="flex-1 px-4 py-2 bg-[#81059e] text-white rounded hover:bg-[#820f76] flex items-center justify-center"
-              onClick={handleConfirm}
-              disabled={isLoading} // Desabilita o botão durante o carregamento
-            >
-              {isLoading ? (
-                <span className="spinner-border spinner-border-sm"></span> // Exibe o spinner durante o carregamento
-              ) : (
-                <>
-                  <Image src="/images/check.png" alt="Confirmar" width={20} height={20} className="mr-2" />
-                  CONFIRMAR
-                </>
-              )}
-            </button>
+            {/* Seção Endereço */}
+            <div className="p-4 bg-gray-50 rounded-lg">
+              <h3 className="text-lg font-semibold text-[#81059e] mb-4 flex items-center gap-2">
+                <FiMapPin /> Endereço
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <span className="text-[#81059e] font-medium">Logradouro</span>
+                  <p className="text-black mt-1">{formData.logradouro}</p>
+                </div>
+                <div>
+                  <span className="text-[#81059e] font-medium">Bairro</span>
+                  <p className="text-black mt-1">{formData.bairro}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Botões de ação */}
+            <div className="flex justify-center gap-6 mt-8">
+              <button
+                onClick={handleEdit}
+                disabled={isLoading}
+                className="border-2 border-[#81059e] p-2 px-3 rounded-sm text-[#81059e] flex items-center gap-2"
+              >
+                <FiEdit2 /> EDITAR
+              </button>
+              <button
+                onClick={handleConfirm}
+                disabled={isLoading}
+                className="bg-[#81059e] p-2 px-3 rounded-sm text-white flex items-center gap-2"
+              >
+                {isLoading ? (
+                  <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white"></div>
+                ) : (
+                  <FiCheck />
+                )}
+                CONFIRMAR
+              </button>
+            </div>
           </div>
 
           {/* Popup de confirmação */}
           {showPopup && (
-            <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
+            <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
               <div className="bg-green-500 text-white p-4 rounded-lg shadow-lg">
                 Registro confirmado com sucesso!
               </div>
@@ -133,7 +156,11 @@ const ConfirmAddOphthalmologist = () => {
 
 export default function Page() {
   return (
-    <Suspense fallback={<div> <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#81059e]"></div></div>}>
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#81059e]"></div>
+      </div>
+    }>
       <ConfirmAddOphthalmologist />
     </Suspense>
   );

@@ -16,7 +16,9 @@ import {
   faCakeCandles,
   faGlasses,
   faTrash,
-  faIdCard
+  faIdCard,
+  faWhatsapp,
+  faPhone
 } from "@fortawesome/free-solid-svg-icons";
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
@@ -202,6 +204,15 @@ const ClientsTable = () => {
     return cadastroDate && cadastroDate >= thirtyDaysAgo;
   }).length;
 
+  // Função para gerar link do WhatsApp
+  const generateWhatsAppLink = (phoneNumber) => {
+    // Remove caracteres não numéricos
+    const cleanNumber = phoneNumber.replace(/\D/g, '');
+    // Adiciona o código do país se não tiver
+    const formattedNumber = cleanNumber.startsWith('55') ? cleanNumber : `55${cleanNumber}`;
+    return `https://wa.me/${formattedNumber}`;
+  };
+
   return (
     <Layout>
       <div className="min-h-screen p-0 md:p-2 mb-20">
@@ -350,6 +361,8 @@ const ClientsTable = () => {
                           <th className="px-3 py-2">Bairro</th>
                           <th className="px-3 py-2">Logradouro</th>
                           <th className="px-3 py-2">Número</th>
+                          <th className="px-3 py-2">Whatsapp
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
@@ -389,6 +402,23 @@ const ClientsTable = () => {
                             </td>
                             <td className="border px-3 py-2" onClick={() => handleModalOpen(client)}>
                               {client.endereco?.numero || 'N/A'}
+                            </td>
+                            <td className="border px-3 py-2 text-center">
+                              {client.telefones && client.telefones.length > 0 ? (
+                                <a
+                                  href={generateWhatsAppLink(client.telefones[0])}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="inline-block p-2 bg-green-500 text-green-600 hover:text-green-100 hover:bg-green-500 rounded-full transition-all"
+                                >
+                                  <FontAwesomeIcon icon={faPhone} className="h-5 w-5" />
+                                </a>
+                              ) : (
+                                <span className="inline-block p-2 text-gray-400">
+                                  <FontAwesomeIcon icon={faWhatsapp} className="h-5 w-5" />
+                                </span>
+                              )}
                             </td>
                           </tr>
                         ))}
@@ -588,6 +618,17 @@ const ClientsTable = () => {
                   >
                     Baixar PDF
                   </button>
+                  {selectedClient.telefones && selectedClient.telefones.length > 0 && (
+                    <a
+                      href={generateWhatsAppLink(selectedClient.telefones[0])}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600 transition flex items-center gap-2"
+                    >
+                      <FontAwesomeIcon icon={faPhone} className="h-5 w-5 " />
+                      WhatsApp
+                    </a>
+                  )}
                   <Link href={`/clients/edit/${selectedClient.id}`}>
                     <button
                       className="bg-yellow-500 text-white py-2 px-4 rounded hover:bg-yellow-600 transition"

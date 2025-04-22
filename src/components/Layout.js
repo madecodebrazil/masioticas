@@ -1,17 +1,22 @@
 // components/Layout.js
 "use client";
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { useNotifications } from '@/hooks/useNotifications';
 import { usePathname, useRouter } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
 import MobileNavSidebar from '@/components/MB_NavSidebar';
 import BottomMobileNav from '@/components/MB_BottomNav';
+import NotificationsModal from '@/components/NotificationsModal';
 import Image from 'next/image';
 import Head from 'next/head';
+import { BellIcon } from '@heroicons/react/24/outline';
 
 const Layout = ({ children }) => {
     const { user, userData, loading, userPermissions, hasAccessToLoja } = useAuth();
+    const { notifications, unreadCount, markAllAsRead } = useNotifications();
+    const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
     const router = useRouter();
     const pathname = usePathname();
 
@@ -73,7 +78,18 @@ const Layout = ({ children }) => {
                         />
                     </div>
 
-                    <div className="absolute top-2 right-8 z-30 hidden lg:block">
+                    <div className="absolute top-2 right-8 z-30 hidden lg:flex items-center gap-4">
+                        <button
+                            onClick={() => setIsNotificationsOpen(true)}
+                            className="relative p-2 rounded-full hover:bg-purple-50 transition-colors"
+                        >
+                            <BellIcon className="h-10 w-10 text-white" />
+                            {unreadCount > 0 && (
+                                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                                    {unreadCount}
+                                </span>
+                            )}
+                        </button>
                         <Image
                             src={userData?.imageUrl || '/images/default-avatar.png'}
                             alt="User Avatar"
@@ -95,6 +111,15 @@ const Layout = ({ children }) => {
                     </div>
                 </div>
             </div>
+
+            <NotificationsModal
+                isOpen={isNotificationsOpen}
+                onClose={() => {
+                    setIsNotificationsOpen(false);
+                    markAllAsRead();
+                }}
+                notifications={notifications}
+            />
         </>
     );
 };

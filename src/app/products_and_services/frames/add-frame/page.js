@@ -2,7 +2,7 @@
 "use client";
 import React, { Suspense, useEffect, useState } from "react";
 import Layout from "@/components/Layout";
-import { doc, setDoc, getDocs, getDoc, collection, addDoc, query, where } from "firebase/firestore";
+import { doc, setDoc, getDocs, getDoc, collection, addDoc, query, where, deleteDoc } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { firestore } from "../../../../lib/firebaseConfig";
 import Link from "next/link";
@@ -15,13 +15,57 @@ import { ptBR } from 'date-fns/locale';
 import "react-datepicker/dist/react-datepicker.css";
 import { FiPlus, FiX } from 'react-icons/fi';
 import ProductConfirmModal from '@/components/ProductConfirmModal';
+import { QRCodeSVG } from 'qrcode.react';
 
 const SelectWithAddOption = ({ label, options, value, onChange, collectionName, addNewOption, canAddNew = true }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [newItemValue, setNewItemValue] = useState("");
   const [showAddInput, setShowAddInput] = useState(false);
 
+  const handleRemoveItem = async (itemToRemove) => {
+    try {
+      const loja = selectedLoja || "loja1";
+      const path = `estoque/${loja}/armacoes/configuracoes/${collectionName}`;
+      const docRef = doc(firestore, path, itemToRemove.toLowerCase().replace(/\s+/g, '_'));
+      await deleteDoc(docRef);
 
+      // Atualizar a lista de opções removendo o item
+      const updatedOptions = options.filter(option => option !== itemToRemove);
+      onChange(""); // Limpar a seleção atual
+
+      // Atualizar o estado correspondente baseado na coleção
+      switch (collectionName) {
+        case "armacoes_fabricantes":
+          setFabricantes(updatedOptions);
+          break;
+        case "fornecedores":
+          setFornecedores(updatedOptions);
+          break;
+        case "armacoes_marcas":
+          setMarcas(updatedOptions);
+          break;
+        case "armacoes_formatos":
+          setFormatos(updatedOptions);
+          break;
+        case "armacoes_aros":
+          setAros(updatedOptions);
+          break;
+        case "armacoes_materiais":
+          setMateriais(updatedOptions);
+          break;
+        case "armacoes_cores":
+          setCores(updatedOptions);
+          break;
+        default:
+          break;
+      }
+
+      alert(`${itemToRemove} removido com sucesso!`);
+    } catch (error) {
+      console.error(`Erro ao remover ${itemToRemove}:`, error);
+      alert(`Erro ao remover ${itemToRemove}`);
+    }
+  };
 
   const handleAddItem = async () => {
     if (!newItemValue.trim()) return;
@@ -41,25 +85,49 @@ const SelectWithAddOption = ({ label, options, value, onChange, collectionName, 
 
       {!showAddInput ? (
         <div className="relative">
-          <select
-            value={value || ""}
-            onChange={(e) => {
-              if (e.target.value === "add_new") {
-                setShowAddInput(true);
-              } else {
-                onChange(e.target.value);
-              }
-            }}
-            className="bg-gray-100 w-full px-4 py-3 border-2 border-[#81059e] rounded-lg text-black focus:outline-none focus:border-[#81059e] focus:ring-1 focus:ring-[#81059e]"
-          >
-            <option value="">Selecione uma opção</option>
-            {options.map((option) => (
-              <option key={option} value={option}>
-                {option ? (typeof option === 'object' ? option.nome : option.toUpperCase()) : ""}
-              </option>
-            ))}
-            {canAddNew && <option value="add_new">+ ADICIONAR NOVO</option>}
-          </select>
+          <div className="relative">
+            <select
+              value={value || ""}
+              onChange={(e) => {
+                if (e.target.value === "add_new") {
+                  setShowAddInput(true);
+                } else {
+                  onChange(e.target.value);
+                }
+              }}
+              className="bg-gray-100 w-full px-4 py-3 border-2 border-[#81059e] rounded-lg text-black focus:outline-none focus:border-[#81059e] focus:ring-1 focus:ring-[#81059e]"
+            >
+              <option value="">Selecione uma opção</option>
+              {options.map((option) => (
+                <option key={option} value={option}>
+                  {option ? (typeof option === 'object' ? option.nome : option.toUpperCase()) : ""}
+                </option>
+              ))}
+              {canAddNew && <option value="add_new">+ ADICIONAR NOVO</option>}
+            </select>
+          </div>
+
+          {/* Lista de opções com botões de remover */}
+          {value && (
+            <div className="absolute top-full left-0 w-full bg-white border border-gray-200 rounded-b-lg shadow-lg z-10 mt-1">
+              {options.map((option) => (
+                <div key={option} className="flex justify-between items-center px-4 py-2 hover:bg-gray-50">
+                  <span>{option ? (typeof option === 'object' ? option.nome : option.toUpperCase()) : ""}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (confirm(`Deseja remover ${option}?`)) {
+                        handleRemoveItem(option);
+                      }
+                    }}
+                    className="text-red-500 hover:text-red-700 p-1 rounded-full hover:bg-red-50"
+                  >
+                    <FiX />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       ) : (
         <div className="flex items-center gap-2">
@@ -101,6 +169,7 @@ export function FormularioLoja() {
   const [searchFornecedor, setSearchFornecedor] = useState("");
   const [listaFornecedores, setListaFornecedores] = useState([]);
   const [isLoadingFornecedores, setIsLoadingFornecedores] = useState(false);
+  const [qrCodeData, setQrCodeData] = useState(null);
   const imageInputRef = useRef(null);
 
   useEffect(() => {
@@ -858,92 +927,47 @@ export function FormularioLoja() {
     e.preventDefault();
     setIsLoading(true);
 
-    if (!selectedLoja && selectedLojas.length === 0) {
-      alert("Selecione ao menos uma loja antes de enviar o formulário");
-      setIsLoading(false);
-      return;
-    }
-
-    // Verificar se o título do produto foi preenchido
-    if (!formData.titulo || formData.titulo.trim() === "") {
-      alert("O título do produto é obrigatório");
-      setIsLoading(false);
-      return;
-    }
-
-    // Garantir que o SKU está presente antes de prosseguir
-    let updatedFormData = { ...formData };
-    if (!formData.sku) {
-      const generatedSKU = generateSKU();
-      updatedFormData = {
-        ...updatedFormData,
-        sku: generatedSKU,
-      };
-    }
-
     try {
-      // Se houver uma imagem, faz o upload para o servidor local
-      let imagePath = "";
+      // Gerar dados para o QR code
+      const qrData = {
+        id: formData.codigo,
+        nome: formData.titulo,
+        marca: formData.marca,
+        tipo: 'armacao'
+      };
 
-      if (updatedFormData.imagem) {
-        const fileName = `${Date.now()}_${updatedFormData.codigo}_${updatedFormData.imagem.name.replace(/\s+/g, '_')}`;
-        imagePath = `/images/armacoes/${fileName}`;
+      // Converter para string JSON
+      const qrDataString = JSON.stringify(qrData);
+      setQrCodeData(qrDataString);
 
-        const uploadFormData = new FormData();
-        uploadFormData.append('image', updatedFormData.imagem);
-        uploadFormData.append('fileName', fileName);
-        uploadFormData.append('productCode', updatedFormData.codigo);
-
-        try {
-          const response = await fetch('/api/upload-image', {
-            method: 'POST',
-            body: uploadFormData,
-          });
-
-          if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || 'Falha no upload da imagem');
-          }
-
-          const result = await response.json();
-          console.log('Imagem enviada com sucesso:', result);
-        } catch (uploadError) {
-          console.error('Erro no upload da imagem:', uploadError);
-          alert(`Erro ao fazer upload da imagem: ${uploadError.message}`);
-          setIsLoading(false);
-          return;
-        }
+      // Upload da imagem se existir
+      let imageUrl = null;
+      if (formData.imagem) {
+        imageUrl = await handleImageUpload(formData.imagem);
       }
 
-      // Criar objeto de dados do produto (sem o objeto File)
-      const { imagem, ...productDataWithoutFile } = updatedFormData;
-      const now = new Date();
+      // Preparar dados para salvar
       const productData = {
-        ...productDataWithoutFile,
-        imagemUrl: imagePath,
-        categoria: "armacao",
-        subcategoria: updatedFormData.subcategoria || "grau",
-        avaria: updatedFormData.avaria || false,
-        createdAt: now,
-        updatedAt: now,
-        dataFormatada: format(now, 'dd/MM/yyyy', { locale: ptBR }),
-        horaFormatada: format(now, 'HH:mm', { locale: ptBR }),
-        createdBy: userData?.nome || 'Sistema',
-        lojas: selectedLojas
+        ...formData,
+        imagem: imageUrl,
+        qrCode: qrDataString,
+        data: new Date().toISOString(),
+        loja: selectedLoja || "loja1"
       };
 
-      // Salvar uma cópia na temp_image para persistência temporária
-      const tempRef = doc(firestore, "temp_image", updatedFormData.codigo);
-      await setDoc(tempRef, productData);
+      // Salvar no Firestore
+      const docRef = doc(firestore, `estoque/${productData.loja}/armacoes`, productData.codigo);
+      await setDoc(docRef, productData);
 
-      // Em vez de redirecionar, definimos o produto para confirmação e mostramos o modal
-      setProductToConfirm(productData);
-      setShowConfirmModal(true);
-      setIsLoading(false);
-
+      setShowSuccessPopup(true);
+      setTimeout(() => {
+        setShowSuccessPopup(false);
+        router.push('/products_and_services/frames');
+      }, 2000);
     } catch (error) {
-      console.error("Erro ao processar os dados:", error);
-      alert(`Erro ao processar o produto: ${error.message}`);
+      console.error("Erro ao salvar produto:", error);
+      alert("Erro ao salvar produto. Por favor, tente novamente.");
+    } finally {
       setIsLoading(false);
     }
   };
@@ -1607,6 +1631,15 @@ export function FormularioLoja() {
           showSuccessPopup && (
             <div className="fixed bottom-4 right-4 bg-green-500 text-white p-4 rounded-lg shadow-lg">
               <p>Produto enviado com sucesso!</p>
+              {qrCodeData && (
+                <div className="mt-4 p-4 bg-white rounded-lg">
+                  <h3 className="text-lg font-semibold text-gray-800 mb-2">QR Code da Armação</h3>
+                  <div className="flex justify-center">
+                    <QRCodeSVG value={qrCodeData} size={200} />
+                  </div>
+                  <p className="text-sm text-gray-600 mt-2">Imprima este QR code para identificação da armação</p>
+                </div>
+              )}
             </div>
           )
         }

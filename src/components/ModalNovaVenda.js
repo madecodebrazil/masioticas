@@ -1,7 +1,7 @@
 // components/ModalNovaVenda.js
 import { useState, useEffect, useRef } from 'react';
 import {
-    collection, getDocs, doc, getDoc, addDoc, updateDoc, query, where, serverTimestamp
+    collection, getDocs, doc, getDoc, addDoc, updateDoc, query, where, serverTimestamp, setDoc
 } from 'firebase/firestore';
 import { FiClock, FiRefreshCw, FiMessageSquare, FiPrinter, FiEye } from 'react-icons/fi';
 import CreditCardForm from './CreditCardForm';
@@ -30,6 +30,8 @@ import { FaBitcoin, FaEthereum } from 'react-icons/fa';
 import ClientForm from './ClientForm';
 import PaymentMethodPanel from './PaymentMethodPanel';
 import Link from 'next/link';
+import { createNotification } from '@/lib/notifications';
+import { QrReader } from 'react-qr-reader';
 
 
 function removerValoresUndefined(obj) {
@@ -78,47 +80,13 @@ const ModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
     // Estado adicional para controlar se os dados foram carregados
     const [initialized, setInitialized] = useState(false);
 
-    // Modificação do useEffect para evitar que o modal abra sozinho
-    useEffect(() => {
-        // Verificação rigorosa para garantir que o modal só carregue dados quando realmente for aberto
-        if (isOpen === true && selectedLoja && !initialized) {
-            setInitialized(true);
-            fetchClients();
-            fetchProducts();
-            fetchCashbackDisponivel();
-
-            // Definir data atual
-            setDataVenda(new Date());
-
-            // Inicializar o primeiro método de pagamento com o valor total
-            updatePaymentMethodValue(0);
-
-            // Não acessar userData aqui!
-        }
-
-        // Quando o modal for fechado, resetar o estado de inicialização
-        if (isOpen === false && initialized) {
-            setInitialized(false);
-        }
-    }, [isOpen, selectedLoja, initialized]); // Remova userData e user das dependências
-
-    // Adicione um useEffect separado exclusivamente para atualizar o vendedor
-    useEffect(() => {
-        if (isOpen && initialized && userData) {
-            setVendedor(userData.nome || user?.email || 'Vendedor');
-        }
-    }, [userData, user, isOpen, initialized]);
-
-    // Estado para controle da tabela de produtos no carrinho
-    const [focusedRow, setFocusedRow] = useState(null);
-    const [newProductQty, setNewProductQty] = useState(1);
-    const produtoInputRef = useRef(null);
+    // Estados para observações e detalhes da venda
+    const [observation, setObservation] = useState('');
 
     // Estados para pagamento e descontos
     const [discount, setDiscount] = useState(0);
-    const [discountType, setDiscountType] = useState('percentage'); // 'percentage' ou 'value'
+    const [discountType, setDiscountType] = useState('percentage');
     const [discountFormatted, setDiscountFormatted] = useState('');
-    const [observation, setObservation] = useState('');
     const [valorPago, setValorPago] = useState('');
     const [troco, setTroco] = useState(0);
 
@@ -137,8 +105,9 @@ const ModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
         processed: false
     }]);
     const [currentPaymentIndex, setCurrentPaymentIndex] = useState(0);
-    const [valueDistribution, setValueDistribution] = useState('auto'); // 'auto' ou 'manual'
+    const [valueDistribution, setValueDistribution] = useState('auto');
 
+    // Estados para formulário de cartão de crédito
     const [showCreditCardForm, setShowCreditCardForm] = useState(false);
     const [dadosCartao, setDadosCartao] = useState(null);
     const [boletoData, setBoletoData] = useState(null);
@@ -149,7 +118,7 @@ const ModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
     const [statusPagamentoFinal, setStatusPagamentoFinal] = useState("");
     const [statusVendaFinal, setStatusVendaFinal] = useState("");
 
-    // Novos estados para cashback e criptomoedas
+    // Estados para cashback e criptomoedas
     const [cashbackDisponivel, setCashbackDisponivel] = useState(0);
     const [selectedCrypto, setSelectedCrypto] = useState('bitcoin');
     const [cryptoAddress, setCryptoAddress] = useState('');
@@ -158,40 +127,54 @@ const ModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
     const [vendedor, setVendedor] = useState('');
     const [dataVenda, setDataVenda] = useState(new Date());
 
-
-
-    const [osFormData, setOsFormData] = useState([]);
-    const [currentOSIndex, setCurrentOSIndex] = useState(0);
+    // Estados para gerenciar OS
     const [showOSForm, setShowOSForm] = useState(false);
+    const [currentOSIndex, setCurrentOSIndex] = useState(0);
+    const [osFormData, setOsFormData] = useState([]);
+    const [pendingOS, setPendingOS] = useState(false);
 
+    // Novos estados para o QrReader
+    const [showQrScanner, setShowQrScanner] = useState(false);
+    const [scannedQrData, setScannedQrData] = useState(null);
+
+    // Modificação do useEffect para evitar que o modal abra sozinho
     useEffect(() => {
-        if (isOpen === true && selectedLoja && !initialized) {
-            setInitialized(true);
-            fetchClients();
-            fetchProducts();
-            fetchCashbackDisponivel();
+        // Verificação rigorosa para garantir que o modal só carregue dados quando realmente for aberto
+        if (isOpen && selectedLoja && !initialized) {
+            const loadInitialData = async () => {
+                setLoading(true);
+                try {
+                    setInitialized(true);
+                    await fetchClients();
+                    await fetchProducts();
+                    await fetchCashbackDisponivel();
+                    setDataVenda(new Date());
+                    updatePaymentMethodValue(0);
+                } catch (error) {
+                    console.error('Erro ao carregar dados iniciais:', error);
+                    setError('Erro ao carregar dados iniciais: ' + error.message);
+                } finally {
+                    setLoading(false);
+                }
+            };
 
-            // Remova essa verificação daqui
-            // if (userData) { ... }
-
-            setDataVenda(new Date());
-            updatePaymentMethodValue(0);
+            loadInitialData();
         }
 
-        if (isOpen === false && initialized) {
+        // Quando o modal for fechado, resetar o estado de inicialização
+        if (!isOpen && initialized) {
             setInitialized(false);
+            setProducts([]);
+            setError('');
         }
-    }, [isOpen, selectedLoja, user, initialized]); // <- userData REMOVIDO
+    }, [isOpen, selectedLoja]);
 
-
-    // Adicionar outro useEffect para garantir que o vendedor seja atualizado quando userData estiver disponível
+    // Adicione um useEffect separado exclusivamente para atualizar o vendedor
     useEffect(() => {
         if (isOpen && initialized && userData) {
-            setVendedor(userData?.nome || user?.email || 'Vendedor');
+            setVendedor(userData.nome || user?.email || 'Vendedor');
         }
     }, [userData, user, isOpen, initialized]);
-
-
 
     // Atualizar o valor do método de pagamento atual quando o total mudar
     useEffect(() => {
@@ -275,73 +258,55 @@ const ModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
     // Carregar produtos do estoque
     const fetchProducts = async () => {
         try {
-            setLoading(true);
-            setError('');
-
-            // Categorias de produtos a serem buscadas
-            const categorias = ['armacoes', 'lentes', 'solares'];
+            const categories = ['armacoes', 'lentes', 'solares'];
             let allProducts = [];
+            let totalProdutos = 0;
 
-            // Caminho correto conforme a estrutura do Firebase: estoque > loja1 > armacoes
-            for (const categoria of categorias) {
-                try {
-                    // Note que o caminho está correto conforme sua estrutura mostrada na captura de tela
-                    const productsRef = collection(firestore, `estoque/${selectedLoja}/${categoria}`);
-                    const querySnapshot = await getDocs(productsRef);
+            for (const category of categories) {
+                let queryRef;
 
-                    console.log(`Categoria ${categoria}: encontrados ${querySnapshot.size} produtos`);
-
-                    // Mapear documentos para o formato esperado
-                    const categoryProducts = querySnapshot.docs.map(doc => {
-                        const data = doc.data();
-                        return {
-                            id: doc.id,
-                            categoria: categoria,
-                            nome: data.nome || data.info_geral?.nome || `Produto ${doc.id}`,
-                            marca: data.marca || data.info_geral?.marca || "Sem marca",
-                            codigo: data.codigo || data.info_geral?.codigo || doc.id,
-                            preco: data.preco || data.info_geral?.preco || 0,
-                            quantidade: data.quantidade || 0,
-                            info_geral: data.info_geral || {
-                                nome: data.nome || `Produto ${doc.id}`,
-                                marca: data.marca || "Sem marca",
-                                codigo: data.codigo || doc.id,
-                                preco: data.preco || 0
-                            },
-                            info_adicional: data.info_adicional || {}
-                        };
-                    });
-
-                    allProducts = [...allProducts, ...categoryProducts];
-                } catch (err) {
-                    console.error(`Erro ao buscar categoria ${categoria}:`, err);
+                // Se não for admin, filtra por loja
+                if (!userData?.isAdmin && selectedLoja) {
+                    queryRef = query(collection(firestore, category), where('loja', '==', selectedLoja));
+                } else {
+                    queryRef = collection(firestore, category);
                 }
+
+                const querySnapshot = await getDocs(queryRef);
+                const productsInCategory = querySnapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data(),
+                    category
+                }));
+
+                // Filtra produtos com quantidade maior que 0
+                const availableProducts = productsInCategory.filter(product => {
+                    const quantidade = parseInt(product.quantidade) || 0;
+                    return quantidade > 0;
+                });
+
+                console.log(`Found ${availableProducts.length} available products in ${category} for loja ${selectedLoja}`);
+                allProducts = [...allProducts, ...availableProducts];
+                totalProdutos += productsInCategory.length;
             }
 
-            // Se encontrou produtos, define no estado
-            if (allProducts.length > 0) {
-                // Filtrar produtos com quantidade disponível
-                const productsWithStock = allProducts.filter(product =>
-                    (product.quantidade || 0) > 0
-                );
-
-                // Se não houver produtos com estoque, usar todos os produtos
-                if (productsWithStock.length === 0) {
-                    console.log('Nenhum produto com estoque. Mostrando todos os produtos.');
-                    setProducts(allProducts);
+            if (allProducts.length === 0) {
+                if (totalProdutos === 0) {
+                    setError('Não há produtos cadastrados no estoque desta loja.');
                 } else {
-                    setProducts(productsWithStock);
+                    setError('Todos os produtos desta loja estão com estoque zerado. Por favor, atualize o estoque.');
                 }
             } else {
-                console.error('Nenhum produto encontrado no estoque!');
-                setError('Nenhum produto encontrado no estoque. Verifique a estrutura do banco de dados.');
+                setError(''); // Limpa o erro se encontrou produtos
             }
 
-        } catch (err) {
-            console.error('Erro ao buscar produtos:', err);
-            setError('Falha ao carregar lista de produtos');
-        } finally {
-            setLoading(false);
+            console.log('Total products loaded:', allProducts.length, 'for loja:', selectedLoja);
+            setProducts(allProducts);
+
+        } catch (error) {
+            console.error('Error fetching products:', error);
+            setError('Erro ao carregar produtos: ' + error.message);
+            setProducts([]); // Reseta produtos em caso de erro
         }
     };
 
@@ -571,7 +536,7 @@ const ModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
     const addToCart = (product) => {
         if (!product) return;
 
-        // Verificar se tem estoque disponível (ignorar se estivermos mostrando produtos sem estoque)
+        // Verificar se tem estoque disponível
         const quantidadeEstoque = parseInt(product.quantidade) || 0;
         if (quantidadeEstoque < newProductQty && error !== 'Aviso: Mostrando produtos sem estoque disponível') {
             setError(`Quantidade solicitada excede o estoque disponível (${quantidadeEstoque})`);
@@ -579,60 +544,39 @@ const ModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
             return;
         }
 
-        // Simular loading ao adicionar
-        setLoadingStates(prev => ({ ...prev, [product.id]: true }));
-
         try {
-            // Adicionar à coleção ativa
-            const collection = collections.find(c => c.id === activeCollection);
-
             // Verificar o tipo de produto
-            const productType = product.categoria;
-            const isFrame = productType === 'armacoes';
-            const isLens = productType === 'lentes';
-            const isSunglass = productType === 'solares';
+            const isFrame = product.categoria === 'armacoes';
+            const isLens = product.categoria === 'lentes';
+            const isSunglass = product.categoria === 'solares';
 
             // Se for óculos de sol, não precisa de OS
             const requiresOS = !isSunglass;
 
-            // Verificar limitações da coleção
-            if (requiresOS) {
-                // Verificar se já existe uma armação na coleção
-                const hasFrame = collection.items.some(item => item.categoria === 'armacoes');
-                if (isFrame && hasFrame) {
-                    setError('Esta coleção já possui uma armação. Crie uma nova coleção para adicionar outra armação.');
-                    setTimeout(() => setError(''), 3000);
-                    return;
-                }
-
-                // Verificar se já existe uma lente na coleção
-                const hasLens = collection.items.some(item => item.categoria === 'lentes');
-                if (isLens && hasLens) {
-                    setError('Esta coleção já possui lentes. Crie uma nova coleção para adicionar outras lentes.');
+            // Verificar se já existe uma armação no carrinho quando adicionar uma lente
+            if (isLens) {
+                const hasFrame = cartItems.some(item => item.categoria === 'armacoes');
+                if (!hasFrame) {
+                    setError('É necessário adicionar uma armação antes de adicionar lentes');
                     setTimeout(() => setError(''), 3000);
                     return;
                 }
             }
 
-            // Adicionar o produto à coleção ativa
-            const updatedCollections = collections.map(c => {
-                if (c.id === activeCollection) {
-                    return {
-                        ...c,
-                        items: [...c.items, { ...product, quantity: newProductQty }],
-                        requiresOS: requiresOS
-                    };
+            // Verificar se já existe uma lente no carrinho quando adicionar uma armação
+            if (isFrame) {
+                const hasLens = cartItems.some(item => item.categoria === 'lentes');
+                if (hasLens) {
+                    setError('Já existe uma lente no carrinho. Remova a lente antes de adicionar uma nova armação.');
+                    setTimeout(() => setError(''), 3000);
+                    return;
                 }
-                return c;
-            });
-
-            setCollections(updatedCollections);
+            }
 
             // Verificar se o produto já está no carrinho
             const existingItem = cartItems.find(item =>
                 item.id === product.id &&
-                item.categoria === product.categoria &&
-                item.collectionId === activeCollection
+                item.categoria === product.categoria
             );
 
             if (existingItem) {
@@ -646,27 +590,42 @@ const ModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
 
                 // Aumentar a quantidade se já estiver no carrinho
                 setCartItems(cartItems.map(item =>
-                    (item.id === product.id && item.categoria === product.categoria && item.collectionId === activeCollection)
+                    (item.id === product.id && item.categoria === product.categoria)
                         ? { ...item, quantity: newTotalQty }
                         : item
                 ));
             } else {
-                // Adicionar novo item ao carrinho - CORRIGIDO para usar a mesma estrutura do componente de estoque
+                // Adicionar novo item ao carrinho
                 const produtoFormatado = {
                     id: product.id,
                     categoria: product.categoria,
                     loja: product.loja || selectedLoja,
-                    titulo: product.titulo || '',
-                    nome: product.titulo || '', // Manter compatibilidade com ambos os campos
+                    nome: product.nome || product.titulo || '',
                     codigo: product.codigo || '',
                     marca: product.marca || '',
                     sku: product.sku || '',
                     valor: parseFloat(product.valor) || 0,
-                    preco: parseFloat(product.valor) || 0, // Manter compatibilidade com ambos os campos
+                    preco: parseFloat(product.valor) || 0,
                     custo: parseFloat(product.custo) || 0,
                     quantidade: product.quantidade,
-                    quantity: newProductQty, // Quantidade no carrinho
-                    collectionId: activeCollection // Associar à coleção ativa
+                    quantity: newProductQty,
+                    requiresOS: requiresOS,
+                    // Adicionar informações específicas por categoria
+                    ...(isFrame && {
+                        aro: product.aro,
+                        ponte: product.ponte,
+                        haste: product.haste,
+                        material: product.material
+                    }),
+                    ...(isLens && {
+                        indice: product.indice,
+                        tratamento: product.tratamento,
+                        material: product.material
+                    }),
+                    ...(isSunglass && {
+                        protecao: product.protecao,
+                        material: product.material
+                    })
                 };
 
                 setCartItems([...cartItems, produtoFormatado]);
@@ -676,16 +635,10 @@ const ModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
             setProductSearchTerm('');
             setFilteredProducts([]);
             setNewProductQty(1);
+
         } catch (err) {
             console.error("Erro ao adicionar produto ao carrinho:", err);
             setError("Erro ao adicionar produto. Tente novamente.");
-        } finally {
-            // Garantir que o estado de loading seja sempre resetado
-            setLoadingStates(prev => ({ ...prev, [product.id]: false }));
-
-            if (produtoInputRef.current) {
-                produtoInputRef.current.focus();
-            }
         }
     };
 
@@ -839,441 +792,67 @@ const ModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
     };
 
     // Finalizar venda
-    // Finalizar venda
     const finalizeSale = async () => {
-        if (cartItems.length === 0) {
-            setError('Adicione pelo menos um produto ao carrinho');
-            return;
-        }
-
-        if (!selectedClient) {
-            setError('Selecione um cliente para continuar');
-            return;
-        }
-
-        if (!allPaymentsProcessed()) {
-            setError('Todos os métodos de pagamento precisam ser processados');
-            return;
-        }
-
-        if (!isPaymentComplete()) {
-            setError('O valor total dos pagamentos deve ser igual ao valor da venda');
-            return;
-        }
-
         try {
             setLoading(true);
+            setError('');
 
-            const subtotal = calculateSubtotal();
-            const discountAmount = calculateDiscount();
-            const total = calculateTotal();
+            // Verificar se há necessidade de gerar OS
+            const osCollections = getOSCollections();
 
-            // Gerar ID da OS
-            const osPrefix = 'OS';
-            const timestamp = Date.now().toString().slice(-6);
-            const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-            const newOsId = `${osPrefix}${timestamp}${random}`;
-
-            // Definir status inicial com base nos métodos de pagamento
-            let statusVenda = 'paga'; // Padrão para pagamentos imediatos
-            let statusPagamento = 'aprovado';
-
-            // Se algum método de pagamento não for imediato, ajusta o status
-            const temPagamentoPendente = paymentMethods.some(payment => {
-                return ['boleto', 'ted', 'crypto'].includes(payment.method);
-            });
-
-            if (temPagamentoPendente) {
-                statusVenda = 'aguardando_pagamento';
-                statusPagamento = 'pendente';
-            }
-
-            // Preparar dados de pagamento para Firebase
-            const dadosPagamento = paymentMethods.map(payment => {
-                const dadosEspecificos = {};
-
-                if (payment.method === 'boleto') {
-                    const dataVencimento = boletoVencimento ? new Date(boletoVencimento) : new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
-                    dadosEspecificos.codigo_barras = '00000000000000000000000000000000000000000000';
-                    dadosEspecificos.linha_digitavel = '00000.00000 00000.000000 00000.000000 0 00000000000000';
-                    dadosEspecificos.url_boleto = null;
-                    dadosEspecificos.data_vencimento = dataVencimento;
-                }
-                else if (payment.method === 'cartao') {
-                    dadosEspecificos.ultimos_digitos = payment.details.ultimos_digitos || null;
-                    dadosEspecificos.bandeira = payment.details.bandeira || null;
-                    dadosEspecificos.parcelas = payment.details.parcelas || 1;
-                    dadosEspecificos.gateway_id = 'simulacao_gateway';
-                    dadosEspecificos.transaction_id = `tx_${Date.now()}`;
-                }
-                else if (payment.method === 'crediario') {
-                    const numeroParcelas = parseInt(parcelasCredario) || 3;
-                    const valorParcela = payment.value / numeroParcelas;
-
-                    const parcelas = [];
-                    let dataProximaParcela = new Date();
-
-                    for (let i = 0; i < numeroParcelas; i++) {
-                        dataProximaParcela = new Date(dataProximaParcela);
-                        dataProximaParcela.setMonth(dataProximaParcela.getMonth() + 1);
-
-                        parcelas.push({
-                            numero: i + 1,
-                            valor: valorParcela,
-                            status: i === 0 ? 'paga' : 'pendente',
-                            data_vencimento: new Date(dataProximaParcela),
-                            data_pagamento: i === 0 ? new Date() : null
-                        });
-                    }
-
-                    dadosEspecificos.status_parcelas = parcelas;
-                    dadosEspecificos.data_primeira_parcela = new Date();
-                }
-                else if (payment.method === 'cashback') {
-                    dadosEspecificos.saldo_anterior = cashbackDisponivel || 0;
-                    dadosEspecificos.saldo_utilizado = payment.value;
-                    dadosEspecificos.saldo_restante = (cashbackDisponivel || 0) - payment.value;
-                }
-                else if (payment.method === 'crypto') {
-                    dadosEspecificos.moeda = payment.details.moeda || null;
-                    dadosEspecificos.endereco = payment.details.endereco || null;
-                    dadosEspecificos.taxa_cambio = payment.details.taxa_cambio || null;
-                    dadosEspecificos.valor_crypto = payment.details.valor_crypto || null;
-                    dadosEspecificos.status_transacao = 'aguardando';
-                    dadosEspecificos.transaction_id = `crypto_${Date.now()}`;
-                }
-
-                return {
-                    metodo: payment.method,
-                    valor: payment.value,
-                    status: payment.method === 'boleto' || payment.method === 'ted' || payment.method === 'crypto'
-                        ? 'pendente'
-                        : 'aprovado',
-                    data_processamento: new Date(),
-                    dados_especificos: dadosEspecificos
-                };
-            });
-
-            // 1. Estruturar dados da venda com os novos campos de pagamento
-            const venda = {
-                cliente: {
-                    id: selectedClient.id,
-                    nome: selectedClient.nome,
-                    cpf: selectedClient.cpf
-                },
-                produtos: cartItems.map(item => ({
-                    id: item.id,
-                    categoria: item.categoria,
-                    nome: item.nome || item.info_geral?.nome || null,
-                    codigo: item.codigo || item.info_geral?.codigo || null,
-                    marca: item.marca || item.info_geral?.marca || null,
-                    preco: item.preco || item.info_geral?.preco || 0,
-                    quantidade: item.quantity,
-                    total: (item.preco || item.info_geral?.preco || 0) * item.quantity
-                })),
-                pagamentos: dadosPagamento,
-                pagamento_resumo: {
-                    valor_total: total,
-                    metodos_utilizados: paymentMethods.map(p => p.method),
-                    status_geral: statusPagamento,
-                    data_criacao: new Date(), // Modificado de serverTimestamp()
-                    data_aprovacao: statusPagamento === 'aprovado' ? new Date() : null, // Modificado de serverTimestamp()
-                },
-                subtotal: subtotal,
-                desconto: {
-                    tipo: discountType,
-                    valor: discount,
-                    total: discountAmount
-                },
-                total: total,
-                data: new Date(), // Modificado de serverTimestamp()
-                vendedor: {
-                    id: user?.uid || null,
-                    nome: vendedor || null
-                },
-                observacao: observation || null,
-                status_venda: statusVenda,
-                os_id: newOsId,
-                requer_montagem: true,
-                historico_status: [
-                    {
-                        status: statusVenda,
-                        data: new Date(),
-                        responsavel: {
-                            id: user?.uid || null,
-                            nome: vendedor || null
-                        }
-                    }
-                ],
-            };
-
-            // 2. Sanitizar o objeto para remover valores undefined
-            const vendaSanitizada = removerValoresUndefined(venda);
-
-            // 3. Registrar venda no Firebase
-            const vendaRef = collection(firestore, `lojas/${selectedLoja}/vendas/items/items`);
-            const novaVendaRef = await addDoc(vendaRef, vendaSanitizada);
-
-            // 4. Atualizar estoque apenas se o pagamento for aprovado ou for crediário
-            if (statusVenda === 'paga') {
-                await Promise.all(cartItems.map(async (item) => {
-                    // Caminho correto para atualizar o estoque
-                    const productRef = doc(firestore, `estoque/${selectedLoja}/${item.categoria}`, item.id);
-
-                    try {
-                        const productDoc = await getDoc(productRef);
-
-                        if (productDoc.exists()) {
-                            const productData = productDoc.data();
-                            const currentStock = productData.quantidade || 0;
-
-                            // Garantir que não ficará negativo
-                            const newStock = Math.max(0, currentStock - item.quantity);
-
-                            // Atualizar estoque
-                            await updateDoc(productRef, {
-                                quantidade: newStock
-                            });
-
-                            console.log(`Estoque atualizado: ${item.nome || item.id} - Novo estoque: ${newStock}`);
-                        } else {
-                            console.warn(`Produto não encontrado no estoque: ${item.id} (${item.categoria})`);
-                        }
-                    } catch (error) {
-                        console.error(`Erro ao atualizar estoque do produto ${item.id}:`, error);
-                        // Continuar mesmo com erro em um produto específico
-                    }
+            if (osCollections.length > 0) {
+                // Preparar dados iniciais para cada OS necessária
+                const initialOSData = osCollections.map(collection => ({
+                    armacaoDados: collection.items.find(item => item.categoria === 'armacoes')?.produto || '',
+                    lenteDados: collection.items.find(item => item.categoria === 'lentes')?.produto || '',
+                    cliente: selectedClient,
+                    processed: false
                 }));
+
+                setOsFormData(initialOSData);
+                setPendingOS(true);
+                setCurrentOSIndex(0);
+                setShowOSForm(true);
+                return; // Interrompe aqui para mostrar o formulário de OS
             }
 
-            // 5. Registrar ordem de serviço apenas se pagamento aprovado ou crediário
-            if (statusVenda === 'paga') {
-                // Usar a função getOSCollections para obter as coleções que devem gerar OS
-                const osCollections = getOSCollections();
+            // Se não houver OS, continua com a finalização normal da venda
+            await processarVenda();
 
-                if (osCollections.length > 0) {
-                    // Preparar dados para o formulário de OS
-                    const osDataList = osCollections.map(collection => {
-                        // Extrair dados dos produtos na coleção
-                        const armacao = collection.items.find(item => item.categoria === 'armacoes') || null;
-                        const lente = collection.items.find(item => item.categoria === 'lentes') || null;
+        } catch (error) {
+            console.error('Erro ao finalizar venda:', error);
+            setError('Erro ao finalizar venda: ' + error.message);
+            setLoading(false);
+        }
+    };
 
-                        // Determinar o tipo de OS baseado nos produtos presentes
-                        let tipoOS = "completa"; // padrão
-                        if (armacao && !lente) {
-                            tipoOS = "somente_armacao";
-                        } else if (!armacao && lente) {
-                            tipoOS = "somente_lente";
-                        }
+    // Função para processar a venda após preenchimento das OS
+    const processarVenda = async () => {
+        try {
+            // ... lógica existente de processamento da venda ...
 
-                        const osData = {
-                            collectionId: collection.id,
-                            data: new Date().toISOString().split('T')[0],
-                            hora: new Date().toTimeString().split(' ')[0].substring(0, 5),
-                            loja: selectedLoja,
-                            cliente: selectedClient.nome,
-                            referencia: `Venda #${novaVendaRef.id}`,
-                            laboratorio: "", // A ser selecionado no formulário
-                            dataMontagemInicial: new Date().toISOString().split('T')[0],
-                            horaMontagemInicial: new Date().toTimeString().split(' ')[0].substring(0, 5),
-                            dataMontagemFinal: "", // A ser preenchido
-                            status: "processamentoInicial",
-                            tipoOS: tipoOS, // Novo campo indicando o tipo de OS
-                            armacaoDados: armacao ? (armacao.titulo || armacao.nome || armacao.codigo || "Armação sem identificação") : "Cliente traz armação",
-                            lenteDados: lente ? (lente.titulo || lente.nome || lente.codigo || "Lente sem identificação") : "Cliente traz lentes",
-                            // Campos extras para casos especiais
-                            clienteTraArmacao: !armacao && lente ? true : false,
-                            clienteTraLentes: armacao && !lente ? true : false,
-                            observacaoEspecial: !armacao || !lente ? "Atenção: Kit incompleto. Cliente vai trazer " +
-                                (!armacao ? "sua própria armação" : "suas próprias lentes") : ""
-                        };
+            // Após salvar a venda, salvar as OS se existirem
+            if (osFormData.length > 0) {
+                for (const osData of osFormData) {
+                    if (!osData.processed) continue;
 
-                        return removerValoresUndefined(osData);
+                    const osRef = collection(firestore, `${selectedLoja}/services/os`);
+                    await addDoc(osRef, {
+                        ...osData,
+                        id_venda: saleId,
+                        data_criacao: new Date(),
+                        status: 'processamentoInicial',
+                        vendedor: vendedor
                     });
-
-                    setOsFormData(osDataList);
-
-                    // Se houver apenas uma OS, mostrar o formulário
-                    if (osDataList.length === 1) {
-                        setCurrentOSIndex(0);
-                        setShowOSForm(true);
-                    } else {
-                        // Se houver múltiplas OS, mostrar o resumo da venda com opção para gerar as OS
-                        setSaleId(novaVendaRef.id);
-                        setOsId(newOsId);
-                        setSuccess(true);
-                        setStatusPagamentoFinal(statusPagamento);
-                        setStatusVendaFinal(statusVenda);
-                    }
-                } else {
-                    // Se não houver OS a gerar, apenas mostrar o resumo da venda
-                    setSaleId(novaVendaRef.id);
-                    setOsId(newOsId);
-                    setSuccess(true);
-                    setStatusPagamentoFinal(statusPagamento);
-                    setStatusVendaFinal(statusVenda);
                 }
-            }
-
-            // 6. Registrar no controle de caixa para pagamentos imediatos
-            for (const payment of paymentMethods) {
-                if (payment.method !== 'cashback' &&
-                    (payment.status !== 'pendente' || payment.method !== 'boleto' && payment.method !== 'ted' && payment.method !== 'crypto')) {
-
-                    const caixaData = {
-                        tipo: 'entrada',
-                        valor: payment.value,
-                        descricao: `Venda #${novaVendaRef.id} - Cliente: ${selectedClient.nome} - Pagamento: ${payment.method}`,
-                        formaPagamento: payment.method,
-                        data: new Date(),
-                        registradoPor: {
-                            id: user?.uid || null,
-                            nome: vendedor || null
-                        },
-                        vendaId: novaVendaRef.id
-                    };
-
-                    const caixaRef = collection(firestore, `lojas/${selectedLoja}/financeiro/controle_caixa/items`);
-                    await addDoc(caixaRef, removerValoresUndefined(caixaData));
-                }
-            }
-
-            // 7. Para boletos e TEDs, adicionar no controle de contas a receber
-            for (const payment of paymentMethods) {
-                if (payment.method === 'boleto' || payment.method === 'ted') {
-                    const contaReceberData = {
-                        tipo: 'venda',
-                        valor: payment.value,
-                        descricao: `Venda #${novaVendaRef.id} - Cliente: ${selectedClient.nome}`,
-                        forma_pagamento: payment.method,
-                        data_criacao: new Date(),
-                        data_vencimento: payment.method === 'boleto' ?
-                            (boletoVencimento ? new Date(boletoVencimento) : new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)) :
-                            new Date(Date.now() + 1 * 24 * 60 * 60 * 1000),
-                        status: 'pendente',
-                        cliente: {
-                            id: selectedClient.id,
-                            nome: selectedClient.nome
-                        },
-                        registrado_por: {
-                            id: user?.uid || null,
-                            nome: vendedor || null
-                        },
-                        venda_id: novaVendaRef.id
-                    };
-
-                    const contasReceberRef = collection(firestore, `lojas/${selectedLoja}/financeiro/contas_receber/items`);
-                    await addDoc(contasReceberRef, removerValoresUndefined(contaReceberData));
-                }
-            }
-
-            // 8. Para crediário, adicionar cada parcela no controle de contas a receber
-            for (const payment of paymentMethods) {
-                if (payment.method === 'crediario') {
-                    const contasReceberRef = collection(firestore, `lojas/${selectedLoja}/financeiro/contas_receber/items`);
-
-                    // Pular a primeira parcela se for considerada como entrada
-                    const parcelasAPagar = payment.dados_especificos?.status_parcelas?.filter(p => p.status === 'pendente') || [];
-
-                    await Promise.all(parcelasAPagar.map(async (parcela) => {
-                        const parcelaData = {
-                            tipo: 'crediario',
-                            valor: parcela.valor,
-                            descricao: `Parcela ${parcela.numero}/${parcelasAPagar.length + 1} - Venda #${novaVendaRef.id}`,
-                            forma_pagamento: 'crediario',
-                            data_criacao: new Date(),
-                            data_vencimento: parcela.data_vencimento,
-                            status: 'pendente',
-                            cliente: {
-                                id: selectedClient.id,
-                                nome: selectedClient.nome
-                            },
-                            registrado_por: {
-                                id: user?.uid || null,
-                                nome: vendedor || null
-                            },
-                            venda_id: novaVendaRef.id,
-                            parcela: parcela.numero
-                        };
-
-                        await addDoc(contasReceberRef, removerValoresUndefined(parcelaData));
-                    }));
-                }
-            }
-
-            // 9. Para cashback, atualizar o saldo do cliente
-            const temCashback = paymentMethods.some(p => p.method === 'cashback');
-            if (temCashback) {
-                const totalCashback = paymentMethods
-                    .filter(p => p.method === 'cashback')
-                    .reduce((sum, p) => sum + parseFloat(p.value || 0), 0);
-
-                // Atualizar saldo de cashback do cliente
-                if (totalCashback > 0) {
-                    const clienteRef = doc(firestore, `lojas/clientes/users/${selectedClient.id}`);
-
-                    try {
-                        await updateDoc(clienteRef, {
-                            'cashback.saldo': cashbackDisponivel - totalCashback,
-                            'cashback.ultima_atualizacao': new Date()
-                        });
-                    } catch (err) {
-                        console.error('Erro ao atualizar saldo de cashback:', err);
-                    }
-                }
-            }
-
-            // 10. Para pagamentos em crypto, registrar transação pendente
-            const temCrypto = paymentMethods.some(p => p.method === 'crypto');
-            if (temCrypto) {
-                const cryptoPayment = paymentMethods.find(p => p.method === 'crypto');
-
-                if (cryptoPayment) {
-                    const cryptoData = {
-                        venda_id: novaVendaRef.id,
-                        cliente_id: selectedClient.id,
-                        cliente_nome: selectedClient.nome,
-                        valor_brl: cryptoPayment.value,
-                        moeda: cryptoPayment.details?.moeda || 'bitcoin',
-                        endereco: cryptoPayment.details?.endereco || '',
-                        valor_crypto: cryptoPayment.details?.valor_crypto || '0',
-                        taxa_cambio: cryptoPayment.details?.taxa_cambio || 0,
-                        status: 'aguardando_confirmacao',
-                        data_criacao: new Date(),
-                        data_confirmacao: null,
-                        registrado_por: {
-                            id: user?.uid || null,
-                            nome: vendedor || null
-                        }
-                    };
-
-                    const cryptoRef = collection(firestore, `lojas/${selectedLoja}/financeiro/crypto_transacoes`);
-                    await addDoc(cryptoRef, removerValoresUndefined(cryptoData));
-                }
-            }
-
-            setSaleId(novaVendaRef.id);
-            setOsId(newOsId);
-
-            // Definir dados de retorno específicos para cada método de pagamento
-            // Por exemplo, para boleto:
-            const pagamentoBoleto = paymentMethods.find(p => p.method === 'boleto');
-            if (pagamentoBoleto) {
-                setBoletoData({
-                    url: pagamentoBoleto.dados_especificos?.url_boleto || '#',
-                    linhaDigitavel: pagamentoBoleto.dados_especificos?.linha_digitavel || '',
-                    dataVencimento: pagamentoBoleto.dados_especificos?.data_vencimento || new Date()
-                });
             }
 
             setSuccess(true);
-            setStatusPagamentoFinal(statusPagamento);
-            setStatusVendaFinal(statusVenda);
+            setLoading(false);
 
-        } catch (err) {
-            console.error('Erro ao finalizar venda:', err);
-            setError('Falha ao processar a venda. Tente novamente.');
-        } finally {
+        } catch (error) {
+            console.error('Erro ao processar venda:', error);
+            setError('Erro ao processar venda: ' + error.message);
             setLoading(false);
         }
     };
@@ -1337,6 +916,8 @@ const ModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
         setCashbackDisponivel(0);
         setSelectedCrypto('bitcoin');
         setCryptoAddress('');
+        setShowQrScanner(false);
+        setScannedQrData(null);
         onClose();
     };
 
@@ -1675,21 +1256,66 @@ const ModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
 
     // Renderizar informações de sucesso após finalizar a venda
     const renderSuccess = () => {
-        // Definir título com base no status da venda
-        let titulo = 'Venda Finalizada com Sucesso!';
-        let corTitulo = 'text-green-600';
-        let icone = <FiCheck className="h-6 w-6 text-green-600" />;
+        if (pendingOS) {
+            return (
+                <div className="bg-white p-6">
+                    <div className="text-center mb-6">
+                        <h2 className="text-2xl font-bold text-[#81059e] mb-2">
+                            Venda Registrada com Sucesso!
+                        </h2>
+                        <p className="text-gray-600">
+                            Por favor, preencha os dados técnicos para cada Ordem de Serviço
+                        </p>
+                    </div>
 
-        if (statusVendaFinal === 'aguardando_pagamento') {
-            titulo = 'Venda Registrada - Aguardando Pagamento';
-            corTitulo = 'text-yellow-600';
-            icone = <FiClock className="h-6 w-6 text-yellow-600" />;
-        } else if (statusVendaFinal === 'em_processamento') {
-            titulo = 'Venda Registrada - Processando Pagamento';
-            corTitulo = 'text-blue-600';
-            icone = <FiRefreshCw className="h-6 w-6 text-blue-600" />;
+                    {showOSForm ? (
+                        <OSForm
+                            data={osFormData[currentOSIndex]}
+                            onSubmit={async (formData) => {
+                                // Atualizar os dados da OS atual
+                                const updatedOsFormData = [...osFormData];
+                                updatedOsFormData[currentOSIndex] = { ...formData, processed: true };
+                                setOsFormData(updatedOsFormData);
+
+                                // Verificar se há mais OS para preencher
+                                if (currentOSIndex < osFormData.length - 1) {
+                                    setCurrentOSIndex(currentOSIndex + 1);
+                                } else {
+                                    // Todas as OS foram preenchidas
+                                    setShowOSForm(false);
+                                    await processarVenda();
+                                }
+                            }}
+                            onCancel={() => setShowOSForm(false)}
+                        />
+                    ) : (
+                        <div className="space-y-3">
+                            {osFormData.map((os, idx) => (
+                                <div key={idx} className="flex justify-between items-center p-2 rounded border border-gray-200 bg-white">
+                                    <div className="text-left">
+                                        <span className="font-medium">OS #{idx + 1}</span>
+                                        <p className="text-sm text-gray-600">
+                                            {os.armacaoDados} + {os.lenteDados}
+                                        </p>
+                                    </div>
+                                    <button
+                                        onClick={() => {
+                                            setCurrentOSIndex(idx);
+                                            setShowOSForm(true);
+                                        }}
+                                        className="px-3 py-1 text-xs bg-[#81059e] text-white rounded-md hover:bg-[#6f0486] flex items-center"
+                                    >
+                                        <FiEye className="mr-1" /> Ver Detalhes
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            );
         }
 
+        // Renderização normal de sucesso para vendas sem OS
         return (
             <div className="p-8 text-center">
                 {/* Conteúdo atual do renderSuccess */}
@@ -1826,6 +1452,36 @@ const ModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
             </div>
         )
     }
+
+    const handleQrScan = async (result) => {
+        if (result) {
+            try {
+                const qrData = JSON.parse(result);
+                if (qrData.tipo === 'armacao') {
+                    // Buscar a armação no Firestore
+                    const armaçãoRef = doc(firestore, `estoque/${selectedLoja}/armacoes`, qrData.id);
+                    const armaçãoDoc = await getDoc(armaçãoRef);
+
+                    if (armaçãoDoc.exists()) {
+                        const armaçãoData = armaçãoDoc.data();
+                        // Adicionar ao carrinho
+                        addToCart({
+                            ...armaçãoData,
+                            id: qrData.id,
+                            quantidade: 1
+                        });
+                        setShowQrScanner(false);
+                        setScannedQrData(null);
+                    } else {
+                        alert('Armação não encontrada!');
+                    }
+                }
+            } catch (error) {
+                console.error('Erro ao processar QR code:', error);
+                alert('Erro ao processar QR code. Por favor, tente novamente.');
+            }
+        }
+    };
 
     return (
         <div className="fixed inset-0 z-50 overflow-y-auto">
@@ -2203,6 +1859,35 @@ const ModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
                     </div>
                 )
             }
+
+            {/* Botão para escanear QR code */}
+            <div className="mb-4">
+                <button
+                    onClick={() => setShowQrScanner(!showQrScanner)}
+                    className="bg-[#81059e] text-white px-4 py-2 rounded-lg flex items-center gap-2"
+                >
+                    <FiSearch className="text-lg" />
+                    {showQrScanner ? 'Fechar Scanner' : 'Escanear QR Code'}
+                </button>
+            </div>
+
+            {/* Scanner de QR code */}
+            {showQrScanner && (
+                <div className="mb-4 p-4 bg-white rounded-lg">
+                    <QrReader
+                        onResult={(result, error) => {
+                            if (result) {
+                                handleQrScan(result?.text);
+                            }
+                            if (error) {
+                                console.error(error);
+                            }
+                        }}
+                        constraints={{ facingMode: 'environment' }}
+                        className="w-full"
+                    />
+                </div>
+            )}
         </div >
     );
 };

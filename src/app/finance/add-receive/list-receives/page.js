@@ -1179,7 +1179,7 @@ export default function ListaRecebimentos() {
                                 {conta.numeroDocumento || 'N/A'}
                               </td>
                               <td className="border px-4 py-2 max-w-[300px] truncate" onClick={() => openModal(conta)}>
-                                {conta.cliente || 'N/A'}
+                                {typeof conta.cliente === 'object' ? conta.cliente.nome || 'N/A' : conta.cliente || 'N/A'}
                               </td>
                               <td className="border px-3 py-2 whitespace-nowrap" onClick={() => openModal(conta)}>
                                 R$ {parseFloat(conta.valor || 0).toFixed(2)}
@@ -1280,8 +1280,8 @@ export default function ListaRecebimentos() {
                   />
                 </div>
                 <div className="space-y-3 p-4 overflow-y-auto flex-grow">
-                  <p><strong>
-                    Código:</strong> {selectedConta.numeroDocumento || 'N/A'}
+                  <p>
+                    <strong>Cliente:</strong> {typeof selectedConta.cliente === 'object' ? selectedConta.cliente.nome || 'N/A' : selectedConta.cliente || 'N/A'}
                   </p>
                   <p>
                     <strong>Cliente:</strong> {selectedConta.cliente || 'N/A'}

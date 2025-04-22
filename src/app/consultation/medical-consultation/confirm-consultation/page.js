@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { getFirestore, doc, setDoc } from "firebase/firestore";
 import { app } from "@/lib/firebaseConfig";
-import Image from "next/image";
+import { FiUser, FiCalendar, FiClock, FiMapPin, FiHome, FiFileText, FiDollarSign, FiEdit2, FiCheck } from 'react-icons/fi';
 import Layout from "@/components/Layout";
 
 const db = getFirestore(app);
@@ -44,7 +44,7 @@ const ConfirmConsultation = () => {
       await setDoc(consultationRef, formData);
       console.log("Consulta confirmada e enviada:", formData);
 
-      router.push("/consultation/medical-consultation/list-consultation");
+      router.push("/consultation/medical-consultation");
     } catch (error) {
       console.error("Erro ao enviar os dados para o Firestore:", error);
     } finally {
@@ -54,98 +54,94 @@ const ConfirmConsultation = () => {
 
   return (
     <Layout>
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="w-full max-w-lg p-8 bg-white rounded-lg shadow-md">
-          <h2 className="text-2xl font-semibold text-[#81059e] mb-6">
+      <div className="min-h-screen mb-32">
+        <div className="w-full max-w-5xl mx-auto rounded-lg">
+          <h2 className="text-3xl font-bold text-[#81059e] mb-8 mt-8">
             CONFIRMAR REGISTRO
           </h2>
 
-          <div className="space-y-4">
-            <div>
-              <span className="font-bold text-[#81059e]">Nome do Paciente</span>
-              <p className="text-black">{formData.nomePaciente}</p>
-            </div>
-            <div>
-              <span className="font-bold text-[#81059e]">CPF</span>
-              <p className="text-black">{formData.cpf}</p>
-            </div>
-            <div>
-              <span className="font-bold text-[#81059e]">Logradouro</span>
-              <p className="text-black">{formData.logradouro}</p>
-            </div>
-            <div>
-              <span className="font-bold text-[#81059e]">Bairro</span>
-              <p className="text-black">{formData.bairro}</p>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
+          {/* Seção Informações do Paciente */}
+          <div className="p-4 bg-gray-50 rounded-lg mb-6">
+            <h3 className="text-lg font-semibold text-[#81059e] mb-4 flex items-center gap-2">
+              <FiUser /> Informações do Paciente
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <span className="font-bold text-[#81059e]">Número</span>
-                <p className="text-black">{formData.numeroCasa}</p>
+                <span className="text-[#81059e] font-medium">Nome do Paciente</span>
+                <p className="text-black mt-1">{formData.nomePaciente}</p>
               </div>
               <div>
-                <span className="font-bold text-[#81059e]">Ametropia</span>
-                <p className="text-black">{formData.ametropia}</p>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <span className="font-bold text-[#81059e]">Data</span>
-                <p className="text-black">{formData.data}</p>
+                <span className="text-[#81059e] font-medium">CPF</span>
+                <p className="text-black mt-1">{formData.cpf}</p>
               </div>
               <div>
-                <span className="font-bold text-[#81059e]">Hora</span>
-                <p className="text-black">{formData.hora}</p>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <span className="font-bold text-[#81059e]">Clínica</span>
-                <p className="text-black">{formData.clinica}</p>
+                <span className="text-[#81059e] font-medium">Logradouro</span>
+                <p className="text-black mt-1">{formData.logradouro}</p>
               </div>
               <div>
-                <span className="font-bold text-[#81059e]">Loja</span>
-                <p className="text-black">
-                  {formData.loja === "loja2"
-                    ? "Óticas Popular 2"
-                    : "Óticas Popular 1"}
-                </p>
+                <span className="text-[#81059e] font-medium">Bairro</span>
+                <p className="text-black mt-1">{formData.bairro}</p>
               </div>
-            </div>
-            <div>
-              <span className="font-bold text-[#81059e]">
-                Valor da Consulta
-              </span>
-              <p className="text-black">R$ {formData.valorConsulta}</p>
+              <div>
+                <span className="text-[#81059e] font-medium">Número</span>
+                <p className="text-black mt-1">{formData.numeroCasa}</p>
+              </div>
+              <div>
+                <span className="text-[#81059e] font-medium">RG</span>
+                <p className="text-black mt-1">{formData.rg}</p>
+              </div>
             </div>
           </div>
 
-          <div className="mt-6 flex space-x-4">
+          {/* Seção Informações da Consulta */}
+          <div className="p-4 bg-gray-50 rounded-lg mb-6">
+            <h3 className="text-lg font-semibold text-[#81059e] mb-4 flex items-center gap-2">
+              <FiCalendar /> Informações da Consulta
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div>
+                <span className="text-[#81059e] font-medium">Data</span>
+                <p className="text-black mt-1">{formData.data}</p>
+              </div>
+              <div>
+                <span className="text-[#81059e] font-medium">Hora</span>
+                <p className="text-black mt-1">{formData.hora}</p>
+              </div>
+              <div>
+                <span className="text-[#81059e] font-medium">Ametropia</span>
+                <p className="text-black mt-1">{formData.ametropia}</p>
+              </div>
+              <div>
+                <span className="text-[#81059e] font-medium">Clínica</span>
+                <p className="text-black mt-1">{formData.clinica}</p>
+              </div>
+              <div>
+                <span className="text-[#81059e] font-medium">Loja</span>
+                <p className="text-black mt-1">
+                  {formData.loja === "loja2" ? "Óticas Popular 2" : "Óticas Popular 1"}
+                </p>
+              </div>
+              <div>
+                <span className="text-[#81059e] font-medium">Valor da Consulta</span>
+                <p className="text-black mt-1">R$ {formData.valorConsulta}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Botões de Ação */}
+          <div className="flex justify-center gap-6 mt-6">
             <button
-              className="flex-1 px-4 py-2 bg-[#81059e] text-white rounded hover:bg-[#820f76] flex items-center justify-center"
               onClick={handleEdit}
+              className="bg-[#81059e] p-2 px-3 rounded-sm text-white flex items-center gap-2"
             >
-              <Image
-                src="/images/edit.png"
-                alt="Editar"
-                width={20}
-                height={20}
-                className="mr-2"
-              />
-              EDITAR
+              <FiEdit2 /> EDITAR
             </button>
             <button
-              className="flex-1 px-4 py-2 bg-[#81059e] text-white rounded hover:bg-[#820f76] flex items-center justify-center"
               onClick={handleConfirm}
               disabled={isSubmitting}
+              className="border-2 border-[#81059e] p-2 px-3 rounded-sm text-[#81059e] flex items-center gap-2"
             >
-              <Image
-                src="/images/check.png"
-                alt="Confirmar"
-                width={20}
-                height={20}
-                className="mr-2"
-              />
-              {isSubmitting ? "CONFIRMANDO..." : "CONFIRMAR"}
+              <FiCheck /> {isSubmitting ? "CONFIRMANDO..." : "CONFIRMAR"}
             </button>
           </div>
         </div>

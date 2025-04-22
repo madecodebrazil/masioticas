@@ -4,12 +4,16 @@ import { useRouter, useSearchParams } from "next/navigation"; // Para redirecion
 import { getFirestore, collection, getDocs } from "firebase/firestore";
 import Layout from "@/components/Layout"; // Seu layout instanciado
 import { app } from "../../../lib/firebaseConfig"; // Certifique-se de que o Firebase está corretamente inicializado
+import { useAuth } from "@/hooks/useAuth";
+import { FiUser, FiCalendar, FiClock, FiMapPin, FiHome, FiFileText, FiDollarSign } from 'react-icons/fi';
 
 const db = getFirestore(app); // Inicializando Firestore
 
 const NovaConsulta = () => {
   const router = useRouter();
   const searchParams = useSearchParams(); // Hook para capturar dados da URL
+  const { userPermissions, userData } = useAuth();
+  const [selectedLoja, setSelectedLoja] = useState(null);
 
   const [formData, setFormData] = useState({
     nomePaciente: "",
@@ -30,6 +34,18 @@ const NovaConsulta = () => {
   const [clientes, setClientes] = useState([]); // Armazenar os dados dos clientes buscados
   const [showNomeSuggestions, setShowNomeSuggestions] = useState(false); // Controlar a exibição das sugestões de nome
   const [showCpfSuggestions, setShowCpfSuggestions] = useState(false); // Controlar a exibição das sugestões de CPF
+
+  // Definir loja inicial baseado nas permissões
+  useEffect(() => {
+    if (userPermissions) {
+      if (!userPermissions.isAdmin && userPermissions.lojas.length > 0) {
+        setSelectedLoja(userPermissions.lojas[0]);
+      }
+      else if (userPermissions.isAdmin && userPermissions.lojas.length > 0) {
+        setSelectedLoja(userPermissions.lojas[0]);
+      }
+    }
+  }, [userPermissions]);
 
   // Definir a data e hora atuais no formulário ou capturar da URL
   useEffect(() => {
@@ -167,206 +183,226 @@ const NovaConsulta = () => {
 
   return (
     <Layout>
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50">
-        <div className="w-full max-w-lg p-8 bg-white rounded-lg shadow-md">
-          <div className="flex flex-col items-center mb-4">
-            <div className="flex w-full justify-between mb-2">
-              <button
-                type="button"
-                onClick={() =>
-                  router.push(
-                    "/consultation/medical-consultation/list-consultation"
-                  )
-                }
-                className="px-8 mr-2 py-2 bg-[#81059e] text-white rounded"
+      <div className="min-h-screen">
+        <div className="w-full max-w-5xl mx-auto rounded-lg">
+          <h2 className="text-3xl font-bold text-[#81059e] mb-8 mt-8">NOVA CONSULTA</h2>
+
+          {/* Seletor de Loja para Admins */}
+          {userPermissions?.isAdmin && (
+            <div className="mb-6">
+              <label className="text-[#81059e] font-medium flex items-center gap-2">
+                <FiHome /> Selecionar Loja
+              </label>
+              <select
+                value={selectedLoja || ''}
+                onChange={(e) => setSelectedLoja(e.target.value)}
+                className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black mt-1"
               >
-                LISTA DE CONSULTAS
+                <option value="">Selecione uma loja</option>
+                {userPermissions.lojas.map((loja) => (
+                  <option key={loja} value={loja}>
+                    {loja === 'loja1' ? 'Loja 1 - Centro' : 'Loja 2 - Caramuru'}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <div className='space-x-2 mb-6'>
+            <button
+              onClick={() => router.push("/consultation/medical-consultation/list-consultation")}
+              className="bg-[#81059e] p-2 rounded-sm text-white"
+            >
+              LISTA DE CONSULTAS
+            </button>
+            <button
+              onClick={handleClear}
+              className="text-[#81059e] px-3 py-1 border-2 border-[#81059e] font-bold text-base rounded-sm"
+            >
+              Limpar
+            </button>
+          </div>
+
+          <form onSubmit={handleSubmit} className="mt-8 mb-20">
+            {/* Seção Paciente */}
+            <div className="p-4 bg-gray-50 rounded-lg mb-6">
+              <h3 className="text-lg font-semibold text-[#81059e] mb-4 flex items-center gap-2">
+                <FiUser /> Informações do Paciente
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="relative">
+                  <label className="text-[#81059e] font-medium">Nome do Paciente</label>
+                  <input
+                    type="text"
+                    name="nomePaciente"
+                    value={formData.nomePaciente}
+                    onChange={handleInputChange}
+                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                  />
+                  {showNomeSuggestions && clientes.length > 0 && (
+                    <div className="absolute z-10 bg-white border-2 border-[#81059e] rounded-lg w-full max-h-40 overflow-auto text-black">
+                      {clientes.map((cliente) => (
+                        <div
+                          key={cliente.cpf}
+                          className="p-2 cursor-pointer hover:bg-purple-50"
+                          onClick={() => handleSelectCliente(cliente)}
+                        >
+                          {cliente.nome} - {cliente.cpf}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="relative">
+                  <label className="text-[#81059e] font-medium">CPF</label>
+                  <input
+                    type="text"
+                    name="cpf"
+                    value={formData.cpf}
+                    onChange={handleInputChange}
+                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                  />
+                  {showCpfSuggestions && clientes.length > 0 && (
+                    <div className="absolute z-10 bg-white border-2 border-[#81059e] rounded-lg w-full max-h-40 overflow-auto text-black">
+                      {clientes.map((cliente) => (
+                        <div
+                          key={cliente.cpf}
+                          className="p-2 cursor-pointer hover:bg-purple-50"
+                          onClick={() => handleSelectCliente(cliente)}
+                        >
+                          {cliente.nome} - {cliente.cpf}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="text-[#81059e] font-medium">Logradouro</label>
+                  <input
+                    type="text"
+                    name="logradouro"
+                    value={formData.logradouro}
+                    onChange={handleInputChange}
+                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[#81059e] font-medium">Bairro</label>
+                  <input
+                    type="text"
+                    name="bairro"
+                    value={formData.bairro}
+                    onChange={handleInputChange}
+                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[#81059e] font-medium">Nº da Casa</label>
+                  <input
+                    type="text"
+                    name="numeroCasa"
+                    value={formData.numeroCasa}
+                    onChange={handleInputChange}
+                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[#81059e] font-medium">RG</label>
+                  <input
+                    type="text"
+                    name="rg"
+                    value={formData.rg}
+                    onChange={handleInputChange}
+                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Seção Consulta */}
+            <div className="p-4 bg-gray-50 rounded-lg mb-6">
+              <h3 className="text-lg font-semibold text-[#81059e] mb-4 flex items-center gap-2">
+                <FiCalendar /> Informações da Consulta
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                  <label className="text-[#81059e] font-medium">Data</label>
+                  <input
+                    type="date"
+                    name="data"
+                    value={formData.data}
+                    onChange={handleInputChange}
+                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[#81059e] font-medium">Hora</label>
+                  <input
+                    type="time"
+                    name="hora"
+                    value={formData.hora}
+                    onChange={handleInputChange}
+                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[#81059e] font-medium">Valor da Consulta</label>
+                  <input
+                    type="number"
+                    name="valorConsulta"
+                    value={formData.valorConsulta}
+                    onChange={handleInputChange}
+                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[#81059e] font-medium">Ametropia</label>
+                  <select
+                    name="ametropia"
+                    value={formData.ametropia}
+                    onChange={handleInputChange}
+                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                  >
+                    <option value="Sim">Sim</option>
+                    <option value="Não">Não</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[#81059e] font-medium">Clínica</label>
+                  <input
+                    type="text"
+                    name="clinica"
+                    value={formData.clinica}
+                    onChange={handleInputChange}
+                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    placeholder="Insira o nome da clínica"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-center gap-6 mt-8">
+              <button
+                type="submit"
+                className="bg-[#81059e] p-2 px-3 rounded-sm text-white flex items-center gap-2"
+              >
+                MARCAR CONSULTA
               </button>
               <button
                 type="button"
                 onClick={handleClear}
-                className="px-8 mr-2 py-2 bg-[#81059e] text-white rounded"
+                className="border-2 border-[#81059e] p-2 px-3 rounded-sm text-[#81059e] flex items-center gap-2"
               >
-                LIMPAR
-              </button>
-            </div>
-            <h2 className="text-xl md:text-2xl font-semibold text-[#81059e]">
-              NOVA CONSULTA
-            </h2>
-          </div>
-
-          <form onSubmit={handleSubmit} className="mt-6 grid grid-cols-2 gap-4">
-            <div className="relative col-span-2">
-              <label className="block text-[#81059e]">Nome do Paciente</label>
-              <input
-                type="text"
-                name="nomePaciente"
-                value={formData.nomePaciente}
-                onChange={handleInputChange}
-                className="w-full mt-1 px-3 py-2 border border-[#81059e] rounded text-black focus:outline-none focus:ring-2 focus:ring-[#81059e]"
-              />
-              {showNomeSuggestions && clientes.length > 0 && (
-                <div className="absolute z-10 bg-white border border-gray-300 rounded mt-2 w-full max-h-40 overflow-auto text-black">
-                  {clientes.map((cliente) => (
-                    <div
-                      key={cliente.cpf}
-                      className="p-2 cursor-pointer hover:bg-gray-200"
-                      onClick={() => handleSelectCliente(cliente)}
-                    >
-                      {cliente.nome} - {cliente.cpf}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div className="relative col-span-2">
-              <label className="block text-[#81059e]">CPF</label>
-              <input
-                type="text"
-                name="cpf"
-                value={formData.cpf}
-                onChange={handleInputChange}
-                className="w-full mt-1 px-3 py-2 border border-[#81059e] rounded text-black focus:outline-none focus:ring-2 focus:ring-[#81059e]"
-              />
-              {showCpfSuggestions && clientes.length > 0 && (
-                <div className="absolute z-10 bg-white border border-gray-300 rounded mt-2 w-full max-h-40 overflow-auto text-black">
-                  {clientes.map((cliente) => (
-                    <div
-                      key={cliente.cpf}
-                      className="p-2 cursor-pointer hover:bg-gray-200"
-                      onClick={() => handleSelectCliente(cliente)}
-                    >
-                      {cliente.nome} - {cliente.cpf}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-[#81059e]">Logradouro</label>
-              <input
-                type="text"
-                name="logradouro"
-                value={formData.logradouro}
-                onChange={handleInputChange}
-                className="w-full mt-1 px-3 py-2 border border-[#81059e] rounded text-black focus:outline-none focus:ring-2 focus:ring-[#81059e]"
-              />
-            </div>
-            <div className="col-span-2">
-              <label className="block text-[#81059e]">Valor da Consulta</label>
-              <input
-                type="number"
-                name="valorConsulta"
-                value={formData.valorConsulta}
-                onChange={handleInputChange}
-                className="w-full mt-1 px-3 py-2 border border-[#81059e] rounded text-black focus:outline-none focus:ring-2 focus:ring-[#81059e]"
-              />
-            </div>
-
-            <div>
-              <label className="block text-[#81059e]">RG</label>
-              <input
-                type="text"
-                name="rg"
-                value={formData.rg}
-                onChange={handleInputChange}
-                className="w-full mt-1 px-3 py-2 border border-[#81059e] rounded text-black focus:outline-none focus:ring-2 focus:ring-[#81059e]"
-              />
-            </div>
-
-            <div>
-              <label className="block text-[#81059e]">Bairro</label>
-              <input
-                type="text"
-                name="bairro"
-                value={formData.bairro}
-                onChange={handleInputChange}
-                className="w-full mt-1 px-3 py-2 border border-[#81059e] rounded text-black focus:outline-none focus:ring-2 focus:ring-[#81059e]"
-              />
-            </div>
-
-            <div>
-              <label className="block text-[#81059e]">Nº da Casa</label>
-              <input
-                type="text"
-                name="numeroCasa"
-                value={formData.numeroCasa}
-                onChange={handleInputChange}
-                className="w-full mt-1 px-3 py-2 border border-[#81059e] rounded text-black focus:outline-none focus:ring-2 focus:ring-[#81059e]"
-              />
-            </div>
-
-            {/* Ametropia como Select */}
-            <div>
-              <label className="block text-[#81059e]">Ametropia</label>
-              <select
-                name="ametropia"
-                value={formData.ametropia}
-                onChange={handleInputChange}
-                className="w-full mt-1 px-3 py-2 border border-[#81059e] rounded text-black focus:outline-none focus:ring-2 focus:ring-[#81059e]"
-              >
-                <option value="Sim">Sim</option>
-                <option value="Não">Não</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-[#81059e]">Data</label>
-              <input
-                type="date"
-                name="data"
-                value={formData.data}
-                onChange={handleInputChange}
-                className="w-full mt-1 px-3 py-2 border border-[#81059e] rounded text-black focus:outline-none focus:ring-2 focus:ring-[#81059e]"
-              />
-            </div>
-
-            <div>
-              <label className="block text-[#81059e]">Hora</label>
-              <input
-                type="time"
-                name="hora"
-                value={formData.hora}
-                onChange={handleInputChange}
-                className="w-full mt-1 px-3 py-2 border border-[#81059e] rounded text-black focus:outline-none focus:ring-2 focus:ring-[#81059e]"
-              />
-            </div>
-
-            {/* Select para Loja */}
-            <div>
-              <label className="block text-[#81059e]">Loja</label>
-              <select
-                name="loja"
-                value={formData.loja}
-                onChange={handleInputChange}
-                className="w-full mt-1 px-3 py-2 border border-[#81059e] rounded text-black focus:outline-none focus:ring-2 focus:ring-[#81059e]"
-              >
-                <option value="loja1">Óticas Popular 1</option>
-                <option value="loja2">Óticas Popular 2</option>
-              </select>
-            </div>
-
-            {/* Campo para Clínica */}
-            <div className="col-span-2">
-              <label className="block text-[#81059e]">Clínica</label>
-              <input
-                type="text"
-                name="clinica"
-                value={formData.clinica}
-                onChange={handleInputChange}
-                className="w-full mt-1 px-3 py-2 border border-[#81059e] rounded text-black focus:outline-none focus:ring-2 focus:ring-[#81059e]"
-                placeholder="Insira o nome da clínica"
-              />
-            </div>
-
-            <div className="col-span-2 flex justify-end">
-              <button
-                type="submit"
-                className="px-6 py-2 bg-[#81059e] text-white rounded hover:bg-[#820f76]"
-              >
-                MARCAR CONSULTA
+                CANCELAR
               </button>
             </div>
           </form>

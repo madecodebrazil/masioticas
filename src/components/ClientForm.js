@@ -4,7 +4,7 @@ import { getDoc, setDoc, doc, serverTimestamp, collection, addDoc, getDocs, quer
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { firestore } from '@/lib/firebaseConfig';
 import InputMask from 'react-input-mask';
-import { FiUser, FiMail, FiPhone, FiCalendar, FiMapPin, FiHash, FiHome, FiImage, FiFileText } from 'react-icons/fi';
+import { FiUser, FiMail, FiPhone, FiCalendar, FiMapPin, FiHash, FiHome, FiImage, FiFileText, FiCamera, FiCheckCircle } from 'react-icons/fi';
 
 const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
     const [formData, setFormData] = useState({
@@ -25,6 +25,8 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
     });
     const [selectedFile, setSelectedFile] = useState(null);
     const [selectedFileName, setSelectedFileName] = useState('');
+    const [imagePreview, setImagePreview] = useState(null);
+    const [documentoFile, setDocumentoFile] = useState(null);
     const [showSuccessPopup, setShowSuccessPopup] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -32,7 +34,7 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
 
     const handleChange = (e) => {
         const { name, value, files } = e.target;
-        
+
         if (files) {
             setSelectedFile(files[0]);
             setSelectedFileName(files[0].name);
@@ -51,16 +53,68 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
         }
     };
 
+    const handleImageChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setSelectedFile(file);
+            setSelectedFileName(file.name);
+            // Criar preview da imagem
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setImagePreview(reader.result);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const handleDocumentChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setDocumentoFile(file);
+        }
+    };
+
+    const handleCameraClick = () => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+
+        // Verifica se o dispositivo tem câmera
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        if (isMobile) {
+            input.capture = 'environment';
+        }
+
+        input.onchange = (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                // Cria um nome mais curto para exibição
+                const displayName = file.name.length > 20
+                    ? file.name.substring(0, 15) + '...' + file.name.split('.').pop()
+                    : file.name;
+
+                setSelectedFile(file);
+                setSelectedFileName(displayName);
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    setImagePreview(reader.result);
+                };
+                reader.readAsDataURL(file);
+            }
+        };
+        input.click();
+    };
+
     // Função para buscar endereço pelo CEP
     const fetchAddressByCep = async (cep) => {
         if (!cep || cep.replace(/\D/g, '').length !== 8) return;
-        
+
         setFetchingCep(true);
         try {
             const cleanCep = cep.replace(/\D/g, '');
             const response = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
             const data = await response.json();
-            
+
             if (!data.erro) {
                 setFormData(prev => ({
                     ...prev,
@@ -91,7 +145,7 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
 
     const uploadImage = async (cpf) => {
         if (!selectedFile) return null;
-        
+
         try {
             const storage = getStorage();
             // Gera um nome de arquivo único baseado no timestamp para evitar conflitos
@@ -107,41 +161,56 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
         }
     };
 
+    const uploadDocument = async (file, cpf) => {
+        if (!file) return null;
+
+        try {
+            const storage = getStorage();
+            const fileName = `${Date.now()}-documento-${file.name.replace(/[^a-zA-Z0-9.-]/g, '')}`;
+            const storageRef = ref(storage, `clientes/${cpf}/documentos/${fileName}`);
+            const snapshot = await uploadBytes(storageRef, file);
+            return await getDownloadURL(snapshot.ref);
+        } catch (error) {
+            console.error('Erro ao fazer upload do documento:', error);
+            return null;
+        }
+    };
+
     // Validação de CPF usando algoritmo de dígitos verificadores
     const validarCPF = (cpf) => {
         cpf = cpf.replace(/\D/g, '');
-        
+
         if (cpf.length !== 11) return false;
-        
+
         // Verificar se todos os dígitos são iguais
         if (/^(\d)\1{10}$/.test(cpf)) return false;
-        
+
         // Validar dígitos verificadores
         let soma = 0;
         let resto;
-        
+
         // Primeiro dígito verificador
         for (let i = 1; i <= 9; i++) {
-            soma += parseInt(cpf.substring(i-1, i)) * (11 - i);
+            soma += parseInt(cpf.substring(i - 1, i)) * (11 - i);
         }
-        
+
         resto = (soma * 10) % 11;
         if (resto === 10 || resto === 11) resto = 0;
         if (resto !== parseInt(cpf.substring(9, 10))) return false;
-        
+
         // Segundo dígito verificador
         soma = 0;
         for (let i = 1; i <= 10; i++) {
-            soma += parseInt(cpf.substring(i-1, i)) * (12 - i);
+            soma += parseInt(cpf.substring(i - 1, i)) * (12 - i);
         }
-        
+
         resto = (soma * 10) % 11;
         if (resto === 10 || resto === 11) resto = 0;
         if (resto !== parseInt(cpf.substring(10, 11))) return false;
-        
+
         return true;
     };
-    
+
     // Validação de email com regex mais completa
     const validarEmail = (email) => {
         const regex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
@@ -153,49 +222,48 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
             setError('Não foi possível identificar a loja para o cadastro.');
             return false;
         }
-        
+
         // Validação do CPF
         const cpf = formData.cpf.replace(/\D/g, '');
         if (!validarCPF(cpf)) {
             setError('CPF inválido. Verifique se os números estão corretos.');
             return false;
         }
-        
+
         // Validação do telefone
         const telefone = formData.telefone.replace(/\D/g, '');
         if (telefone.length < 10) {
             setError('Telefone inválido. Digite no mínimo 10 dígitos.');
             return false;
         }
-        
+
         // Validação do email (se fornecido)
         if (formData.email && !validarEmail(formData.email)) {
             setError('Email inválido. Verifique o formato.');
             return false;
         }
-        
+
         return true;
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
-        
+
         if (!validateForm()) return;
-        
+
         setLoading(true);
 
         try {
-            const cpf = formData.cpf.replace(/\D/g, ''); // Remove caracteres não numéricos do CPF
+            const cpf = formData.cpf.replace(/\D/g, '');
 
-            // Verificar se o CPF já existe na subcoleção 'users'
+            // Verificar se o CPF já existe
             try {
-                // Caminho correto para a subcoleção 'users'
                 const usersCollection = collection(firestore, 'lojas/clientes/users');
                 const querySnapshot = await getDocs(
                     query(usersCollection, where('cpf', '==', cpf))
                 );
-                
+
                 if (!querySnapshot.empty) {
                     setError("Este CPF já está cadastrado no sistema.");
                     setLoading(false);
@@ -203,23 +271,22 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
                 }
             } catch (err) {
                 console.error("Erro ao verificar CPF existente:", err);
-                // Continua mesmo se der erro na verificação
             }
 
             const imageUrl = await uploadImage(cpf);
-            
-            // Prepare os dados do cliente
+            const documentoUrl = await uploadDocument(documentoFile, cpf);
+
             const clienteData = {
                 ...formData,
                 cpf,
                 imagem: imageUrl || null,
+                documento: documentoUrl || null,
                 dataCadastro: serverTimestamp(),
                 lojaOrigem: selectedLoja,
                 cadastradoPor: {
                     userId: userId,
                     nome: userName
                 },
-                // Converte 'telefone' para um array 'telefones' para manter compatibilidade com a tabela de listagem
                 telefones: [formData.telefone]
             };
 
@@ -227,7 +294,7 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
                 // Caminho correto: /lojas/clientes/users/{autoID}
                 const usersCollection = collection(firestore, 'lojas/clientes/users');
                 await addDoc(usersCollection, clienteData);
-                
+
                 setShowSuccessPopup(true);
                 // Limpar formulário após sucesso
                 setFormData({
@@ -248,7 +315,9 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
                 });
                 setSelectedFile(null);
                 setSelectedFileName('');
-                
+                setImagePreview(null);
+                setDocumentoFile(null);
+
                 setTimeout(() => {
                     setShowSuccessPopup(false);
                     if (onSuccessRedirect) onSuccessRedirect();
@@ -267,8 +336,8 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
 
     // Lista de estados brasileiros
     const estados = [
-        'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 
-        'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 
+        'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS',
+        'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC',
         'SP', 'SE', 'TO'
     ];
 
@@ -279,7 +348,7 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
                     <span className="block sm:inline">{error}</span>
                 </div>
             )}
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                     <label className="flex text-[#81059e] font-medium items-center gap-1">
@@ -358,16 +427,57 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
                     <label className="flex text-[#81059e] font-medium items-center gap-1">
                         <FiImage /> Foto do Cliente
                     </label>
+                    <div className="flex gap-4">
+                        <div className="relative flex-1">
+                            <input
+                                type="file"
+                                accept="image/*"
+                                onChange={handleImageChange}
+                                className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-10"
+                            />
+                            <div className="flex items-center border-2 border-[#81059e] py-2 px-3 rounded-lg w-full text-black">
+                                <span className="flex-1 truncate text-sm">
+                                    {selectedFileName || "Escolher arquivo..."}
+                                </span>
+                                <button type="button" className="bg-purple-100 text-[#81059e] px-3 py-1 rounded-md ml-2 whitespace-nowrap">
+                                    Procurar
+                                </button>
+                            </div>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={handleCameraClick}
+                            className="bg-purple-100 text-[#81059e] p-3 rounded-lg flex items-center justify-center whitespace-nowrap"
+                            title="Tirar foto"
+                        >
+                            <FiCamera size={24} />
+                        </button>
+                    </div>
+                    {imagePreview && (
+                        <div className="mt-2">
+                            <img
+                                src={imagePreview}
+                                alt="Preview"
+                                className="w-32 h-32 object-cover rounded-lg border-2 border-[#81059e]"
+                            />
+                        </div>
+                    )}
+                </div>
+
+                <div>
+                    <label className="flex text-[#81059e] font-medium items-center gap-1">
+                        <FiFileText /> RG ou CPF
+                    </label>
                     <div className="relative">
                         <input
                             type="file"
-                            accept="image/*"
-                            onChange={handleChange}
+                            accept=".pdf,.jpg,.jpeg,.png"
+                            onChange={handleDocumentChange}
                             className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-10"
                         />
                         <div className="flex items-center border-2 border-[#81059e] py-2 px-3 rounded-lg w-full text-black">
                             <span className="flex-1 truncate">
-                                {selectedFileName || "Escolher arquivo..."}
+                                {documentoFile ? documentoFile.name : "Escolher arquivo..."}
                             </span>
                             <button type="button" className="bg-purple-100 text-[#81059e] px-3 py-1 rounded-md ml-2">
                                 Procurar
@@ -515,9 +625,11 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
             </div>
 
             {showSuccessPopup && (
-                <div className="fixed bottom-5 right-5 bg-green-500 text-white p-4 rounded-lg shadow-lg flex items-center">
-                    <FiFileText className="mr-2" />
-                    Cliente adicionado com sucesso!
+                <div className="fixed top-4 right-4 z-50 animate-fade-in">
+                    <div className="bg-green-500 text-white px-6 py-4 rounded-lg shadow-lg flex items-center gap-2">
+                        <FiCheckCircle size={24} />
+                        <span>Cliente adicionado com sucesso!</span>
+                    </div>
                 </div>
             )}
         </form>

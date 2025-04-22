@@ -5,9 +5,10 @@ import {
   FiShoppingBag, FiBarChart2, FiTag, FiPackage,
   FiAlertCircle, FiLayers, FiPlusCircle, FiEye, FiCheckCircle
 } from 'react-icons/fi';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebaseConfig';
 import { useAuth } from '@/hooks/useAuth';
+import { QrReader } from 'react-qr-reader';
 
 // Substituir a declaração do componente e a definição de props
 const CarrinhoCompras = ({
@@ -44,12 +45,13 @@ const CarrinhoCompras = ({
       items: [],
       requiresOS: true,
       generateOS: true,
-      forceGenerateOS: false // Novo campo para forçar geração de OS mesmo sem kit completo
+      forceGenerateOS: false
     }
   ]);
   const [activeCollection, setActiveCollection] = useState(1);
   const [showOSForm, setShowOSForm] = useState(false);
   const [generatedOS, setGeneratedOS] = useState([]);
+  const [showQrScanner, setShowQrScanner] = useState(false);
 
   // Exponha as collections para o componente pai
   useEffect(() => {
@@ -464,44 +466,44 @@ const CarrinhoCompras = ({
   };
 
   // Atualizar quantidade no carrinho
-  
-// Modificação na função updateQuantity no CarrinhoCompras.js
-const updateQuantity = (productId, categoria, newQuantity) => {
-  if (newQuantity < 1) return;
 
-  // Verificar se a quantidade não excede o estoque
-  const product = estoqueData.find(p => p.id === productId && p.categoria === categoria);
-  const stockQuantity = parseInt(product?.quantidade) || 0;
+  // Modificação na função updateQuantity no CarrinhoCompras.js
+  const updateQuantity = (productId, categoria, newQuantity) => {
+    if (newQuantity < 1) return;
 
-  if (newQuantity > stockQuantity && error !== 'Aviso: Mostrando produtos sem estoque disponível') {
-    setError(`Quantidade máxima disponível: ${stockQuantity}`);
-    setTimeout(() => setError(''), 3000);
-    return;
-  }
+    // Verificar se a quantidade não excede o estoque
+    const product = estoqueData.find(p => p.id === productId && p.categoria === categoria);
+    const stockQuantity = parseInt(product?.quantidade) || 0;
 
-  // Atualizar a quantidade no carrinho
-  setCartItems(cartItems.map(item =>
-    (item.id === productId && item.categoria === categoria)
-      ? { ...item, quantity: newQuantity }
-      : item
-  ));
+    if (newQuantity > stockQuantity && error !== 'Aviso: Mostrando produtos sem estoque disponível') {
+      setError(`Quantidade máxima disponível: ${stockQuantity}`);
+      setTimeout(() => setError(''), 3000);
+      return;
+    }
 
-  // IMPORTANTE: Atualizar também a quantidade na coleção correspondente
-  const updatedCollections = collections.map(collection => {
-    const updatedItems = collection.items.map(item => 
-      (item.id === productId && item.categoria === categoria) 
-        ? { ...item, quantity: newQuantity } 
+    // Atualizar a quantidade no carrinho
+    setCartItems(cartItems.map(item =>
+      (item.id === productId && item.categoria === categoria)
+        ? { ...item, quantity: newQuantity }
         : item
-    );
-    
-    return {
-      ...collection,
-      items: updatedItems
-    };
-  });
-  
-  setCollections(updatedCollections);
-};
+    ));
+
+    // IMPORTANTE: Atualizar também a quantidade na coleção correspondente
+    const updatedCollections = collections.map(collection => {
+      const updatedItems = collection.items.map(item =>
+        (item.id === productId && item.categoria === categoria)
+          ? { ...item, quantity: newQuantity }
+          : item
+      );
+
+      return {
+        ...collection,
+        items: updatedItems
+      };
+    });
+
+    setCollections(updatedCollections);
+  };
 
   // Remover produto do carrinho
   const removeFromCart = (productId, categoria) => {
@@ -552,6 +554,62 @@ const updateQuantity = (productId, categoria, newQuantity) => {
       'outros': 'Outros Produtos'
     };
     return translations[category] || category;
+  };
+
+  // Adicionar função para remover coleção
+  const removeCollection = (collectionId) => {
+    // Verificar se há itens na coleção
+    const collection = collections.find(c => c.id === collectionId);
+    if (collection && collection.items.length > 0) {
+      if (!confirm(`Esta coleção contém ${collection.items.length} item(s). Deseja realmente removê-la?`)) {
+        return;
+      }
+    }
+
+    // Remover a coleção
+    const updatedCollections = collections.filter(c => c.id !== collectionId);
+    setCollections(updatedCollections);
+
+    // Atualizar o carrinho removendo os itens da coleção
+    const updatedCartItems = cartItems.filter(item => item.collectionId !== collectionId);
+    setCartItems(updatedCartItems);
+
+    // Se a coleção removida era a ativa, selecionar outra
+    if (activeCollection === collectionId) {
+      setActiveCollection(updatedCollections[0]?.id || null);
+    }
+  };
+
+  // Função para processar o QR code escaneado
+  const handleQrScan = async (result) => {
+    if (result) {
+      try {
+        const qrData = JSON.parse(result?.text);
+        if (qrData.tipo === 'armacao') {
+          // Buscar a armação no Firestore
+          const armacaoRef = doc(firestore, `estoque/${selectedLoja}/armacoes`, qrData.id);
+          const armacaoDoc = await getDoc(armacaoRef);
+
+          if (armacaoDoc.exists()) {
+            const armacaoData = armacaoDoc.data();
+            // Adicionar ao carrinho
+            addToCart({
+              ...armacaoData,
+              id: qrData.id,
+              quantidade: 1
+            });
+            setShowQrScanner(false);
+          } else {
+            setError('Armação não encontrada!');
+            setTimeout(() => setError(''), 3000);
+          }
+        }
+      } catch (error) {
+        console.error('Erro ao processar QR code:', error);
+        setError('Erro ao processar QR code. Por favor, tente novamente.');
+        setTimeout(() => setError(''), 3000);
+      }
+    }
   };
 
   return (
@@ -615,28 +673,38 @@ const updateQuantity = (productId, categoria, newQuantity) => {
 
         <div className="flex flex-wrap gap-2">
           {collections.map(collection => (
-            <button
-              key={collection.id}
-              onClick={() => setActiveCollection(collection.id)}
-              className={`px-3 py-1 text-xs rounded-full flex items-center ${activeCollection === collection.id
-                ? 'bg-[#81059e] text-white'
-                : 'bg-gray-200 text-gray-700'
-                }`}
-            >
-              {collection.name}
-              {getOSCollections().some(c => c.id === collection.id) && (
-                <FiCheckCircle className="ml-1 text-green-400" />
-              )}
-              <span className="ml-1 bg-gray-600 text-white text-xs px-1.5 rounded-full">
-                {collection.items.length}
-              </span>
-            </button>
+            <div key={collection.id} className="relative">
+              <button
+                onClick={() => setActiveCollection(collection.id)}
+                className={`px-3 py-1 text-xs rounded-full flex items-center ${activeCollection === collection.id
+                  ? 'bg-[#81059e] text-white'
+                  : 'bg-gray-200 text-gray-700'
+                  }`}
+              >
+                {collection.name}
+                {getOSCollections().some(c => c.id === collection.id) && (
+                  <FiCheckCircle className="ml-1 text-green-400" />
+                )}
+                <span className="ml-1 bg-gray-600 text-white text-xs px-1.5 rounded-full">
+                  {collection.items.length}
+                </span>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    removeCollection(collection.id);
+                  }}
+                  className="ml-2 text-red-500 hover:text-red-600 font-bold"
+                >
+                  ×
+                </button>
+              </button>
+            </div>
           ))}
         </div>
       </div>
 
       {/* Barra de Busca de Produtos */}
-      <div className="p-4 border-b border-gray-200 bg-gray-50">
+      <div className="p-4 border-b border-gray-200">
         <div className="flex gap-2 items-center">
           <div className="relative flex-1">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -705,9 +773,23 @@ const updateQuantity = (productId, categoria, newQuantity) => {
               </div>
             )}
           </div>
-          <div className="flex items-center border-2 border-[#81059e] rounded-lg overflow-hidden">
+
+          {/* Botão de Scanner QR Code */}
+          <button
+            onClick={() => setShowQrScanner(!showQrScanner)}
+            className="px-4 py-2 bg-[#81059e] text-white rounded-lg flex items-center gap-2"
+          >
+            <FiSearch className="text-lg" />
+            {showQrScanner ? 'Fechar Scanner' : 'QR Code'}
+          </button>
+
+          {/* Controles de quantidade */}
+          <div className="flex border border-[#81059e] rounded-lg overflow-hidden">
             <button
-              onClick={() => setNewProductQty(prev => Math.max(1, prev - 1))}
+              onClick={(e) => {
+                e.stopPropagation();
+                setNewProductQty(prev => Math.max(1, prev - 1));
+              }}
               className="px-3 py-2 bg-gray-100 text-[#81059e] hover:bg-gray-200 border-r border-[#81059e]"
             >
               <FiMinus size={16} />
@@ -720,7 +802,10 @@ const updateQuantity = (productId, categoria, newQuantity) => {
               className="w-14 text-center p-2 focus:outline-none focus:ring-2 focus:ring-[#81059e] focus:ring-opacity-50"
             />
             <button
-              onClick={() => setNewProductQty(prev => prev + 1)}
+              onClick={(e) => {
+                e.stopPropagation();
+                setNewProductQty(prev => prev + 1);
+              }}
               className="px-3 py-2 bg-gray-100 text-[#81059e] hover:bg-gray-200 border-l border-[#81059e]"
             >
               <FiPlus size={16} />
@@ -728,6 +813,27 @@ const updateQuantity = (productId, categoria, newQuantity) => {
           </div>
         </div>
       </div>
+
+      {/* Scanner de QR code */}
+      {showQrScanner && (
+        <div className="mt-4 p-4 bg-white rounded-lg border-2 border-[#81059e]">
+          <QrReader
+            onResult={(result, error) => {
+              if (result) {
+                handleQrScan(result);
+              }
+              if (error) {
+                console.error(error);
+              }
+            }}
+            constraints={{ facingMode: 'environment' }}
+            className="w-full max-w-md mx-auto"
+          />
+          <p className="text-sm text-gray-600 text-center mt-2">
+            Posicione o QR code da armação no centro da câmera
+          </p>
+        </div>
+      )}
 
       {/* Lista de Produtos no Carrinho */}
       <div className="divide-y divide-gray-100">
