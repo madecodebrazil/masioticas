@@ -1,9 +1,9 @@
 // components/ModalNovaVenda.js
 import { useState, useEffect, useRef } from 'react';
 import {
-    collection, getDocs, doc, getDoc, addDoc, updateDoc, query, where, serverTimestamp, setDoc
+    collection, getDocs, doc, getDoc, addDoc, updateDoc, query, where, serverTimestamp
 } from 'firebase/firestore';
-import { FiClock, FiRefreshCw, FiMessageSquare, FiPrinter, FiEye } from 'react-icons/fi';
+import { FiClock, FiRefreshCw, FiMessageSquare, FiPrinter } from 'react-icons/fi';
 import CreditCardForm from './CreditCardForm';
 import CarrinhoCompras from './CarrinhoCompras';
 import { firestore } from '@/lib/firebaseConfig';
@@ -28,48 +28,53 @@ import {
 } from 'react-icons/fi';
 import { FaBitcoin, FaEthereum } from 'react-icons/fa';
 import ClientForm from './ClientForm';
-import PaymentMethodPanel from './PaymentMethodPanel';
-import Link from 'next/link';
-import { createNotification } from '@/lib/notifications';
-import { QrReader } from 'react-qr-reader';
-
 
 function removerValoresUndefined(obj) {
-    // Se for null, undefined ou não for um objeto, retornar null
-    if (obj === null || obj === undefined || typeof obj !== 'object') {
-        return obj === undefined ? null : obj;
+    // Se for null, undefined ou não for um objeto, retornar um valor padrão apropriado
+    if (obj === null || obj === undefined) {
+        return null;
+    }
+
+    if (typeof obj !== 'object') {
+        return obj;
+    }
+
+    // Se for uma data, retornar como está
+    if (obj instanceof Date) {
+        return obj;
     }
 
     // Se for um array, processar cada item
     if (Array.isArray(obj)) {
-        return obj.map(item => removerValoresUndefined(item));
+        const arrayLimpo = obj.map(item => removerValoresUndefined(item)).filter(item => item !== null);
+        return arrayLimpo.length > 0 ? arrayLimpo : null;
     }
 
     // Se for um objeto, processar cada propriedade
     const resultado = {};
+    let temPropriedade = false;
+
     for (const chave in obj) {
         if (Object.prototype.hasOwnProperty.call(obj, chave)) {
-            // Substituir undefined por null
-            const valor = obj[chave] === undefined ? null : removerValoresUndefined(obj[chave]);
-            resultado[chave] = valor;
+            const valor = removerValoresUndefined(obj[chave]);
+            if (valor !== null && valor !== undefined) {
+                resultado[chave] = valor;
+                temPropriedade = true;
+            }
         }
     }
 
-    return resultado;
+    return temPropriedade ? resultado : null;
 }
 
 
 const ModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
-
     // Estado para gerenciamento de clientes
-    // Obtém informações do usuário atual
-    const { user, userData } = useAuth();
     const [searchTerm, setSearchTerm] = useState('');
     const [clients, setClients] = useState([]);
     const [filteredClients, setFilteredClients] = useState([]);
     const [selectedClient, setSelectedClient] = useState(null);
     const [showClientForm, setShowClientForm] = useState(false);
-    const [collections, setCollections] = useState([]);
 
     // Estados para gerenciamento de produtos
     const [products, setProducts] = useState([]);
@@ -77,16 +82,15 @@ const ModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
     const [filteredProducts, setFilteredProducts] = useState([]);
     const [cartItems, setCartItems] = useState([]);
 
-    // Estado adicional para controlar se os dados foram carregados
-    const [initialized, setInitialized] = useState(false);
-
-    // Estados para observações e detalhes da venda
-    const [observation, setObservation] = useState('');
+    // Estado para controle da tabela de produtos no carrinho
+    const [focusedRow, setFocusedRow] = useState(null);
+    const [newProductQty, setNewProductQty] = useState(1);
+    const produtoInputRef = useRef(null);
 
     // Estados para pagamento e descontos
     const [discount, setDiscount] = useState(0);
-    const [discountType, setDiscountType] = useState('percentage');
-    const [discountFormatted, setDiscountFormatted] = useState('');
+    const [discountType, setDiscountType] = useState('percentage'); // 'percentage' ou 'value'
+    const [observation, setObservation] = useState('');
     const [valorPago, setValorPago] = useState('');
     const [troco, setTroco] = useState(0);
 
@@ -105,9 +109,8 @@ const ModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
         processed: false
     }]);
     const [currentPaymentIndex, setCurrentPaymentIndex] = useState(0);
-    const [valueDistribution, setValueDistribution] = useState('auto');
+    const [valueDistribution, setValueDistribution] = useState('auto'); // 'auto' ou 'manual'
 
-    // Estados para formulário de cartão de crédito
     const [showCreditCardForm, setShowCreditCardForm] = useState(false);
     const [dadosCartao, setDadosCartao] = useState(null);
     const [boletoData, setBoletoData] = useState(null);
@@ -118,7 +121,7 @@ const ModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
     const [statusPagamentoFinal, setStatusPagamentoFinal] = useState("");
     const [statusVendaFinal, setStatusVendaFinal] = useState("");
 
-    // Estados para cashback e criptomoedas
+    // Novos estados para cashback e criptomoedas
     const [cashbackDisponivel, setCashbackDisponivel] = useState(0);
     const [selectedCrypto, setSelectedCrypto] = useState('bitcoin');
     const [cryptoAddress, setCryptoAddress] = useState('');
@@ -127,54 +130,28 @@ const ModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
     const [vendedor, setVendedor] = useState('');
     const [dataVenda, setDataVenda] = useState(new Date());
 
-    // Estados para gerenciar OS
-    const [showOSForm, setShowOSForm] = useState(false);
-    const [currentOSIndex, setCurrentOSIndex] = useState(0);
-    const [osFormData, setOsFormData] = useState([]);
-    const [pendingOS, setPendingOS] = useState(false);
+    // Obtém informações do usuário atual
+    const { user, userData } = useAuth();
 
-    // Novos estados para o QrReader
-    const [showQrScanner, setShowQrScanner] = useState(false);
-    const [scannedQrData, setScannedQrData] = useState(null);
-
-    // Modificação do useEffect para evitar que o modal abra sozinho
+    // Buscar dados iniciais quando o componente montar
     useEffect(() => {
-        // Verificação rigorosa para garantir que o modal só carregue dados quando realmente for aberto
-        if (isOpen && selectedLoja && !initialized) {
-            const loadInitialData = async () => {
-                setLoading(true);
-                try {
-                    setInitialized(true);
-                    await fetchClients();
-                    await fetchProducts();
-                    await fetchCashbackDisponivel();
-                    setDataVenda(new Date());
-                    updatePaymentMethodValue(0);
-                } catch (error) {
-                    console.error('Erro ao carregar dados iniciais:', error);
-                    setError('Erro ao carregar dados iniciais: ' + error.message);
-                } finally {
-                    setLoading(false);
-                }
-            };
+        if (isOpen && selectedLoja) {
+            fetchClients();
+            fetchProducts();
+            fetchCashbackDisponivel();
 
-            loadInitialData();
-        }
+            // Definir vendedor automaticamente
+            if (userData) {
+                setVendedor(userData.nome || user?.email || 'Vendedor');
+            }
 
-        // Quando o modal for fechado, resetar o estado de inicialização
-        if (!isOpen && initialized) {
-            setInitialized(false);
-            setProducts([]);
-            setError('');
-        }
-    }, [isOpen, selectedLoja]);
+            // Definir data atual
+            setDataVenda(new Date());
 
-    // Adicione um useEffect separado exclusivamente para atualizar o vendedor
-    useEffect(() => {
-        if (isOpen && initialized && userData) {
-            setVendedor(userData.nome || user?.email || 'Vendedor');
+            // Inicializar o primeiro método de pagamento com o valor total
+            updatePaymentMethodValue(0);
         }
-    }, [userData, user, isOpen, initialized]);
+    }, [isOpen, selectedLoja, userData, user]);
 
     // Atualizar o valor do método de pagamento atual quando o total mudar
     useEffect(() => {
@@ -182,26 +159,6 @@ const ModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
             updatePaymentMethodValue(0);
         }
     }, [cartItems, discount, discountType]);
-
-    // Atualizar formatação quando o tipo de desconto mudar
-    useEffect(() => {
-        if (discount > 0) {
-            if (discountType === 'percentage') {
-                setDiscountFormatted(discount.toLocaleString('pt-BR', {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2
-                }));
-            } else {
-                setDiscountFormatted(discount.toLocaleString('pt-BR', {
-                    style: 'currency',
-                    currency: 'BRL',
-                    minimumFractionDigits: 2
-                }).replace('R$', '').trim());
-            }
-        } else {
-            setDiscountFormatted('');
-        }
-    }, [discountType, discount]);
 
     // Carregar clientes do Firebase
     const fetchClients = async () => {
@@ -224,30 +181,6 @@ const ModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
         }
     };
 
-    function removerValoresUndefined(obj) {
-        // Se for null, undefined ou não for um objeto, retornar null
-        if (obj === null || obj === undefined || typeof obj !== 'object') {
-            return obj === undefined ? null : obj;
-        }
-
-        // Se for um array, processar cada item
-        if (Array.isArray(obj)) {
-            return obj.map(item => removerValoresUndefined(item));
-        }
-
-        // Se for um objeto, processar cada propriedade
-        const resultado = {};
-        for (const chave in obj) {
-            if (Object.prototype.hasOwnProperty.call(obj, chave)) {
-                // Substituir undefined por null
-                const valor = obj[chave] === undefined ? null : removerValoresUndefined(obj[chave]);
-                resultado[chave] = valor;
-            }
-        }
-
-        return resultado;
-    }
-
     // Buscar cashback disponível do cliente
     const fetchCashbackDisponivel = async () => {
         // Esta função seria implementada para buscar o saldo de cashback do cliente
@@ -258,55 +191,73 @@ const ModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
     // Carregar produtos do estoque
     const fetchProducts = async () => {
         try {
-            const categories = ['armacoes', 'lentes', 'solares'];
+            setLoading(true);
+            setError('');
+
+            // Categorias de produtos a serem buscadas
+            const categorias = ['armacoes', 'lentes', 'solares'];
             let allProducts = [];
-            let totalProdutos = 0;
 
-            for (const category of categories) {
-                let queryRef;
+            // Caminho correto conforme a estrutura do Firebase: estoque > loja1 > armacoes
+            for (const categoria of categorias) {
+                try {
+                    // Note que o caminho está correto conforme sua estrutura mostrada na captura de tela
+                    const productsRef = collection(firestore, `estoque/${selectedLoja}/${categoria}`);
+                    const querySnapshot = await getDocs(productsRef);
 
-                // Se não for admin, filtra por loja
-                if (!userData?.isAdmin && selectedLoja) {
-                    queryRef = query(collection(firestore, category), where('loja', '==', selectedLoja));
-                } else {
-                    queryRef = collection(firestore, category);
+                    console.log(`Categoria ${categoria}: encontrados ${querySnapshot.size} produtos`);
+
+                    // Mapear documentos para o formato esperado
+                    const categoryProducts = querySnapshot.docs.map(doc => {
+                        const data = doc.data();
+                        return {
+                            id: doc.id,
+                            categoria: categoria,
+                            nome: data.nome || data.info_geral?.nome || `Produto ${doc.id}`,
+                            marca: data.marca || data.info_geral?.marca || "Sem marca",
+                            codigo: data.codigo || data.info_geral?.codigo || doc.id,
+                            preco: data.preco || data.info_geral?.preco || 0,
+                            quantidade: data.quantidade || 0,
+                            info_geral: data.info_geral || {
+                                nome: data.nome || `Produto ${doc.id}`,
+                                marca: data.marca || "Sem marca",
+                                codigo: data.codigo || doc.id,
+                                preco: data.preco || 0
+                            },
+                            info_adicional: data.info_adicional || {}
+                        };
+                    });
+
+                    allProducts = [...allProducts, ...categoryProducts];
+                } catch (err) {
+                    console.error(`Erro ao buscar categoria ${categoria}:`, err);
                 }
-
-                const querySnapshot = await getDocs(queryRef);
-                const productsInCategory = querySnapshot.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data(),
-                    category
-                }));
-
-                // Filtra produtos com quantidade maior que 0
-                const availableProducts = productsInCategory.filter(product => {
-                    const quantidade = parseInt(product.quantidade) || 0;
-                    return quantidade > 0;
-                });
-
-                console.log(`Found ${availableProducts.length} available products in ${category} for loja ${selectedLoja}`);
-                allProducts = [...allProducts, ...availableProducts];
-                totalProdutos += productsInCategory.length;
             }
 
-            if (allProducts.length === 0) {
-                if (totalProdutos === 0) {
-                    setError('Não há produtos cadastrados no estoque desta loja.');
+            // Se encontrou produtos, define no estado
+            if (allProducts.length > 0) {
+                // Filtrar produtos com quantidade disponível
+                const productsWithStock = allProducts.filter(product =>
+                    (product.quantidade || 0) > 0
+                );
+
+                // Se não houver produtos com estoque, usar todos os produtos
+                if (productsWithStock.length === 0) {
+                    console.log('Nenhum produto com estoque. Mostrando todos os produtos.');
+                    setProducts(allProducts);
                 } else {
-                    setError('Todos os produtos desta loja estão com estoque zerado. Por favor, atualize o estoque.');
+                    setProducts(productsWithStock);
                 }
             } else {
-                setError(''); // Limpa o erro se encontrou produtos
+                console.error('Nenhum produto encontrado no estoque!');
+                setError('Nenhum produto encontrado no estoque. Verifique a estrutura do banco de dados.');
             }
 
-            console.log('Total products loaded:', allProducts.length, 'for loja:', selectedLoja);
-            setProducts(allProducts);
-
-        } catch (error) {
-            console.error('Error fetching products:', error);
-            setError('Erro ao carregar produtos: ' + error.message);
-            setProducts([]); // Reseta produtos em caso de erro
+        } catch (err) {
+            console.error('Erro ao buscar produtos:', err);
+            setError('Falha ao carregar lista de produtos');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -379,27 +330,6 @@ const ModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
         const subtotal = calculateSubtotal();
         const discountAmount = calculateDiscount();
         return subtotal - discountAmount;
-    };
-
-    // Função para obter as coleções que precisam de OS
-    // Atualize a função getOSCollections para usar as collections deste componente
-    // Função para obter as coleções que precisam de OS
-    const getOSCollections = () => {
-        return collections.filter(c => {
-            // Verifica se tem armação E lentes (caso padrão)
-            const hasFrameAndLens = c.items.some(item => item.categoria === 'armacoes') &&
-                c.items.some(item => item.categoria === 'lentes');
-
-            // Verifica se tem apenas armação ou apenas lentes mas com forceGenerateOS ativado
-            const hasFrameOrLensAndForced = c.forceGenerateOS &&
-                (c.items.some(item => item.categoria === 'armacoes') ||
-                    c.items.some(item => item.categoria === 'lentes'));
-
-            // Gera OS se: 
-            // 1. generateOS está ativo E
-            // 2. Tem armação E lentes OU tem armação OU lentes com força ativada
-            return c.generateOS && (hasFrameAndLens || hasFrameOrLensAndForced);
-        });
     };
 
     // Calcular o total já atribuído aos meios de pagamento
@@ -536,109 +466,27 @@ const ModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
     const addToCart = (product) => {
         if (!product) return;
 
-        // Verificar se tem estoque disponível
-        const quantidadeEstoque = parseInt(product.quantidade) || 0;
-        if (quantidadeEstoque < newProductQty && error !== 'Aviso: Mostrando produtos sem estoque disponível') {
-            setError(`Quantidade solicitada excede o estoque disponível (${quantidadeEstoque})`);
-            setTimeout(() => setError(''), 3000);
-            return;
+        // Verificar se o produto já está no carrinho
+        const existingItem = cartItems.find(item => item.id === product.id);
+
+        if (existingItem) {
+            // Aumentar a quantidade se já estiver no carrinho
+            setCartItems(cartItems.map(item =>
+                item.id === product.id
+                    ? { ...item, quantity: item.quantity + newProductQty }
+                    : item
+            ));
+        } else {
+            // Adicionar novo item ao carrinho
+            setCartItems([...cartItems, { ...product, quantity: newProductQty }]);
         }
 
-        try {
-            // Verificar o tipo de produto
-            const isFrame = product.categoria === 'armacoes';
-            const isLens = product.categoria === 'lentes';
-            const isSunglass = product.categoria === 'solares';
-
-            // Se for óculos de sol, não precisa de OS
-            const requiresOS = !isSunglass;
-
-            // Verificar se já existe uma armação no carrinho quando adicionar uma lente
-            if (isLens) {
-                const hasFrame = cartItems.some(item => item.categoria === 'armacoes');
-                if (!hasFrame) {
-                    setError('É necessário adicionar uma armação antes de adicionar lentes');
-                    setTimeout(() => setError(''), 3000);
-                    return;
-                }
-            }
-
-            // Verificar se já existe uma lente no carrinho quando adicionar uma armação
-            if (isFrame) {
-                const hasLens = cartItems.some(item => item.categoria === 'lentes');
-                if (hasLens) {
-                    setError('Já existe uma lente no carrinho. Remova a lente antes de adicionar uma nova armação.');
-                    setTimeout(() => setError(''), 3000);
-                    return;
-                }
-            }
-
-            // Verificar se o produto já está no carrinho
-            const existingItem = cartItems.find(item =>
-                item.id === product.id &&
-                item.categoria === product.categoria
-            );
-
-            if (existingItem) {
-                // Verificar se a nova quantidade total excede o estoque
-                const newTotalQty = existingItem.quantity + newProductQty;
-                if (quantidadeEstoque < newTotalQty && error !== 'Aviso: Mostrando produtos sem estoque disponível') {
-                    setError(`Quantidade total excede o estoque disponível (${quantidadeEstoque})`);
-                    setTimeout(() => setError(''), 3000);
-                    return;
-                }
-
-                // Aumentar a quantidade se já estiver no carrinho
-                setCartItems(cartItems.map(item =>
-                    (item.id === product.id && item.categoria === product.categoria)
-                        ? { ...item, quantity: newTotalQty }
-                        : item
-                ));
-            } else {
-                // Adicionar novo item ao carrinho
-                const produtoFormatado = {
-                    id: product.id,
-                    categoria: product.categoria,
-                    loja: product.loja || selectedLoja,
-                    nome: product.nome || product.titulo || '',
-                    codigo: product.codigo || '',
-                    marca: product.marca || '',
-                    sku: product.sku || '',
-                    valor: parseFloat(product.valor) || 0,
-                    preco: parseFloat(product.valor) || 0,
-                    custo: parseFloat(product.custo) || 0,
-                    quantidade: product.quantidade,
-                    quantity: newProductQty,
-                    requiresOS: requiresOS,
-                    // Adicionar informações específicas por categoria
-                    ...(isFrame && {
-                        aro: product.aro,
-                        ponte: product.ponte,
-                        haste: product.haste,
-                        material: product.material
-                    }),
-                    ...(isLens && {
-                        indice: product.indice,
-                        tratamento: product.tratamento,
-                        material: product.material
-                    }),
-                    ...(isSunglass && {
-                        protecao: product.protecao,
-                        material: product.material
-                    })
-                };
-
-                setCartItems([...cartItems, produtoFormatado]);
-            }
-
-            // Limpar campos
-            setProductSearchTerm('');
-            setFilteredProducts([]);
-            setNewProductQty(1);
-
-        } catch (err) {
-            console.error("Erro ao adicionar produto ao carrinho:", err);
-            setError("Erro ao adicionar produto. Tente novamente.");
+        // Limpar campos
+        setProductSearchTerm('');
+        setFilteredProducts([]);
+        setNewProductQty(1);
+        if (produtoInputRef.current) {
+            produtoInputRef.current.focus();
         }
     };
 
@@ -705,41 +553,6 @@ const ModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
         }).format(value);
     };
 
-    // Adicione esta função para lidar com a formatação do valor de desconto
-    const handleDiscountChange = (e) => {
-        // Remove qualquer caractere que não seja número
-        const valor = e.target.value.replace(/\D/g, '');
-
-        if (valor === '') {
-            setDiscount(0);
-            setDiscountFormatted('');
-            return;
-        }
-
-        // Converte para número e divide por 100 para considerar os centavos
-        const valorNumerico = Number(valor) / 100;
-
-        // Atualiza o estado do desconto com o valor numérico para cálculos
-        setDiscount(valorNumerico);
-
-        // Formata o valor para exibição dependendo do tipo de desconto
-        if (discountType === 'percentage') {
-            // Para percentual, exibimos com até 2 casas decimais e o símbolo %
-            setDiscountFormatted(valorNumerico.toLocaleString('pt-BR', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-            }));
-        } else {
-            // Para valor monetário, exibimos como moeda
-            setDiscountFormatted(valorNumerico.toLocaleString('pt-BR', {
-                style: 'currency',
-                currency: 'BRL'
-            }).replace('R$', '').trim());
-        }
-    };
-
-
-
     // Verificar se todos os métodos de pagamento estão processados
     const allPaymentsProcessed = () => {
         return paymentMethods.every(method => method.processed);
@@ -793,66 +606,377 @@ const ModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
 
     // Finalizar venda
     const finalizeSale = async () => {
+        if (cartItems.length === 0) {
+            setError('Adicione pelo menos um produto ao carrinho');
+            return;
+        }
+
+        if (!selectedClient) {
+            setError('Selecione um cliente para continuar');
+            return;
+        }
+
+        if (!allPaymentsProcessed()) {
+            setError('Todos os métodos de pagamento precisam ser processados');
+            return;
+        }
+
+        if (!isPaymentComplete()) {
+            setError('O valor total dos pagamentos deve ser igual ao valor da venda');
+            return;
+        }
+
         try {
             setLoading(true);
-            setError('');
 
-            // Verificar se há necessidade de gerar OS
-            const osCollections = getOSCollections();
+            const subtotal = calculateSubtotal();
+            const discountAmount = calculateDiscount();
+            const total = calculateTotal();
 
-            if (osCollections.length > 0) {
-                // Preparar dados iniciais para cada OS necessária
-                const initialOSData = osCollections.map(collection => ({
-                    armacaoDados: collection.items.find(item => item.categoria === 'armacoes')?.produto || '',
-                    lenteDados: collection.items.find(item => item.categoria === 'lentes')?.produto || '',
-                    cliente: selectedClient,
-                    processed: false
-                }));
+            // Gerar ID da OS
+            const osPrefix = 'OS';
+            const timestamp = Date.now().toString().slice(-6);
+            const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+            const newOsId = `${osPrefix}${timestamp}${random}`;
 
-                setOsFormData(initialOSData);
-                setPendingOS(true);
-                setCurrentOSIndex(0);
-                setShowOSForm(true);
-                return; // Interrompe aqui para mostrar o formulário de OS
+            // Definir status inicial com base nos métodos de pagamento
+            let statusVenda = 'paga'; // Padrão para pagamentos imediatos
+            let statusPagamento = 'aprovado';
+
+            // Se algum método de pagamento não for imediato, ajusta o status
+            const temPagamentoPendente = paymentMethods.some(payment => {
+                return ['boleto', 'ted', 'crypto'].includes(payment.method);
+            });
+
+            if (temPagamentoPendente) {
+                statusVenda = 'aguardando_pagamento';
+                statusPagamento = 'pendente';
             }
 
-            // Se não houver OS, continua com a finalização normal da venda
-            await processarVenda();
+            // Preparar dados de pagamento para Firebase
+            const dadosPagamento = paymentMethods.map(payment => {
+                const dadosEspecificos = {};
 
-        } catch (error) {
-            console.error('Erro ao finalizar venda:', error);
-            setError('Erro ao finalizar venda: ' + error.message);
-            setLoading(false);
-        }
-    };
+                if (payment.method === 'boleto') {
+                    const dataVencimento = boletoVencimento ? new Date(boletoVencimento) : new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
+                    dadosEspecificos.codigo_barras = '00000000000000000000000000000000000000000000';
+                    dadosEspecificos.linha_digitavel = '00000.00000 00000.000000 00000.000000 0 00000000000000';
+                    dadosEspecificos.url_boleto = null;
+                    dadosEspecificos.data_vencimento = dataVencimento;
+                }
+                else if (payment.method === 'cartao' && payment.details) {
+                    dadosEspecificos.ultimos_digitos = payment.details.ultimos_digitos || '0000';
+                    dadosEspecificos.bandeira = payment.details.bandeira || 'indefinida';
+                    dadosEspecificos.parcelas = payment.details.parcelas || 1;
+                    dadosEspecificos.gateway_id = 'simulacao_gateway';
+                    dadosEspecificos.transaction_id = `tx_${Date.now()}`;
+                }
+                else if (payment.method === 'crediario') {
+                    const numeroParcelas = parseInt(parcelasCredario) || 3;
+                    const valorParcela = (payment.value || 0) / numeroParcelas;
 
-    // Função para processar a venda após preenchimento das OS
-    const processarVenda = async () => {
-        try {
-            // ... lógica existente de processamento da venda ...
+                    const parcelas = [];
+                    let dataProximaParcela = new Date();
 
-            // Após salvar a venda, salvar as OS se existirem
-            if (osFormData.length > 0) {
-                for (const osData of osFormData) {
-                    if (!osData.processed) continue;
+                    for (let i = 0; i < numeroParcelas; i++) {
+                        dataProximaParcela = new Date(dataProximaParcela);
+                        dataProximaParcela.setMonth(dataProximaParcela.getMonth() + 1);
 
-                    const osRef = collection(firestore, `${selectedLoja}/services/os`);
-                    await addDoc(osRef, {
-                        ...osData,
-                        id_venda: saleId,
-                        data_criacao: new Date(),
-                        status: 'processamentoInicial',
-                        vendedor: vendedor
+                        parcelas.push({
+                            numero: i + 1,
+                            valor: valorParcela || 0,
+                            status: i === 0 ? 'paga' : 'pendente',
+                            data_vencimento: new Date(dataProximaParcela),
+                            data_pagamento: i === 0 ? new Date() : null
+                        });
+                    }
+
+                    dadosEspecificos.status_parcelas = parcelas;
+                    dadosEspecificos.data_primeira_parcela = new Date();
+                }
+                else if (payment.method === 'cashback') {
+                    dadosEspecificos.saldo_anterior = cashbackDisponivel || 0;
+                    dadosEspecificos.saldo_utilizado = payment.value || 0;
+                    dadosEspecificos.saldo_restante = (cashbackDisponivel || 0) - (payment.value || 0);
+                }
+                else if (payment.method === 'crypto' && payment.details) {
+                    dadosEspecificos.moeda = payment.details.moeda || 'bitcoin';
+                    dadosEspecificos.endereco = payment.details.endereco || '';
+                    dadosEspecificos.taxa_cambio = payment.details.taxa_cambio || 0;
+                    dadosEspecificos.valor_crypto = payment.details.valor_crypto || '0';
+                    dadosEspecificos.status_transacao = 'aguardando';
+                    dadosEspecificos.transaction_id = `crypto_${Date.now()}`;
+                }
+
+                return {
+                    metodo: payment.method || 'dinheiro',
+                    valor: payment.value || 0,
+                    status: payment.method === 'boleto' || payment.method === 'ted' || payment.method === 'crypto'
+                        ? 'pendente'
+                        : 'aprovado',
+                    data_processamento: new Date(),
+                    dados_especificos: removerValoresUndefined(dadosEspecificos)
+                };
+            });
+
+            // 1. Estruturar dados da venda com os novos campos de pagamento
+            const venda = {
+                cliente: {
+                    id: selectedClient.id || '',
+                    nome: selectedClient.nome || '',
+                    cpf: selectedClient.cpf || ''
+                },
+                produtos: cartItems.map(item => ({
+                    id: item.id || '',
+                    categoria: item.categoria || '',
+                    nome: item.nome || item.info_geral?.nome || '',
+                    codigo: item.codigo || item.info_geral?.codigo || '',
+                    marca: item.marca || item.info_geral?.marca || '',
+                    preco: item.preco || item.info_geral?.preco || 0,
+                    quantidade: item.quantity || 0,
+                    total: ((item.preco || item.info_geral?.preco || 0) * (item.quantity || 0)) || 0
+                })),
+                pagamentos: dadosPagamento,
+                pagamento_resumo: {
+                    valor_total: total || 0,
+                    metodos_utilizados: paymentMethods.map(p => p.method || ''),
+                    status_geral: statusPagamento || 'pendente',
+                    data_criacao: serverTimestamp(),
+                    data_aprovacao: statusPagamento === 'aprovado' ? serverTimestamp() : null
+                },
+                subtotal: subtotal || 0,
+                desconto: {
+                    tipo: discountType || 'percentage',
+                    valor: discount || 0,
+                    total: discountAmount || 0
+                },
+                total: total || 0,
+                data: serverTimestamp(),
+                vendedor: {
+                    id: user?.uid || '',
+                    nome: vendedor || ''
+                },
+                observacao: observation || '',
+                status_venda: statusVenda || 'pendente',
+                os_id: newOsId || '',
+                // Removendo o campo requer_montagem que é redundante
+            };
+
+            // Remover valores undefined antes de salvar
+            const vendaLimpa = removerValoresUndefined(venda);
+
+            // 2. Registrar venda no Firebase
+            const vendaRef = collection(firestore, `lojas/${selectedLoja}/vendas/items/items`);
+            const novaVendaRef = await addDoc(vendaRef, vendaLimpa);
+
+            // 3. Atualizar estoque apenas se o pagamento for aprovado ou for crediário
+            if (statusVenda === 'paga') {
+                await Promise.all(cartItems.map(async (item) => {
+                    // Caminho correto para atualizar o estoque
+                    const productRef = doc(firestore, `estoque/${selectedLoja}/${item.categoria}`, item.id);
+
+                    try {
+                        const productDoc = await getDoc(productRef);
+
+                        if (productDoc.exists()) {
+                            const productData = productDoc.data();
+                            const currentStock = productData.quantidade || 0;
+
+                            // Garantir que não ficará negativo
+                            const newStock = Math.max(0, currentStock - item.quantity);
+
+                            // Atualizar estoque
+                            await updateDoc(productRef, {
+                                quantidade: newStock
+                            });
+
+                            console.log(`Estoque atualizado: ${item.nome || item.id} - Novo estoque: ${newStock}`);
+                        } else {
+                            console.warn(`Produto não encontrado no estoque: ${item.id} (${item.categoria})`);
+                        }
+                    } catch (error) {
+                        console.error(`Erro ao atualizar estoque do produto ${item.id}:`, error);
+                        // Continuar mesmo com erro em um produto específico
+                    }
+                }));
+            }
+
+            // 4. Registrar ordem de serviço apenas se pagamento aprovado
+            if (statusVenda === 'paga') {
+                // Prepare os dados da OS
+                const dadosOS = {
+                    id_os: newOsId,
+                    id_venda: novaVendaRef.id,
+                    cliente: {
+                        id: selectedClient.id,
+                        nome: selectedClient.nome,
+                        cpf: selectedClient.cpf,
+                        contato: selectedClient.telefone || ''
+                    },
+                    status: 'em_montagem', // Mudando status inicial para em_montagem
+                    data_criacao: new Date(),
+                    data_previsao: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000), // +2 dias
+                    produtos: cartItems.map(item => ({
+                        id: item.id,
+                        nome: item.info_geral?.nome,
+                        marca: item.info_geral?.marca
+                    })),
+                    observacoes: observation
+                };
+
+                // Remover valores undefined
+                const dadosOSLimpos = removerValoresUndefined(dadosOS);
+
+                // E então use os dados limpos
+                const osRef = collection(firestore, `lojas/${selectedLoja}/servicos/items/items`);
+                await addDoc(osRef, dadosOSLimpos);
+            }
+
+            // 5. Registrar no controle de caixa para pagamentos imediatos
+            for (const payment of paymentMethods) {
+                if (payment.status !== 'pendente' && payment.method !== 'cashback') {
+                    const caixaRef = collection(firestore, `lojas/${selectedLoja}/financeiro/controle_caixa/items`);
+                    await addDoc(caixaRef, {
+                        tipo: 'entrada',
+                        valor: payment.value,
+                        descricao: `Venda #${novaVendaRef.id} - Cliente: ${selectedClient.nome} - Pagamento: ${payment.method}`,
+                        formaPagamento: payment.method,
+                        data: new Date(), // Modificar se estava usando serverTimestamp() dentro de algum array
+                        registradoPor: {
+                            id: user?.uid,
+                            nome: vendedor
+                        },
+                        vendaId: novaVendaRef.id
                     });
                 }
             }
 
-            setSuccess(true);
-            setLoading(false);
+            // 6. Para boletos e TEDs, adicionar no controle de contas a receber
+            for (const payment of paymentMethods) {
+                if (payment.method === 'boleto' || payment.method === 'ted') {
+                    const contasReceberRef = collection(firestore, `lojas/${selectedLoja}/financeiro/contas_receber/items`);
+                    await addDoc(contasReceberRef, {
+                        tipo: 'venda',
+                        valor: payment.value,
+                        descricao: `Venda #${novaVendaRef.id} - Cliente: ${selectedClient.nome}`,
+                        forma_pagamento: payment.method,
+                        data_criacao: new Date(), // Modificar se estava usando serverTimestamp() dentro de algum array
+                        data_vencimento: payment.method === 'boleto' ?
+                            (boletoVencimento ? new Date(boletoVencimento) : new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)) :
+                            new Date(Date.now() + 1 * 24 * 60 * 60 * 1000),
+                        status: 'pendente',
+                        cliente: {
+                            id: selectedClient.id,
+                            nome: selectedClient.nome
+                        },
+                        registrado_por: {
+                            id: user?.uid,
+                            nome: vendedor
+                        },
+                        venda_id: novaVendaRef.id
+                    });
+                }
+            }
 
-        } catch (error) {
-            console.error('Erro ao processar venda:', error);
-            setError('Erro ao processar venda: ' + error.message);
+            // 7. Para crediário, adicionar cada parcela no controle de contas a receber
+            for (const payment of paymentMethods) {
+                if (payment.method === 'crediario') {
+                    const contasReceberRef = collection(firestore, `lojas/${selectedLoja}/financeiro/contas_receber/items`);
+
+                    // Pular a primeira parcela se for considerada como entrada
+                    const parcelasAPagar = payment.dados_especificos?.status_parcelas?.filter(p => p.status === 'pendente') || [];
+
+                    await Promise.all(parcelasAPagar.map(async (parcela) => {
+                        await addDoc(contasReceberRef, {
+                            tipo: 'crediario',
+                            valor: parcela.valor,
+                            descricao: `Parcela ${parcela.numero}/${parcelasAPagar.length + 1} - Venda #${novaVendaRef.id}`,
+                            forma_pagamento: 'crediario',
+                            data_criacao: serverTimestamp(),
+                            data_vencimento: parcela.data_vencimento,
+                            status: 'pendente',
+                            cliente: {
+                                id: selectedClient.id,
+                                nome: selectedClient.nome
+                            },
+                            registrado_por: {
+                                id: user?.uid,
+                                nome: vendedor
+                            },
+                            venda_id: novaVendaRef.id,
+                            parcela: parcela.numero
+                        });
+                    }));
+                }
+            }
+
+            // 8. Para cashback, atualizar o saldo do cliente
+            const temCashback = paymentMethods.some(p => p.method === 'cashback');
+            if (temCashback) {
+                const totalCashback = paymentMethods
+                    .filter(p => p.method === 'cashback')
+                    .reduce((sum, p) => sum + parseFloat(p.value || 0), 0);
+
+                // Atualizar saldo de cashback do cliente
+                if (totalCashback > 0) {
+                    const clienteRef = doc(firestore, `lojas/clientes/users/${selectedClient.id}`);
+
+                    try {
+                        await updateDoc(clienteRef, {
+                            'cashback.saldo': cashbackDisponivel - totalCashback,
+                            'cashback.ultima_atualizacao': serverTimestamp()
+                        });
+                    } catch (err) {
+                        console.error('Erro ao atualizar saldo de cashback:', err);
+                    }
+                }
+            }
+
+            // 9. Para pagamentos em crypto, registrar transação pendente
+            const temCrypto = paymentMethods.some(p => p.method === 'crypto');
+            if (temCrypto) {
+                const cryptoRef = collection(firestore, `lojas/${selectedLoja}/financeiro/crypto_transacoes`);
+                await addDoc(cryptoRef, {
+                    venda_id: novaVendaRef.id,
+                    cliente_id: selectedClient.id,
+                    cliente_nome: selectedClient.nome,
+                    valor_brl: payment.value,
+                    moeda: payment.dados_especificos?.moeda || 'bitcoin',
+                    endereco: payment.dados_especificos?.endereco || '',
+                    valor_crypto: payment.dados_especificos?.valor_crypto || '0',
+                    taxa_cambio: payment.dados_especificos?.taxa_cambio || 0,
+                    status: 'aguardando_confirmacao',
+                    data_criacao: new Date(), // Modificar se estava usando serverTimestamp() dentro de algum array
+                    data_confirmacao: null,
+                    registrado_por: {
+                        id: user?.uid,
+                        nome: vendedor
+                    }
+                });
+            }
+
+            setSaleId(novaVendaRef.id);
+            setOsId(newOsId);
+
+            // Definir dados de retorno específicos para cada método de pagamento
+            // Por exemplo, para boleto:
+            const pagamentoBoleto = paymentMethods.find(p => p.method === 'boleto');
+            if (pagamentoBoleto) {
+                setBoletoData({
+                    url: pagamentoBoleto.dados_especificos?.url_boleto || '#',
+                    linhaDigitavel: pagamentoBoleto.dados_especificos?.linha_digitavel || '',
+                    dataVencimento: pagamentoBoleto.dados_especificos?.data_vencimento || new Date()
+                });
+            }
+
+            setSuccess(true);
+            setStatusPagamentoFinal(statusPagamento);
+            setStatusVendaFinal(statusVenda);
+
+        } catch (err) {
+            console.error('Erro ao finalizar venda:', err);
+            setError('Falha ao processar a venda. Tente novamente.');
+        } finally {
             setLoading(false);
         }
     };
@@ -916,8 +1040,6 @@ const ModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
         setCashbackDisponivel(0);
         setSelectedCrypto('bitcoin');
         setCryptoAddress('');
-        setShowQrScanner(false);
-        setScannedQrData(null);
         onClose();
     };
 
@@ -952,536 +1074,586 @@ const ModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
         }
     };
 
-    // Adicionar componente de formulário de OS simplificado
-    const OSForm = ({ data, onSubmit, onCancel }) => {
-        const [formData, setFormData] = useState(data);
+    // Renderizar informações de sucesso após finalizar a venda
+    const renderSuccess = () => {
+        // Definir título com base no status da venda
+        let titulo = 'Venda Finalizada com Sucesso!';
+        let corTitulo = 'text-green-600';
+        let icone = <FiCheck className="h-6 w-6 text-green-600" />;
 
-        const handleChange = (e) => {
-            const { name, value } = e.target;
-            setFormData(prev => ({ ...prev, [name]: value }));
-        };
-
-        const tipoOS = formData.tipoOS || "completa";
+        if (statusVendaFinal === 'aguardando_pagamento') {
+            titulo = 'Venda Registrada - Aguardando Pagamento';
+            corTitulo = 'text-yellow-600';
+            icone = <FiClock className="h-6 w-6 text-yellow-600" />;
+        } else if (statusVendaFinal === 'em_processamento') {
+            titulo = 'Venda Registrada - Processando Pagamento';
+            corTitulo = 'text-blue-600';
+            icone = <FiRefreshCw className="h-6 w-6 text-blue-600" />;
+        }
 
         return (
-            <div className="bg-white p-6 rounded-lg shadow-lg max-h-[80vh] overflow-y-auto">
-                <h2 className="text-lg font-bold text-[#81059e] mb-4">Dados da Ordem de Serviço</h2>
+            <div className="p-8 text-center">
+                <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
+                    {icone}
+                </div>
+                <h3 className={`text-lg font-medium ${corTitulo} mb-2`}>{titulo}</h3>
+                <p className="text-sm text-gray-500 mb-1">Venda #{saleId}</p>
 
-                {/* Alerta para OS especiais */}
-                {(tipoOS === "somente_armacao" || tipoOS === "somente_lente") && (
-                    <div className="mb-4 p-3 bg-yellow-50 border-l-4 border-yellow-500 text-yellow-700">
-                        <h3 className="font-medium">Atenção: Kit Incompleto</h3>
-                        <p className="text-sm">
-                            {tipoOS === "somente_armacao"
-                                ? "Cliente comprou apenas a armação e vai trazer suas próprias lentes."
-                                : "Cliente comprou apenas as lentes e vai trazer sua própria armação."}
+                {statusVendaFinal === 'paga' && (
+                    <>
+                        <p className="text-sm text-gray-500 mb-4">Ordem de Serviço: {osId}</p>
+                        <p className="text-sm text-gray-600 mb-6">
+                            A ordem de serviço foi registrada e está aguardando montagem.
+                        </p>
+                    </>
+                )}
+
+                {/* Resumo dos métodos de pagamento utilizados */}
+                <div className="mb-6 p-4 border-2 border-gray-200 bg-gray-50 rounded-sm">
+                    <h4 className="font-medium text-gray-700 mb-3">Resumo dos Pagamentos</h4>
+
+                    <div className="space-y-3">
+                        {paymentMethods.map((payment, idx) => {
+                            let methodIcon, methodColor, methodName;
+
+                            switch (payment.method) {
+                                case 'dinheiro':
+                                    methodIcon = <FiDollarSign />;
+                                    methodColor = 'text-green-600';
+                                    methodName = 'Dinheiro';
+                                    break;
+                                case 'cartao':
+                                    methodIcon = <FiCreditCard />;
+                                    methodColor = 'text-blue-600';
+                                    methodName = 'Cartão';
+                                    break;
+                                case 'pix':
+                                    methodIcon = <span className="font-bold">PIX</span>;
+                                    methodColor = 'text-purple-600';
+                                    methodName = 'PIX';
+                                    break;
+                                case 'boleto':
+                                    methodIcon = <FiFileText />;
+                                    methodColor = 'text-yellow-600';
+                                    methodName = 'Boleto';
+                                    break;
+                                case 'ted':
+                                    methodIcon = <FiActivity />;
+                                    methodColor = 'text-blue-500';
+                                    methodName = 'TED';
+                                    break;
+                                case 'crediario':
+                                    methodIcon = <FiClipboard />;
+                                    methodColor = 'text-purple-700';
+                                    methodName = 'Crediário';
+                                    break;
+                                case 'cashback':
+                                    methodIcon = <FiPercent />;
+                                    methodColor = 'text-orange-500';
+                                    methodName = 'Cashback';
+                                    break;
+                                case 'crypto':
+                                    methodIcon = payment.details?.moeda === 'bitcoin' ? <FaBitcoin /> : <FaEthereum />;
+                                    methodColor = 'text-amber-500';
+                                    methodName = payment.details?.moeda === 'bitcoin' ? 'Bitcoin' : 'Ethereum';
+                                    break;
+                                default:
+                                    methodIcon = <FiDollarSign />;
+                                    methodColor = 'text-gray-600';
+                                    methodName = payment.method;
+                            }
+
+                            return (
+                                <div key={idx} className="flex justify-between items-center p-2 rounded border border-gray-200">
+                                    <div className="flex items-center">
+                                        <span className={`mr-2 ${methodColor}`}>{methodIcon}</span>
+                                        <span className="font-medium">{methodName}</span>
+                                    </div>
+                                    <span className="font-semibold">{formatCurrency(payment.value)}</span>
+                                </div>
+                            );
+                        })}
+
+                        <div className="flex justify-between items-center p-2 mt-2 font-bold border-t border-gray-300">
+                            <span>Total</span>
+                            <span className="text-[#81059e]">{formatCurrency(calculateTotal())}</span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Conteúdo específico para boleto */}
+                {paymentMethods.some(p => p.method === 'boleto') && boletoData && (
+                    <div className="mb-6 p-4 border-2 border-dashed border-yellow-400 bg-yellow-50 rounded-sm">
+                        <h4 className="font-medium text-yellow-700 mb-2">Boleto Gerado</h4>
+                        <p className="text-sm text-gray-700 mb-1">Vencimento: {new Date(boletoData.dataVencimento).toLocaleDateString('pt-BR')}</p>
+                        <p className="text-xs font-mono bg-white p-2 border border-gray-200 rounded mb-2 overflow-x-auto">
+                            {boletoData.linhaDigitavel}
+                        </p>
+                        <div className="flex justify-center mb-2">
+                            <button
+                                onClick={() => window.open(boletoData.url, '_blank')}
+                                className="inline-flex justify-center px-4 py-2 text-sm font-medium text-white bg-yellow-500 border border-transparent rounded-md hover:bg-yellow-600"
+                            >
+                                <FiPrinter className="mr-2" /> Imprimir Boleto
+                            </button>
+                        </div>
+                        <p className="text-xs text-gray-500">
+                            O boleto também foi enviado para o e-mail do cliente. O pagamento será confirmado em até 2 dias úteis.
                         </p>
                     </div>
                 )}
 
-                <form onSubmit={(e) => {
-                    e.preventDefault();
-                    onSubmit(formData);
-                }}>
-                    {/* Campos comuns a todos os tipos de OS */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">Laboratório</label>
-                            <select
-                                name="laboratorio"
-                                value={formData.laboratorio}
-                                onChange={handleChange}
-                                className="w-full border border-gray-300 p-2 rounded-md"
-                                required
-                            >
-                                <option value="">Selecione...</option>
-                                <option value="Laboratório 1">Laboratório 1</option>
-                                <option value="Laboratório 2">Laboratório 2</option>
-                                <option value="Laboratório 3">Laboratório 3</option>
-                            </select>
+                {/* Conteúdo específico para TED */}
+                {paymentMethods.some(p => p.method === 'ted') && (
+                    <div className="mb-6 p-4 border-2 border-dashed border-blue-400 bg-blue-50 rounded-sm">
+                        <h4 className="font-medium text-blue-700 mb-2">Transferência Bancária (TED)</h4>
+                        <p className="text-sm text-gray-700 mb-3">Por favor, realize a transferência para:</p>
+                        <div className="text-sm bg-white p-3 border border-gray-200 rounded-sm mb-3 text-left">
+                            <p><strong>Banco:</strong> Banco do Brasil</p>
+                            <p><strong>Agência:</strong> 1234-5</p>
+                            <p><strong>Conta:</strong> 67890-1</p>
+                            <p><strong>CNPJ:</strong> 12.345.678/0001-90</p>
+                            <p><strong>Favorecido:</strong> MASI Óticas LTDA</p>
+                            <p><strong>Valor:</strong> {formatCurrency(paymentMethods.find(p => p.method === 'ted')?.value || 0)}</p>
                         </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">Status</label>
-                            <select
-                                name="status"
-                                value={formData.status}
-                                onChange={handleChange}
-                                className="w-full border border-gray-300 p-2 rounded-md"
-                                required
-                            >
-                                <option value="processamentoInicial">Em processamento inicial</option>
-                                <option value="aguardandoCliente">Aguardando cliente trazer {tipoOS === "somente_armacao" ? "lentes" : "armação"}</option>
-                                <option value="encaminhadoLaboratorio">Encaminhado ao Laboratório</option>
-                                <option value="montagemProgresso">Montagem em Progresso</option>
-                                <option value="prontoEntrega">Pronto para Entrega</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    {/* Área de produtos */}
-                    <div className="mb-4 border border-gray-200 rounded-lg p-4 bg-gray-50">
-                        <h3 className="text-md font-medium text-[#81059e] mb-2">Produtos</h3>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {/* Armação */}
-                            <div>
-                                <div className="flex justify-between">
-                                    <label className="block text-sm font-medium text-gray-700">Armação</label>
-                                    {tipoOS === "somente_lente" && (
-                                        <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full">
-                                            Cliente traz
-                                        </span>
-                                    )}
-                                </div>
-                                {tipoOS === "somente_lente" ? (
-                                    <div className="mt-2">
-                                        <input
-                                            type="text"
-                                            name="armacaoClienteDescricao"
-                                            value={formData.armacaoClienteDescricao || ""}
-                                            onChange={handleChange}
-                                            placeholder="Descrição da armação do cliente"
-                                            className="w-full border border-gray-300 p-2 rounded-md"
-                                        />
-                                    </div>
-                                ) : (
-                                    <div className="mt-2 p-3 bg-white border border-gray-200 rounded-md">
-                                        {formData.armacaoDados || "Nenhuma armação selecionada"}
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Lentes */}
-                            <div>
-                                <div className="flex justify-between">
-                                    <label className="block text-sm font-medium text-gray-700">Lentes</label>
-                                    {tipoOS === "somente_armacao" && (
-                                        <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full">
-                                            Cliente traz
-                                        </span>
-                                    )}
-                                </div>
-                                {tipoOS === "somente_armacao" ? (
-                                    <div className="mt-2">
-                                        <input
-                                            type="text"
-                                            name="lentesClienteDescricao"
-                                            value={formData.lentesClienteDescricao || ""}
-                                            onChange={handleChange}
-                                            placeholder="Descrição das lentes do cliente"
-                                            className="w-full border border-gray-300 p-2 rounded-md"
-                                        />
-                                    </div>
-                                ) : (
-                                    <div className="mt-2 p-3 bg-white border border-gray-200 rounded-md">
-                                        {formData.lenteDados || "Nenhuma lente selecionada"}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Receita médica */}
-                    <div className="mb-4">
-                        <h3 className="text-md font-medium text-[#81059e] mb-2">Receita Médica</h3>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <h4 className="text-sm font-medium text-gray-700">Olho Direito</h4>
-                                <div className="grid grid-cols-4 gap-2">
-                                    <div>
-                                        <label className="block text-xs text-gray-600">Esfera</label>
-                                        <input
-                                            type="text"
-                                            name="esferaDireito"
-                                            value={formData.esferaDireito || ''}
-                                            onChange={handleChange}
-                                            className="w-full border border-gray-300 p-1 rounded-md text-sm"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs text-gray-600">Cilindro</label>
-                                        <input
-                                            type="text"
-                                            name="cilindroDireito"
-                                            value={formData.cilindroDireito || ''}
-                                            onChange={handleChange}
-                                            className="w-full border border-gray-300 p-1 rounded-md text-sm"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs text-gray-600">Eixo</label>
-                                        <input
-                                            type="text"
-                                            name="eixoDireito"
-                                            value={formData.eixoDireito || ''}
-                                            onChange={handleChange}
-                                            className="w-full border border-gray-300 p-1 rounded-md text-sm"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs text-gray-600">Adição</label>
-                                        <input
-                                            type="text"
-                                            name="adicaoDireito"
-                                            value={formData.adicaoDireito || ''}
-                                            onChange={handleChange}
-                                            className="w-full border border-gray-300 p-1 rounded-md text-sm"
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div>
-                                <h4 className="text-sm font-medium text-gray-700">Olho Esquerdo</h4>
-                                <div className="grid grid-cols-4 gap-2">
-                                    <div>
-                                        <label className="block text-xs text-gray-600">Esfera</label>
-                                        <input
-                                            type="text"
-                                            name="esferaEsquerdo"
-                                            value={formData.esferaEsquerdo || ''}
-                                            onChange={handleChange}
-                                            className="w-full border border-gray-300 p-1 rounded-md text-sm"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs text-gray-600">Cilindro</label>
-                                        <input
-                                            type="text"
-                                            name="cilindroEsquerdo"
-                                            value={formData.cilindroEsquerdo || ''}
-                                            onChange={handleChange}
-                                            className="w-full border border-gray-300 p-1 rounded-md text-sm"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs text-gray-600">Eixo</label>
-                                        <input
-                                            type="text"
-                                            name="eixoEsquerdo"
-                                            value={formData.eixoEsquerdo || ''}
-                                            onChange={handleChange}
-                                            className="w-full border border-gray-300 p-1 rounded-md text-sm"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs text-gray-600">Adição</label>
-                                        <input
-                                            type="text"
-                                            name="adicaoEsquerdo"
-                                            value={formData.adicaoEsquerdo || ''}
-                                            onChange={handleChange}
-                                            className="w-full border border-gray-300 p-1 rounded-md text-sm"
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Medidas pupilares */}
-                    <div className="mb-4">
-                        <h3 className="text-md font-medium text-[#81059e] mb-2">Medidas Pupilares</h3>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700">Distância Interpupilar</label>
-                                <input
-                                    type="text"
-                                    name="distanciaInterpupilar"
-                                    value={formData.distanciaInterpupilar || ''}
-                                    onChange={handleChange}
-                                    className="w-full border border-gray-300 p-2 rounded-md"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700">Altura</label>
-                                <input
-                                    type="text"
-                                    name="altura"
-                                    value={formData.altura || ''}
-                                    onChange={handleChange}
-                                    className="w-full border border-gray-300 p-2 rounded-md"
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Observações adicionais */}
-                    <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700">Observações</label>
-                        <textarea
-                            name="observacoes"
-                            value={formData.observacoes || formData.observacaoEspecial || ''}
-                            onChange={handleChange}
-                            className="w-full border border-gray-300 p-2 rounded-md h-20"
-                            placeholder="Observações adicionais sobre a OS..."
-                        />
-                    </div>
-
-                    {/* Data prevista para entrega */}
-                    <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700">Data prevista para entrega</label>
-                        <input
-                            type="date"
-                            name="dataPrevistaEntrega"
-                            value={formData.dataPrevistaEntrega || ''}
-                            onChange={handleChange}
-                            className="w-full border border-gray-300 p-2 rounded-md"
-                        />
-                    </div>
-
-                    <div className="flex justify-end space-x-3">
+                        <p className="text-xs text-gray-500 mb-2">
+                            Após realizar a transferência, envie o comprovante para nosso WhatsApp ou e-mail
+                            para agilizar a confirmação do pagamento.
+                        </p>
                         <button
-                            type="button"
-                            onClick={onCancel}
-                            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                            onClick={() => {
+                                // Implementar função para enviar dados por WhatsApp
+                                const message = `Olá! Realizei o pagamento da venda #${saleId}. Segue o comprovante.`;
+                                window.open(`https://wa.me/5500000000000?text=${encodeURIComponent(message)}`, '_blank');
+                            }}
+                            className="inline-flex justify-center px-4 py-2 text-sm font-medium text-white bg-green-500 border border-transparent rounded-md hover:bg-green-600"
                         >
-                            Cancelar
-                        </button>
-                        <button
-                            type="submit"
-                            className="px-4 py-2 bg-[#81059e] text-white rounded-md hover:bg-[#6f0486]"
-                        >
-                            Salvar OS
+                            <FiMessageSquare className="mr-2" /> Enviar via WhatsApp
                         </button>
                     </div>
-                </form>
+                )}
+
+                {/* Conteúdo específico para crypto */}
+                {paymentMethods.some(p => p.method === 'crypto') && (
+                    <div className="mb-6 p-4 border-2 border-dashed border-amber-400 bg-amber-50 rounded-sm">
+                        <h4 className="font-medium text-amber-700 mb-2">Pagamento com Criptomoedas</h4>
+                        {paymentMethods.filter(p => p.method === 'crypto').map((payment, idx) => (
+                            <div key={idx} className="mb-3 last:mb-0">
+                                <p className="text-sm mb-1">
+                                    <span className="font-medium">Moeda:</span> {payment.details?.moeda === 'bitcoin' ? 'Bitcoin (BTC)' : 'Ethereum (ETH)'}
+                                </p>
+                                <p className="text-sm mb-1">
+                                    <span className="font-medium">Valor em {payment.details?.moeda === 'bitcoin' ? 'BTC' : 'ETH'}:</span> {payment.details?.valor_crypto}
+                                </p>
+                                <p className="text-sm mb-1">
+                                    <span className="font-medium">Endereço:</span> <span className="font-mono text-xs bg-white px-2 py-1 rounded">{payment.details?.endereco}</span>
+                                </p>
+                                <p className="text-xs text-gray-600 mt-2">
+                                    Aguardando confirmação da transação na blockchain. Este processo pode levar até 30 minutos.
+                                </p>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                <div className="flex justify-center space-x-4">
+                    <button
+                        onClick={handleClose}
+                        className="inline-flex justify-center px-4 py-2 text-sm font-medium text-white bg-[#81059e] border border-transparent rounded-md hover:bg-[#6f0486]"
+                    >
+                        Concluir
+                    </button>
+
+                    <button
+                        onClick={() => {
+                            // Lógica para imprimir comprovante
+                            // Por enquanto apenas fecha o modal
+                            handleClose();
+                        }}
+                        className="inline-flex justify-center px-4 py-2 text-sm font-medium text-[#81059e] bg-white border border-[#81059e] rounded-md hover:bg-purple-50"
+                    >
+                        <FiPrinter className="mr-2" /> Imprimir Comprovante
+                    </button>
+
+                    {statusVendaFinal === 'paga' && (
+                        <button
+                            onClick={() => {
+                                handleClose();
+                                window.location.href = '/products_and_services/OS/list-os';
+                            }}
+                            className="inline-flex justify-center px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700"
+                        >
+                            <FiClipboard className="mr-2" /> Ver Ordem de Serviço
+                        </button>
+                    )}
+                </div>
             </div>
         );
     };
 
+    // Renderizar painel de métodos de pagamento
+    const renderPaymentMethodsPanel = () => {
+        return (
+            <div className="mb-6">
+                <div className="flex justify-between items-center mb-3">
+                    <label className="block text-[#81059e] font-medium flex items-center gap-1">
+                        <FiCreditCard /> Formas de Pagamento
+                    </label>
 
-    // Renderizar informações de sucesso após finalizar a venda
-    const renderSuccess = () => {
-        if (pendingOS) {
-            return (
-                <div className="bg-white p-6">
-                    <div className="text-center mb-6">
-                        <h2 className="text-2xl font-bold text-[#81059e] mb-2">
-                            Venda Registrada com Sucesso!
-                        </h2>
-                        <p className="text-gray-600">
-                            Por favor, preencha os dados técnicos para cada Ordem de Serviço
-                        </p>
+                    <div className="flex items-center space-x-2">
+                        <div className="flex items-center">
+                            <input
+                                type="radio"
+                                id="auto-distribution"
+                                checked={valueDistribution === 'auto'}
+                                onChange={() => {
+                                    setValueDistribution('auto');
+                                    // Recalcular valores automaticamente
+                                    setTimeout(() => {
+                                        paymentMethods.forEach((_, i) => updatePaymentMethodValue(i));
+                                    }, 0);
+                                }}
+                                className="mr-1"
+                            />
+                            <label htmlFor="auto-distribution" className="text-sm">Auto</label>
+                        </div>
+                        <div className="flex items-center">
+                            <input
+                                type="radio"
+                                id="manual-distribution"
+                                checked={valueDistribution === 'manual'}
+                                onChange={() => setValueDistribution('manual')}
+                                className="mr-1"
+                            />
+                            <label htmlFor="manual-distribution" className="text-sm">Manual</label>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Lista de métodos de pagamento */}
+                <div className="space-y-3">
+                    {paymentMethods.map((payment, index) => (
+                        <div
+                            key={index}
+                            className={`p-3 border-2 rounded-sm ${currentPaymentIndex === index ? 'border-[#81059e] bg-purple-50' : 'border-gray-200'
+                                }`}
+                        >
+                            <div className="flex justify-between items-center mb-2">
+                                <div className="flex items-center">
+                                    <button
+                                        onClick={() => setCurrentPaymentIndex(index)}
+                                        className={`mr-2 p-1 rounded-full ${currentPaymentIndex === index ? 'bg-[#81059e] text-white' : 'bg-gray-200'
+                                            }`}
+                                    >
+                                        {index + 1}
+                                    </button>
+                                    <span className="font-medium">Pagamento {index + 1}</span>
+                                </div>
+
+                                {paymentMethods.length > 1 && (
+                                    <button
+                                        onClick={() => removePaymentMethod(index)}
+                                        className="text-red-500 hover:text-red-700"
+                                    >
+                                        <FiTrash2 size={16} />
+                                    </button>
+                                )}
+                            </div>
+
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mb-3">
+                                <button
+                                    type="button"
+                                    onClick={() => changePaymentMethod(index, 'dinheiro')}
+                                    className={`p-2 border rounded-md flex items-center justify-center ${payment.method === 'dinheiro'
+                                        ? 'bg-[#81059e] text-white border-[#81059e]'
+                                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                        }`}
+                                >
+                                    <FiDollarSign className="mr-1" /> Dinheiro
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => changePaymentMethod(index, 'cartao')}
+                                    className={`p-2 border rounded-md flex items-center justify-center ${payment.method === 'cartao'
+                                        ? 'bg-[#81059e] text-white border-[#81059e]'
+                                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                        }`}
+                                >
+                                    <FiCreditCard className="mr-1" /> Cartão
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => changePaymentMethod(index, 'pix')}
+                                    className={`p-2 border rounded-md flex items-center justify-center ${payment.method === 'pix'
+                                        ? 'bg-[#81059e] text-white border-[#81059e]'
+                                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                        }`}
+                                >
+                                    PIX
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => changePaymentMethod(index, 'crediario')}
+                                    className={`p-2 border rounded-md flex items-center justify-center ${payment.method === 'crediario'
+                                        ? 'bg-[#81059e] text-white border-[#81059e]'
+                                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                        }`}
+                                >
+                                    Crediário
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => changePaymentMethod(index, 'boleto')}
+                                    className={`p-2 border rounded-md flex items-center justify-center ${payment.method === 'boleto'
+                                        ? 'bg-[#81059e] text-white border-[#81059e]'
+                                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                        }`}
+                                >
+                                    <FiFileText className="mr-1" /> Boleto
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => changePaymentMethod(index, 'ted')}
+                                    className={`p-2 border rounded-md flex items-center justify-center ${payment.method === 'ted'
+                                        ? 'bg-[#81059e] text-white border-[#81059e]'
+                                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                        }`}
+                                >
+                                    TED
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => changePaymentMethod(index, 'cashback')}
+                                    className={`p-2 border rounded-md flex items-center justify-center ${payment.method === 'cashback'
+                                        ? 'bg-[#81059e] text-white border-[#81059e]'
+                                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                        }`}
+                                    disabled={cashbackDisponivel <= 0}
+                                    title={cashbackDisponivel <= 0 ? "Cliente não possui saldo de cashback" : ""}
+                                >
+                                    <FiPercent className="mr-1" /> Cashback
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => changePaymentMethod(index, 'crypto')}
+                                    className={`p-2 border rounded-md flex items-center justify-center ${payment.method === 'crypto'
+                                        ? 'bg-[#81059e] text-white border-[#81059e]'
+                                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                        }`}
+                                >
+                                    <FaBitcoin className="mr-1" /> Crypto
+                                </button>
+                            </div>
+
+                            <div className="grid ">
+                                <label className="text-sm font-medium text-gray-700 mb-2">Valor:</label>
+                                <input
+                                    type="text"
+                                    value={formatCurrency(payment.value)}
+                                    onChange={(e) => handlePaymentValueChange(index, e.target.value)}
+                                    className={`border p-2 w-32 mb-4 ${valueDistribution === 'auto' ? 'bg-gray-100' : ''
+                                        }`}
+                                    readOnly={valueDistribution === 'auto'}
+                                />
+
+                                {/* Botão para configurar valor total */}
+                                {valueDistribution === 'manual' && (
+                                    <button
+                                        onClick={() => handlePaymentValueChange(index, calculateTotal().toString())}
+                                        className="p-2 border rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 text-sm"
+                                        title="Definir valor total"
+                                    >
+                                        Total
+                                    </button>
+                                )}
+
+                                {/* Botão para processar o pagamento quando necessário */}
+                                {!payment.processed && (
+                                    <button
+                                        onClick={() => processPaymentMethod(index)}
+                                        className="p-2 border rounded-md bg-[#81059e] text-white hover:bg-[#6f0486] text-sm"
+                                    >
+                                        Processar
+                                    </button>
+                                )}
+
+                                {/* Indicador de processado */}
+                                {payment.processed && (
+                                    <span className="text-green-600 flex items-center text-sm">
+                                        <FiCheck className="mr-1" /> Processado
+                                    </span>
+                                )}
+                            </div>
+
+                            {/* Campos específicos para cada método de pagamento */}
+                            {payment.method === 'cartao' && !payment.processed && (
+                                <div className="p-2 border border-gray-200 rounded-sm mt-2 bg-gray-50">
+                                    <p className="text-sm">Clique em "Processar" para inserir os dados do cartão.</p>
+                                </div>
+                            )}
+
+                            {payment.method === 'cartao' && payment.processed && payment.details && (
+                                <div className="p-2 border border-gray-200 rounded-sm mt-2 bg-green-50">
+                                    <p className="text-sm mb-1">
+                                        <span className="font-medium">Cartão:</span> **** **** **** {payment.details.ultimos_digitos}
+                                    </p>
+                                    <p className="text-sm mb-1">
+                                        <span className="font-medium">Bandeira:</span> {payment.details.bandeira}
+                                    </p>
+                                    {payment.details.parcelas > 1 && (
+                                        <p className="text-sm">
+                                            <span className="font-medium">Parcelamento:</span> {payment.details.parcelas}x
+                                        </p>
+                                    )}
+                                </div>
+                            )}
+
+                            {payment.method === 'cashback' && (
+                                <div className="p-2 border border-gray-200 rounded-sm mt-2 bg-amber-50">
+                                    <div className="flex justify-between items-center">
+                                        <p className="text-sm font-medium">Saldo disponível:</p>
+                                        <p className="text-sm font-semibold text-green-700">{formatCurrency(cashbackDisponivel)}</p>
+                                    </div>
+
+                                    {payment.value > cashbackDisponivel && (
+                                        <p className="text-xs text-red-600 mt-1">
+                                            Valor excede o saldo disponível. Ajuste o valor ou use outro método.
+                                        </p>
+                                    )}
+                                </div>
+                            )}
+
+                            {payment.method === 'crypto' && !payment.processed && (
+                                <div className="p-2 border border-gray-200 rounded-sm mt-2 bg-gray-50">
+                                    <div className="mb-2">
+                                        <label className="text-sm font-medium block mb-1">Selecione a criptomoeda:</label>
+                                        <div className="flex space-x-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => setSelectedCrypto('bitcoin')}
+                                                className={`p-2 border rounded-md flex items-center justify-center ${selectedCrypto === 'bitcoin'
+                                                    ? 'bg-amber-500 text-white border-amber-500'
+                                                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                                    }`}
+                                            >
+                                                <FaBitcoin className="mr-1" /> Bitcoin
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                onClick={() => setSelectedCrypto('ethereum')}
+                                                className={`p-2 border rounded-md flex items-center justify-center ${selectedCrypto === 'ethereum'
+                                                    ? 'bg-blue-500 text-white border-blue-500'
+                                                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                                    }`}
+                                            >
+                                                <FaEthereum className="mr-1" /> Ethereum
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div className="mb-2">
+                                        <label className="text-sm font-medium block mb-1">Endereço da carteira:</label>
+                                        <input
+                                            type="text"
+                                            value={cryptoAddress}
+                                            onChange={(e) => setCryptoAddress(e.target.value)}
+                                            placeholder={`Endereço de ${selectedCrypto === 'bitcoin' ? 'Bitcoin' : 'Ethereum'}`}
+                                            className="border p-2 rounded-sm w-full text-sm font-mono"
+                                        />
+                                    </div>
+
+                                    <div className="text-xs text-gray-500">
+                                        Taxa de câmbio: 1 {selectedCrypto === 'bitcoin' ? 'BTC' : 'ETH'} =
+                                        {selectedCrypto === 'bitcoin' ? ' R$ 217.391,30' : ' R$ 11.904,76'}
+                                    </div>
+                                </div>
+                            )}
+
+                            {payment.method === 'boleto' && (
+                                <div className="p-2 border border-gray-200 rounded-sm mt-2 bg-gray-50">
+                                    <label className="text-sm font-medium block mb-1">Data de Vencimento:</label>
+                                    <input
+                                        type="date"
+                                        className="border border-gray-300 rounded-md p-2 w-full"
+                                        value={boletoVencimento}
+                                        onChange={(e) => setBoletoVencimento(e.target.value)}
+                                        min={new Date().toISOString().split('T')[0]}
+                                    />
+                                </div>
+                            )}
+
+                            {payment.method === 'crediario' && (
+                                <div className="p-2 border border-gray-200 rounded-sm mt-2 bg-gray-50">
+                                    <label className="text-sm font-medium block mb-1">Número de Parcelas:</label>
+                                    <select
+                                        className="border border-gray-300 rounded-md p-2 w-full"
+                                        value={parcelasCredario}
+                                        onChange={(e) => setParcelasCredario(e.target.value)}
+                                    >
+                                        <option value="2">2x</option>
+                                        <option value="3">3x</option>
+                                        <option value="4">4x</option>
+                                        <option value="5">5x</option>
+                                        <option value="6">6x</option>
+                                        <option value="10">10x</option>
+                                        <option value="12">12x</option>
+                                    </select>
+
+                                    <div className="mt-2 text-sm">
+                                        <p>Valor por parcela: <span className="font-semibold text-[#81059e]">
+                                            {formatCurrency(payment.value / parseInt(parcelasCredario))}
+                                        </span></p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    ))}
+                </div>
+
+                {/* Botão para adicionar mais um método de pagamento */}
+                <button
+                    onClick={addPaymentMethod}
+                    className="mt-3 flex items-center justify-center w-full p-2 border-2 border-dashed border-[#81059e] rounded-sm text-[#81059e] hover:bg-purple-50"
+                >
+                    <FiPlusCircle className="mr-2" /> Adicionar Forma de Pagamento
+                </button>
+
+                {/* Resumo dos valores */}
+                <div className="mt-4 p-3 bg-gray-100 rounded-sm">
+                    <div className="flex justify-between items-center text-sm">
+                        <span>Total da venda:</span>
+                        <span className="font-medium">{formatCurrency(calculateTotal())}</span>
                     </div>
 
-                    {showOSForm ? (
-                        <OSForm
-                            data={osFormData[currentOSIndex]}
-                            onSubmit={async (formData) => {
-                                // Atualizar os dados da OS atual
-                                const updatedOsFormData = [...osFormData];
-                                updatedOsFormData[currentOSIndex] = { ...formData, processed: true };
-                                setOsFormData(updatedOsFormData);
+                    <div className="flex justify-between items-center text-sm mt-1">
+                        <span>Total alocado:</span>
+                        <span className={`font-medium ${isPaymentComplete() ? 'text-green-600' : 'text-red-600'
+                            }`}>
+                            {formatCurrency(calculateTotalAllocated())}
+                        </span>
+                    </div>
 
-                                // Verificar se há mais OS para preencher
-                                if (currentOSIndex < osFormData.length - 1) {
-                                    setCurrentOSIndex(currentOSIndex + 1);
-                                } else {
-                                    // Todas as OS foram preenchidas
-                                    setShowOSForm(false);
-                                    await processarVenda();
-                                }
-                            }}
-                            onCancel={() => setShowOSForm(false)}
-                        />
-                    ) : (
-                        <div className="space-y-3">
-                            {osFormData.map((os, idx) => (
-                                <div key={idx} className="flex justify-between items-center p-2 rounded border border-gray-200 bg-white">
-                                    <div className="text-left">
-                                        <span className="font-medium">OS #{idx + 1}</span>
-                                        <p className="text-sm text-gray-600">
-                                            {os.armacaoDados} + {os.lenteDados}
-                                        </p>
-                                    </div>
-                                    <button
-                                        onClick={() => {
-                                            setCurrentOSIndex(idx);
-                                            setShowOSForm(true);
-                                        }}
-                                        className="px-3 py-1 text-xs bg-[#81059e] text-white rounded-md hover:bg-[#6f0486] flex items-center"
-                                    >
-                                        <FiEye className="mr-1" /> Ver Detalhes
-                                    </button>
-                                </div>
-                            ))}
+                    {!isPaymentComplete() && (
+                        <div className="flex justify-between items-center text-sm mt-1">
+                            <span>Valor restante:</span>
+                            <span className="font-medium text-red-600">{formatCurrency(calculateRemainingValue())}</span>
                         </div>
                     )}
                 </div>
-            );
-        }
-
-        // Renderização normal de sucesso para vendas sem OS
-        return (
-            <div className="p-8 text-center">
-                {/* Conteúdo atual do renderSuccess */}
-
-                {/* Adicionar seção para mostrar informações das OS */}
-                {osFormData.length > 0 && (
-                    <div className="mt-6 p-4 border-2 border-[#81059e] bg-purple-50 rounded-lg">
-                        <h4 className="font-medium text-[#81059e] mb-3">Ordens de Serviço Geradas</h4>
-
-                        <div className="mb-3">
-                            <Link href="/products_and_services/OS/list-os">
-                                <button className="bg-[#81059e] text-white px-4 py-2 rounded-md hover:bg-[#6f0486] flex items-center justify-center p-2">
-                                    Ver Lista de OS
-                                </button>
-                            </Link>
-                        </div>
-
-                        <div className="space-y-3">
-                            {osFormData.map((os, idx) => (
-                                <div key={idx} className="flex justify-between items-center p-2 rounded border border-gray-200 bg-white">
-                                    <div className="text-left">
-                                        <span className="font-medium">OS #{idx + 1}</span>
-                                        <p className="text-sm text-gray-600">
-                                            {os.armacaoDados} + {os.lenteDados}
-                                        </p>
-                                    </div>
-                                    <button
-                                        onClick={() => {
-                                            setCurrentOSIndex(idx);
-                                            setShowOSForm(true);
-                                        }}
-                                        className="px-3 py-1 text-xs bg-[#81059e] text-white rounded-md hover:bg-[#6f0486] flex items-center"
-                                    >
-                                        <FiEye className="mr-1" /> Ver Detalhes
-                                    </button>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                )}
-
-                <div className="flex justify-center space-x-4 mt-6">
-                    {/* Botões existentes */}
-                </div>
             </div>
         );
     };
 
-    // Adicionar modal de formulário de OS
-    {
-        showOSForm && (
-            <div className="fixed inset-0 z-[80] overflow-y-auto bg-black bg-opacity-50">
-                <div className="flex items-center justify-center min-h-screen p-4">
-                    <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl">
-                        <div className="p-6">
-                            <div className="flex justify-between items-center mb-4">
-                                <h2 className="text-xl font-bold text-[#81059e]">
-                                    {osFormData.length > 1
-                                        ? `Ordem de Serviço ${currentOSIndex + 1} de ${osFormData.length}`
-                                        : "Ordem de Serviço"}
-                                </h2>
-                                <div className="flex space-x-2">
-                                    {osFormData.length > 1 && (
-                                        <>
-                                            <button
-                                                onClick={() => setCurrentOSIndex(prev => Math.max(0, prev - 1))}
-                                                disabled={currentOSIndex === 0}
-                                                className="p-2 rounded-full text-gray-500 hover:bg-gray-100 disabled:opacity-50"
-                                            >
-                                                <FiChevronLeft />
-                                            </button>
-                                            <button
-                                                onClick={() => setCurrentOSIndex(prev => Math.min(osFormData.length - 1, prev + 1))}
-                                                disabled={currentOSIndex === osFormData.length - 1}
-                                                className="p-2 rounded-full text-gray-500 hover:bg-gray-100 disabled:opacity-50"
-                                            >
-                                                <FiChevronRight />
-                                            </button>
-                                        </>
-                                    )}
-                                    <button
-                                        onClick={() => setShowOSForm(false)}
-                                        className="p-2 rounded-full text-gray-500 hover:bg-gray-100"
-                                    >
-                                        <FiX />
-                                    </button>
-                                </div>
-                            </div>
-
-                            <OSForm
-                                data={osFormData[currentOSIndex]}
-                                onSubmit={async (formData) => {
-                                    try {
-                                        // Salvar OS no Firebase
-                                        const osRef = collection(firestore, `lojas/${selectedLoja}/servicos/items/items`);
-                                        await addDoc(osRef, {
-                                            ...formData,
-                                            id_venda: saleId,
-                                            cliente: {
-                                                id: selectedClient.id,
-                                                nome: selectedClient.nome,
-                                                cpf: selectedClient.cpf,
-                                                contato: selectedClient.telefone || ''
-                                            },
-                                            data_criacao: new Date(),
-                                            data_previsao: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000), // +2 dias
-                                        });
-
-                                        // Atualizar o estado de osFormData
-                                        const updatedOsFormData = [...osFormData];
-                                        updatedOsFormData[currentOSIndex] = { ...formData, processed: true };
-                                        setOsFormData(updatedOsFormData);
-
-                                        // Se todas as OS foram processadas, fechar o formulário
-                                        if (updatedOsFormData.every(os => os.processed)) {
-                                            setShowOSForm(false);
-                                        } else {
-                                            // Avançar para a próxima OS não processada
-                                            const nextIndex = updatedOsFormData.findIndex((os, idx) => idx > currentOSIndex && !os.processed);
-                                            if (nextIndex !== -1) {
-                                                setCurrentOSIndex(nextIndex);
-                                            }
-                                        }
-                                    } catch (error) {
-                                        console.error('Erro ao salvar OS:', error);
-                                        setError('Falha ao salvar a Ordem de Serviço. Tente novamente.');
-                                    }
-                                }}
-                                onCancel={() => setShowOSForm(false)}
-                            />
-                        </div>
-                    </div>
-                </div>
-            </div>
-        )
-    }
-
-    const handleQrScan = async (result) => {
-        if (result) {
-            try {
-                const qrData = JSON.parse(result);
-                if (qrData.tipo === 'armacao') {
-                    // Buscar a armação no Firestore
-                    const armaçãoRef = doc(firestore, `estoque/${selectedLoja}/armacoes`, qrData.id);
-                    const armaçãoDoc = await getDoc(armaçãoRef);
-
-                    if (armaçãoDoc.exists()) {
-                        const armaçãoData = armaçãoDoc.data();
-                        // Adicionar ao carrinho
-                        addToCart({
-                            ...armaçãoData,
-                            id: qrData.id,
-                            quantidade: 1
-                        });
-                        setShowQrScanner(false);
-                        setScannedQrData(null);
-                    } else {
-                        alert('Armação não encontrada!');
-                    }
-                }
-            } catch (error) {
-                console.error('Erro ao processar QR code:', error);
-                alert('Erro ao processar QR code. Por favor, tente novamente.');
-            }
-        }
-    };
+    // Se o modal não estiver aberto, não renderiza nada
+    if (!isOpen) return null;
 
     return (
         <div className="fixed inset-0 z-50 overflow-y-auto">
@@ -1492,7 +1664,7 @@ const ModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
 
                 <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
 
-                <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-5xl sm:w-full">
+                <div className="inline-block align-bottom bg-white rounded-sm text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-5xl sm:w-full">
                     {/* Cabeçalho do modal */}
                     <div className="bg-[#81059e] px-4 py-3 sm:px-6 flex justify-between items-center">
                         <h3 className="text-lg leading-6 font-medium text-white flex items-center gap-2">
@@ -1539,12 +1711,12 @@ const ModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
 
                                     {/* Seleção de Cliente */}
                                     <div className="mb-8 mt-8">
-                                        <label className="block text-[#81059e] font-medium mb-1 flex items-center gap-1">
+                                        <label className="block text-[#81059e] text-2xl font-medium mb-1 flex items-center gap-1">
                                             <FiUser /> Cliente
                                         </label>
 
                                         {showClientForm ? (
-                                            <div className="border-2 border-[#81059e] rounded-lg p-4">
+                                            <div className="border-2 border-[#81059e] rounded-sm p-4">
                                                 <div className="flex justify-between items-center mb-4">
                                                     <h3 className="font-medium text-[#81059e]">Adicionar Novo Cliente</h3>
                                                     <button
@@ -1566,36 +1738,20 @@ const ModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
                                             </div>
                                         ) : (
                                             <>
-                                                <div className="flex gap-2">
-                                                    <div className="relative flex-1">
-                                                        {/* Ícone de busca */}
-                                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10">
+                                                <div className="flex gap-2 ">
+                                                    <div className="relative flex-1mb-32">
+                                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                                             <FiSearch className="text-gray-400" />
                                                         </div>
-                                                        {/* Campo de busca */}
                                                         <input
                                                             type="text"
                                                             value={searchTerm}
                                                             onChange={(e) => setSearchTerm(e.target.value)}
-                                                            className="border-2 border-[#81059e] pl-10 p-2 rounded-lg w-full"
+                                                            className="border-2 border-[#81059e] pl-10 p-2 rounded-sm w-full"
                                                             placeholder="Buscar cliente por nome ou CPF"
-                                                            onKeyDown={(e) => {
-                                                                if (e.key === 'Enter' && searchTerm && filteredClients.length === 0) {
-                                                                    // Se pressionar Enter com um termo de busca que não corresponde a clientes existentes
-                                                                    const novoCliente = {
-                                                                        id: `temp_${Date.now()}`,
-                                                                        nome: searchTerm,
-                                                                        cpf: "",
-                                                                        telefone: ""
-                                                                    };
-                                                                    handleSelectClient(novoCliente);
-                                                                }
-                                                            }}
                                                         />
-
-                                                        {/* Lista de sugestões */}
                                                         {filteredClients.length > 0 && (
-                                                            <div className="absolute top-full mt-1 bg-white border-2 border-[#81059e] rounded-lg w-full max-h-[104px] overflow-y-auto shadow-lg custom-scroll z-20">
+                                                            <div className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md border border-gray-300 max-h-60 overflow-auto">
                                                                 {filteredClients.map(client => (
                                                                     <div
                                                                         key={client.id}
@@ -1609,83 +1765,52 @@ const ModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
                                                             </div>
                                                         )}
                                                     </div>
-
-                                                    {/* Botões para ações */}
-                                                    <div className="flex gap-2">
-                                                        {/* Botão de usar cliente digitado */}
-                                                        {searchTerm && (
-                                                            <button
-                                                                onClick={() => {
-                                                                    // Criar um cliente simples apenas com o nome
-                                                                    const novoCliente = {
-                                                                        id: `temp_${Date.now()}`, // ID temporário
-                                                                        nome: searchTerm,
-                                                                        cpf: "",
-                                                                        telefone: ""
-                                                                    };
-                                                                    handleSelectClient(novoCliente);
-                                                                }}
-                                                                className="bg-green-600 text-white p-2 rounded-lg flex items-center"
-                                                                title="Usar cliente digitado"
-                                                            >
-                                                                <FiCheck />
-                                                            </button>
-                                                        )}
-
-                                                        {/* Botão de adicionar cliente */}
-                                                        <button
-                                                            onClick={() => setShowClientForm(true)}
-                                                            className="bg-[#81059e] text-white p-2 rounded-lg flex items-center"
-                                                            title="Adicionar novo cliente"
-                                                        >
-                                                            <FiPlus />
-                                                        </button>
-                                                    </div>
+                                                    <button
+                                                        onClick={() => setShowClientForm(true)}
+                                                        className="bg-[#81059e] text-white p-2 rounded-sm flex items-center"
+                                                        title="Adicionar novo cliente"
+                                                    >
+                                                        <FiPlus />
+                                                    </button>
                                                 </div>
 
-                                                {/* Espaço entre as seções (mantém o espaço mesmo com cliente selecionado) */}
-                                                <div className={`mb-36 ${selectedClient ? 'mt-2' : 'mt-0'}`}>
-                                                    {/* Exibição do cliente selecionado */}
-                                                    {selectedClient && (
-                                                        <div className="p-3 border-2 border-purple-100 rounded-lg bg-purple-50">
-                                                            <div className="flex justify-between items-center">
-                                                                <div>
-                                                                    <h3 className="font-semibold text-[#81059e]">{selectedClient.nome}</h3>
-                                                                    {selectedClient.cpf && <p className="text-gray-600 text-sm">CPF: {selectedClient.cpf}</p>}
-                                                                    {selectedClient.telefone && <p className="text-gray-600 text-sm">Tel: {selectedClient.telefone}</p>}
-                                                                </div>
-                                                                <button
-                                                                    onClick={() => setSelectedClient(null)}
-                                                                    className="text-[#81059e] hover:text-[#6f0486]"
-                                                                >
-                                                                    <FiX size={20} />
-                                                                </button>
+                                                {selectedClient && (
+                                                    <div className="mt-2 p-3 border-2 border-purple-100 rounded-sm bg-purple-50">
+                                                        <div className="flex justify-between items-center">
+                                                            <div>
+                                                                <h3 className="font-semibold text-[#81059e]">{selectedClient.nome}</h3>
+                                                                {selectedClient.cpf && <p className="text-gray-600 text-sm">CPF: {selectedClient.cpf}</p>}
+                                                                {selectedClient.telefone && <p className="text-gray-600 text-sm">Tel: {selectedClient.telefone}</p>}
                                                             </div>
+                                                            <button
+                                                                onClick={() => setSelectedClient(null)}
+                                                                className="text-[#81059e] hover:text-[#6f0486]"
+                                                            >
+                                                                <FiX size={20} />
+                                                            </button>
                                                         </div>
-                                                    )}
-                                                </div>
+                                                    </div>
+                                                )}
                                             </>
                                         )}
                                     </div>
 
                                     {/* Seleção e Lista de Produtos */}
                                     <div className="mb-4">
-                                        <label className="block text-[#81059e] font-medium mb-1 flex items-center gap-1">
+                                        <label className="block text-[#81059e] text-xl font-medium mb-1 flex items-center gap-1">
                                             <FiShoppingCart /> Produtos
                                         </label>
 
                                         {/* Tabela de Itens no Carrinho */}
-                                        <div className="border-2 border-gray-200 rounded-lg overflow-hidden">
+                                        <div className="border-2 border-gray-200 rounded-sm overflow-hidden">
                                             <CarrinhoCompras
                                                 products={products}
                                                 cartItems={cartItems}
                                                 setCartItems={setCartItems}
                                                 selectedLoja={selectedLoja}
-                                                updateCartValue={(subtotal, updatedCollections) => {
-                                                    // Captura as collections atualizadas do CarrinhoCompras
-                                                    if (updatedCollections) {
-                                                        setCollections(updatedCollections);
-                                                    }
+                                                updateCartValue={(subtotal) => {
+                                                    // Esta função propaga os valores calculados no carrinho para o modal principal
+                                                    // Não precisa fazer nada aqui, pois o cálculo já é feito corretamente em calculateSubtotal
                                                 }}
                                             />
                                         </div>
@@ -1693,13 +1818,13 @@ const ModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
 
                                     {/* Observações */}
                                     <div className="mb-4">
-                                        <label className="block text-[#81059e] font-medium mb-1 flex items-center gap-1">
-                                            <FiFileText /> Observações
+                                        <label className="block text-lg  mb-1 flex items-center gap-1 text-xl">
+                                            <FiFileText /> <p className=''>Observações</p>
                                         </label>
                                         <textarea
                                             value={observation}
                                             onChange={(e) => setObservation(e.target.value)}
-                                            className="border-2 border-[#81059e] p-2 rounded-lg w-full h-20"
+                                            className="border-2 border-[#81059e] p-2 rounded-sm w-full h-20"
                                             placeholder="Observações sobre a venda ou montagem do óculos..."
                                         />
                                     </div>
@@ -1737,28 +1862,18 @@ const ModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
                                             </div>
                                         </div>
 
-                                        <div className="relative">
-                                            <input
-                                                type="text"
-                                                value={discountFormatted}
-                                                onChange={handleDiscountChange}
-                                                className="border-2 border-[#81059e] p-2 rounded-lg w-full"
-                                                placeholder={discountType === 'percentage' ? "0,00" : "0,00"}
-                                            />
-                                            {discountType === 'percentage' ? (
-                                                <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                                                    <span className="text-gray-500">%</span>
-                                                </div>
-                                            ) : (
-                                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-
-                                                </div>
-                                            )}
-                                        </div>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            value={discount}
+                                            onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
+                                            className="border-2 border-[#81059e] p-2 rounded-sm w-full"
+                                            placeholder={discountType === 'percentage' ? "Desconto em %" : "Desconto em R$"}
+                                        />
                                     </div>
 
                                     {/* Resumo da Venda */}
-                                    <div className="bg-gray-50 p-4 rounded-lg mb-4">
+                                    <div className="bg-gray-50 p-4 rounded-sm mb-4">
                                         <h3 className="text-lg font-medium text-[#81059e] mb-4">Resumo da Venda</h3>
 
                                         <div className="space-y-2">
@@ -1782,23 +1897,13 @@ const ModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
                                     </div>
 
                                     {/* Painel de múltiplos pagamentos */}
-                                    <PaymentMethodPanel
-                                        paymentMethods={paymentMethods}
-                                        setPaymentMethods={setPaymentMethods}
-                                        currentPaymentIndex={currentPaymentIndex}
-                                        setCurrentPaymentIndex={setCurrentPaymentIndex}
-                                        valueDistribution={valueDistribution}
-                                        setValueDistribution={setValueDistribution}
-                                        calculateTotal={calculateTotal}
-                                        processPaymentMethod={processPaymentMethod}
-                                        cashbackDisponivel={cashbackDisponivel}
-                                    />
+                                    {renderPaymentMethodsPanel()}
 
                                     {/* Botão de finalizar venda */}
                                     <button
                                         onClick={handleFinalizarClicked}
                                         disabled={loading || cartItems.length === 0 || !selectedClient || !isPaymentComplete()}
-                                        className="w-full bg-[#81059e] text-white py-3 px-4 rounded-lg flex items-center justify-center font-medium hover:bg-[#6f0486] disabled:bg-purple-300 disabled:cursor-not-allowed"
+                                        className="w-full bg-[#81059e] text-white py-3 px-4 rounded-sm flex items-center justify-center font-medium hover:bg-[#6f0486] disabled:bg-purple-300 disabled:cursor-not-allowed"
                                     >
                                         {loading ? (
                                             <>
@@ -1831,64 +1936,33 @@ const ModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
             </div>
 
             {/* Modal de cadastro de cliente */}
-            {
-                showClientForm && (
-                    <div className="fixed inset-0 z-[60] overflow-y-auto bg-black bg-opacity-50">
-                        <div className="flex items-center justify-center min-h-screen">
-                            <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl p-6">
-                                <div className="flex justify-between items-center mb-4">
-                                    <h2 className="text-xl font-bold text-[#81059e]">Cadastrar Novo Cliente</h2>
-                                    <button
-                                        onClick={() => setShowClientForm(false)}
-                                        className="text-gray-400 hover:text-gray-600"
-                                    >
-                                        <FiX size={24} />
-                                    </button>
-                                </div>
-                                <ClientForm
-                                    selectedLoja={selectedLoja}
-                                    onSuccessRedirect={() => {
-                                        setShowClientForm(false);
-                                        fetchClients(); // Atualizar a lista após adicionar
-                                    }}
-                                    userId={user?.uid}
-                                    userName={userData?.nome || user?.email}
-                                />
+            {showClientForm && (
+                <div className="fixed inset-0 z-[60] overflow-y-auto bg-black bg-opacity-50">
+                    <div className="flex items-center justify-center min-h-screen">
+                        <div className="bg-white rounded-sm shadow-xl w-full max-w-4xl p-6">
+                            <div className="flex justify-between items-center mb-4">
+                                <h2 className="text-xl font-bold text-[#81059e]">Cadastrar Novo Cliente</h2>
+                                <button
+                                    onClick={() => setShowClientForm(false)}
+                                    className="text-gray-400 hover:text-gray-600"
+                                >
+                                    <FiX size={24} />
+                                </button>
                             </div>
+                            <ClientForm
+                                selectedLoja={selectedLoja}
+                                onSuccessRedirect={() => {
+                                    setShowClientForm(false);
+                                    fetchClients(); // Atualizar a lista após adicionar
+                                }}
+                                userId={user?.uid}
+                                userName={userData?.nome || user?.email}
+                            />
                         </div>
                     </div>
-                )
-            }
-
-            {/* Botão para escanear QR code */}
-            <div className="mb-4">
-                <button
-                    onClick={() => setShowQrScanner(!showQrScanner)}
-                    className="bg-[#81059e] text-white px-4 py-2 rounded-lg flex items-center gap-2"
-                >
-                    <FiSearch className="text-lg" />
-                    {showQrScanner ? 'Fechar Scanner' : 'Escanear QR Code'}
-                </button>
-            </div>
-
-            {/* Scanner de QR code */}
-            {showQrScanner && (
-                <div className="mb-4 p-4 bg-white rounded-lg">
-                    <QrReader
-                        onResult={(result, error) => {
-                            if (result) {
-                                handleQrScan(result?.text);
-                            }
-                            if (error) {
-                                console.error(error);
-                            }
-                        }}
-                        constraints={{ facingMode: 'environment' }}
-                        className="w-full"
-                    />
                 </div>
             )}
-        </div >
+        </div>
     );
 };
 
