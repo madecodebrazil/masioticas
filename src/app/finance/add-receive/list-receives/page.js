@@ -1284,9 +1284,6 @@ export default function ListaRecebimentos() {
                     <strong>Cliente:</strong> {typeof selectedConta.cliente === 'object' ? selectedConta.cliente.nome || 'N/A' : selectedConta.cliente || 'N/A'}
                   </p>
                   <p>
-                    <strong>Cliente:</strong> {selectedConta.cliente || 'N/A'}
-                  </p>
-                  <p>
                     <strong>Valor:</strong> R${' '}
                     {parseFloat(selectedConta.valor || 0).toFixed(2)}
                   </p>

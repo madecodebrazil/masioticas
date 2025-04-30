@@ -19,6 +19,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { firestore } from '@/lib/firebaseConfig';
 import jsPDF from 'jspdf';
 import { useRouter } from 'next/navigation';
+import { QRCodeSVG } from 'qrcode.react';
 
 export default function ListaArmacoes() {
   const router = useRouter();
@@ -463,6 +464,40 @@ export default function ListaArmacoes() {
     return lojaNames[lojaId] || lojaId;
   };
 
+  const generateQRCodeData = (armacao) => {
+    return JSON.stringify({
+      codigo: armacao.codigo,
+      marca: armacao.marca,
+      valor: armacao.valor,
+      loja: armacao.loja
+    });
+  };
+
+  const downloadQRCode = (armacao) => {
+    const canvas = document.createElement('canvas');
+    const qrCode = new QRCodeSVG({
+      value: generateQRCodeData(armacao),
+      size: 200,
+      level: 'H',
+      includeMargin: true
+    });
+
+    const svg = qrCode.toString();
+    const img = new Image();
+    img.onload = () => {
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+
+      const link = document.createElement('a');
+      link.download = `QRCode_${armacao.codigo}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    };
+    img.src = 'data:image/svg+xml;base64,' + btoa(svg);
+  };
+
   return (
     <Layout>
       <div className="min-h-screen p-0 md:p-2 mb-20">
@@ -705,6 +740,7 @@ export default function ListaArmacoes() {
                           <th className="px-3 py-2 w-12">
                             <span className="sr-only">Selecionar</span>
                           </th>
+                          <th className="px-3 py-2">QR</th>
                           <th className="px-3 py-2 cursor-pointer whitespace-nowrap" onClick={() => handleSort('codigo')}>
                             Código {renderSortArrow('codigo')}
                           </th>
@@ -743,6 +779,18 @@ export default function ListaArmacoes() {
                                 className="h-4 w-4 cursor-pointer"
                                 onClick={(e) => e.stopPropagation()}
                               />
+                            </td>
+                            <td className="border px-3 py-2 text-center">
+                              <div className="flex justify-center">
+                                <QRCodeSVG
+                                  value={generateQRCodeData(armacao)}
+                                  size={40}
+                                  level="H"
+                                  includeMargin={true}
+                                  className="cursor-pointer"
+                                  onClick={() => openModal(armacao)}
+                                />
+                              </div>
                             </td>
                             <td className="border px-3 py-2 whitespace-nowrap" onClick={() => openModal(armacao)}>
                               {armacao.codigo || 'N/A'}
@@ -859,6 +907,27 @@ export default function ListaArmacoes() {
                       />
                     </div>
                   )}
+
+                  {/* QR Code Section */}
+                  <div className="flex flex-col items-center mb-4">
+                    <div className="bg-white p-4 rounded-lg shadow-md">
+                      <QRCodeSVG
+                        value={generateQRCodeData(selectedArmacao)}
+                        size={150}
+                        level="H"
+                        includeMargin={true}
+                      />
+                    </div>
+                    <button
+                      onClick={() => downloadQRCode(selectedArmacao)}
+                      className="mt-2 text-sm text-[#81059e] hover:text-[#690480] flex items-center"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                      </svg>
+                      Baixar QR Code
+                    </button>
+                  </div>
 
                   <p><strong>
                     Código:</strong> {selectedArmacao.codigo || 'N/A'}

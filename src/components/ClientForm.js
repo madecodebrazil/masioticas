@@ -4,7 +4,7 @@ import { getDoc, setDoc, doc, serverTimestamp, collection, addDoc, getDocs, quer
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { firestore } from '@/lib/firebaseConfig';
 import InputMask from 'react-input-mask';
-import { FiUser, FiMail, FiPhone, FiCalendar, FiMapPin, FiHash, FiHome, FiImage, FiFileText, FiCamera, FiCheckCircle } from 'react-icons/fi';
+import { FiUser, FiMail, FiPhone, FiCalendar, FiMapPin, FiHash, FiHome, FiImage, FiFileText, FiCamera, FiCheckCircle, FiX } from 'react-icons/fi';
 
 const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
     const [formData, setFormData] = useState({
@@ -13,6 +13,9 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
         telefone: '',
         cpf: '',
         dataNascimento: '',
+        genero: '',
+        observacoes: '',
+        parentesco: '',
         endereco: {
             cep: '',
             logradouro: '',
@@ -27,6 +30,7 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
     const [selectedFileName, setSelectedFileName] = useState('');
     const [imagePreview, setImagePreview] = useState(null);
     const [documentoFile, setDocumentoFile] = useState(null);
+    const [comprovanteFile, setComprovanteFile] = useState(null);
     const [showSuccessPopup, setShowSuccessPopup] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -67,14 +71,18 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
         }
     };
 
-    const handleDocumentChange = (e) => {
+    const handleDocumentChange = (e, type) => {
         const file = e.target.files[0];
         if (file) {
-            setDocumentoFile(file);
+            if (type === 'documento') {
+                setDocumentoFile(file);
+            } else if (type === 'comprovante') {
+                setComprovanteFile(file);
+            }
         }
     };
 
-    const handleCameraClick = () => {
+    const handleCameraClick = (type) => {
         const input = document.createElement('input');
         input.type = 'file';
         input.accept = 'image/*';
@@ -93,13 +101,19 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
                     ? file.name.substring(0, 15) + '...' + file.name.split('.').pop()
                     : file.name;
 
-                setSelectedFile(file);
-                setSelectedFileName(displayName);
-                const reader = new FileReader();
-                reader.onloadend = () => {
-                    setImagePreview(reader.result);
-                };
-                reader.readAsDataURL(file);
+                if (type === 'foto') {
+                    setSelectedFile(file);
+                    setSelectedFileName(displayName);
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                        setImagePreview(reader.result);
+                    };
+                    reader.readAsDataURL(file);
+                } else if (type === 'documento') {
+                    setDocumentoFile(file);
+                } else if (type === 'comprovante') {
+                    setComprovanteFile(file);
+                }
             }
         };
         input.click();
@@ -161,17 +175,17 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
         }
     };
 
-    const uploadDocument = async (file, cpf) => {
+    const uploadDocument = async (file, cpf, type) => {
         if (!file) return null;
 
         try {
             const storage = getStorage();
-            const fileName = `${Date.now()}-documento-${file.name.replace(/[^a-zA-Z0-9.-]/g, '')}`;
+            const fileName = `${Date.now()}-${type}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '')}`;
             const storageRef = ref(storage, `clientes/${cpf}/documentos/${fileName}`);
             const snapshot = await uploadBytes(storageRef, file);
             return await getDownloadURL(snapshot.ref);
         } catch (error) {
-            console.error('Erro ao fazer upload do documento:', error);
+            console.error(`Erro ao fazer upload do ${type}:`, error);
             return null;
         }
     };
@@ -274,13 +288,15 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
             }
 
             const imageUrl = await uploadImage(cpf);
-            const documentoUrl = await uploadDocument(documentoFile, cpf);
+            const documentoUrl = await uploadDocument(documentoFile, cpf, 'documento');
+            const comprovanteUrl = await uploadDocument(comprovanteFile, cpf, 'comprovante');
 
             const clienteData = {
                 ...formData,
                 cpf,
                 imagem: imageUrl || null,
                 documento: documentoUrl || null,
+                comprovante: comprovanteUrl || null,
                 dataCadastro: serverTimestamp(),
                 lojaOrigem: selectedLoja,
                 cadastradoPor: {
@@ -303,6 +319,9 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
                     telefone: '',
                     cpf: '',
                     dataNascimento: '',
+                    genero: '',
+                    observacoes: '',
+                    parentesco: '',
                     endereco: {
                         cep: '',
                         logradouro: '',
@@ -317,6 +336,7 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
                 setSelectedFileName('');
                 setImagePreview(null);
                 setDocumentoFile(null);
+                setComprovanteFile(null);
 
                 setTimeout(() => {
                     setShowSuccessPopup(false);
@@ -425,65 +445,34 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
 
                 <div>
                     <label className="flex text-[#81059e] font-medium items-center gap-1">
-                        <FiImage /> Foto do Cliente
+                        <FiUser /> Gênero
                     </label>
-                    <div className="flex gap-4">
-                        <div className="relative flex-1">
-                            <input
-                                type="file"
-                                accept="image/*"
-                                onChange={handleImageChange}
-                                className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-10"
-                            />
-                            <div className="flex items-center border-2 border-[#81059e] py-2 px-3 rounded-lg w-full text-black">
-                                <span className="flex-1 truncate text-sm">
-                                    {selectedFileName || "Escolher arquivo..."}
-                                </span>
-                                <button type="button" className="bg-purple-100 text-[#81059e] px-3 py-1 rounded-md ml-2 whitespace-nowrap">
-                                    Procurar
-                                </button>
-                            </div>
-                        </div>
-                        <button
-                            type="button"
-                            onClick={handleCameraClick}
-                            className="bg-purple-100 text-[#81059e] p-3 rounded-lg flex items-center justify-center whitespace-nowrap"
-                            title="Tirar foto"
-                        >
-                            <FiCamera size={24} />
-                        </button>
-                    </div>
-                    {imagePreview && (
-                        <div className="mt-2">
-                            <img
-                                src={imagePreview}
-                                alt="Preview"
-                                className="w-32 h-32 object-cover rounded-lg border-2 border-[#81059e]"
-                            />
-                        </div>
-                    )}
+                    <select
+                        name="genero"
+                        value={formData.genero}
+                        onChange={handleChange}
+                        className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    >
+                        <option value="">Selecione</option>
+                        <option value="masculino">Masculino</option>
+                        <option value="feminino">Feminino</option>
+                        <option value="outro">Outro</option>
+                        <option value="prefiro_nao_informar">Prefiro não informar</option>
+                    </select>
                 </div>
 
                 <div>
                     <label className="flex text-[#81059e] font-medium items-center gap-1">
-                        <FiFileText /> RG ou CPF
+                        <FiUser /> Parentesco
                     </label>
-                    <div className="relative">
-                        <input
-                            type="file"
-                            accept=".pdf,.jpg,.jpeg,.png"
-                            onChange={handleDocumentChange}
-                            className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-10"
-                        />
-                        <div className="flex items-center border-2 border-[#81059e] py-2 px-3 rounded-lg w-full text-black">
-                            <span className="flex-1 truncate">
-                                {documentoFile ? documentoFile.name : "Escolher arquivo..."}
-                            </span>
-                            <button type="button" className="bg-purple-100 text-[#81059e] px-3 py-1 rounded-md ml-2">
-                                Procurar
-                            </button>
-                        </div>
-                    </div>
+                    <input
+                        type="text"
+                        name="parentesco"
+                        value={formData.parentesco}
+                        onChange={handleChange}
+                        placeholder="Ex: Pai, Mãe, Filho(a), etc."
+                        className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    />
                 </div>
             </div>
 
@@ -596,6 +585,143 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
                                 </option>
                             ))}
                         </select>
+                    </div>
+                </div>
+            </div>
+
+            <div className="mt-6">
+                <label className="flex text-[#81059e] font-medium items-center gap-1">
+                    <FiFileText /> Observações
+                </label>
+                <textarea
+                    name="observacoes"
+                    value={formData.observacoes}
+                    onChange={handleChange}
+                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    rows="3"
+                    placeholder="Adicione observações relevantes sobre o cliente"
+                />
+            </div>
+
+            <div className="mt-6">
+                <h3 className="text-lg font-medium text-[#81059e] flex items-center gap-1">
+                    <FiFileText /> Documentos
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
+                    <div>
+                        <label className="flex text-[#81059e] font-medium items-center gap-1">
+                            <FiImage /> Foto do Cliente
+                        </label>
+                        <div className="flex gap-4">
+                            <div className="relative flex-1">
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={handleImageChange}
+                                    className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-10"
+                                />
+                                <div className="flex items-center border-2 border-[#81059e] py-2 px-3 rounded-lg w-full text-black">
+                                    <span className="flex-1 truncate text-sm">
+                                        {selectedFileName || "Escolher arquivo..."}
+                                    </span>
+                                    <button type="button" className="bg-purple-100 text-[#81059e] px-3 py-1 rounded-md ml-2 whitespace-nowrap">
+                                        Procurar
+                                    </button>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => handleCameraClick('foto')}
+                                className="bg-purple-100 text-[#81059e] p-3 rounded-lg flex items-center justify-center whitespace-nowrap"
+                                title="Tirar foto"
+                            >
+                                <FiCamera size={24} />
+                            </button>
+                        </div>
+                        {imagePreview && (
+                            <div className="mt-2 relative">
+                                <img
+                                    src={imagePreview}
+                                    alt="Preview"
+                                    className="w-32 h-32 object-cover rounded-lg border-2 border-[#81059e]"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setImagePreview(null);
+                                        setSelectedFile(null);
+                                        setSelectedFileName('');
+                                    }}
+                                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1"
+                                >
+                                    <FiX size={16} />
+                                </button>
+                            </div>
+                        )}
+                    </div>
+
+                    <div>
+                        <label className="flex text-[#81059e] font-medium items-center gap-1">
+                            <FiFileText /> RG ou CNH
+                        </label>
+                        <div className="flex gap-4">
+                            <div className="relative flex-1">
+                                <input
+                                    type="file"
+                                    accept=".pdf,.jpg,.jpeg,.png"
+                                    onChange={(e) => handleDocumentChange(e, 'documento')}
+                                    className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-10"
+                                />
+                                <div className="flex items-center border-2 border-[#81059e] py-2 px-3 rounded-lg w-full text-black">
+                                    <span className="flex-1 truncate">
+                                        {documentoFile ? documentoFile.name : "Escolher arquivo..."}
+                                    </span>
+                                    <button type="button" className="bg-purple-100 text-[#81059e] px-3 py-1 rounded-md ml-2">
+                                        Procurar
+                                    </button>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => handleCameraClick('documento')}
+                                className="bg-purple-100 text-[#81059e] p-3 rounded-lg flex items-center justify-center whitespace-nowrap"
+                                title="Tirar foto"
+                            >
+                                <FiCamera size={24} />
+                            </button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="flex text-[#81059e] font-medium items-center gap-1">
+                            <FiFileText /> Comprovante de Residência
+                        </label>
+                        <div className="flex gap-4">
+                            <div className="relative flex-1">
+                                <input
+                                    type="file"
+                                    accept=".pdf,.jpg,.jpeg,.png"
+                                    onChange={(e) => handleDocumentChange(e, 'comprovante')}
+                                    className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-10"
+                                />
+                                <div className="flex items-center border-2 border-[#81059e] py-2 px-3 rounded-lg w-full text-black">
+                                    <span className="flex-1 truncate">
+                                        {comprovanteFile ? comprovanteFile.name : "Escolher arquivo..."}
+                                    </span>
+                                    <button type="button" className="bg-purple-100 text-[#81059e] px-3 py-1 rounded-md ml-2">
+                                        Procurar
+                                    </button>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => handleCameraClick('comprovante')}
+                                className="bg-purple-100 text-[#81059e] p-3 rounded-lg flex items-center justify-center whitespace-nowrap"
+                                title="Tirar foto"
+                            >
+                                <FiCamera size={24} />
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>

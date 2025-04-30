@@ -1,5 +1,4 @@
-// Componente corrigido
-// components/PaymentMethodPanel.js
+// src/components/PaymentMethodPanel.js
 import React, { useState, useEffect } from 'react';
 import {
     FiPlus,
@@ -8,9 +7,20 @@ import {
     FiDollarSign,
     FiCreditCard,
     FiFileText,
-    FiPercent
+    FiPercent,
+    FiPlusCircle,
+    FiActivity,
+    FiCalendar
 } from 'react-icons/fi';
-import { FaBitcoin } from 'react-icons/fa';
+import { FaBitcoin, FaEthereum } from 'react-icons/fa';
+import PixQRCodeModal from './PixQRCodeModal';
+import CreditCardModal from './methodModal/CreditCardModal';
+import CashModal from './methodModal/CashModal';
+import TedModal from './methodModal/TedModal';
+import BoletoModal from './methodModal/BoletoModal';
+import CrediarioModal from './methodModal/CrediarioModal';
+import CryptoModal from './methodModal/CryptoModal';
+import CashbackModal from './methodModal/CashbackModal';
 
 const PaymentMethodPanel = ({
     paymentMethods,
@@ -20,36 +30,109 @@ const PaymentMethodPanel = ({
     valueDistribution,
     setValueDistribution,
     calculateTotal,
+    calculateTotalAllocated,
+    calculateRemainingValue,
+    updatePaymentMethodValue,
+    addPaymentMethod,
+    removePaymentMethod,
+    changePaymentMethod,
+    cashbackDisponivel,
+    formatCurrency,
     processPaymentMethod,
-    cashbackDisponivel
+    boletoVencimento,
+    setBoletoVencimento,
+    parcelasCredario,
+    setParcelasCredario,
+    selectedCrypto,
+    setSelectedCrypto,
+    cryptoAddress,
+    setCryptoAddress
 }) => {
-    // Calcular total já alocado nos métodos de pagamento
-    const calculateTotalAllocated = () => {
-        return paymentMethods.reduce((sum, method) =>
-            sum + (parseFloat(method.value) || 0), 0
-        );
-    };
+    // Estado para controle dos modais
+    const [isPixModalOpen, setIsPixModalOpen] = useState(false);
+    const [isCreditCardModalOpen, setIsCreditCardModalOpen] = useState(false);
+    const [isCashModalOpen, setIsCashModalOpen] = useState(false);
+    const [isTedModalOpen, setIsTedModalOpen] = useState(false);
+    const [isBoletoModalOpen, setIsBoletoModalOpen] = useState(false);
+    const [isCrediarioModalOpen, setIsCrediarioModalOpen] = useState(false);
+    const [isCryptoModalOpen, setIsCryptoModalOpen] = useState(false);
+    const [isCashbackModalOpen, setIsCashbackModalOpen] = useState(false);
+    const [currentModalIndex, setCurrentModalIndex] = useState(null);
+
+    // Fallback para calculateTotal caso não seja passado
+    const getTotal = typeof calculateTotal === 'function' ? calculateTotal : () => 0;
 
     // Verifica se os pagamentos totalizam o valor da venda
     const isPaymentComplete = () => {
-        const total = calculateTotal();
+        const total = getTotal();
         const allocated = calculateTotalAllocated();
         return Math.abs(total - allocated) < 0.01;
     };
 
-    // Renderizar detalhes específicos de cada método de pagamento
-    const renderPaymentMethodDetails = (payment) => {
-        if (payment.method === 'cartao' && !payment.processed) {
-            return (
-                <div className="p-2 border border-gray-200 rounded-lg mt-2 bg-gray-50">
-                    <p className="text-sm">Clique em "Processar" para inserir os dados do cartão.</p>
-                </div>
-            );
-        }
+    // Lidar com o processamento de diferentes métodos de pagamento
+    const handleProcessPayment = (index) => {
+        const payment = paymentMethods[index];
+        setCurrentModalIndex(index);
 
+        switch (payment.method) {
+            case 'cartao':
+                setIsCreditCardModalOpen(true);
+                break;
+            case 'dinheiro':
+                setIsCashModalOpen(true);
+                break;
+            case 'ted':
+                setIsTedModalOpen(true);
+                break;
+            case 'boleto':
+                setIsBoletoModalOpen(true);
+                break;
+            case 'crediario':
+                setIsCrediarioModalOpen(true);
+                break;
+            case 'crypto':
+                setIsCryptoModalOpen(true);
+                break;
+            case 'cashback':
+                setIsCashbackModalOpen(true);
+                break;
+            case 'pix':
+                setIsPixModalOpen(true);
+                break;
+            default:
+                break;
+        }
+    };
+
+    const handleModalConfirm = (details) => {
+        if (currentModalIndex === null) return;
+
+        const newMethods = [...paymentMethods];
+        newMethods[currentModalIndex] = {
+            ...newMethods[currentModalIndex],
+            processed: true,
+            details: details
+        };
+
+        setPaymentMethods(newMethods);
+
+        // Fechar todos os modais
+        setIsPixModalOpen(false);
+        setIsCreditCardModalOpen(false);
+        setIsCashModalOpen(false);
+        setIsTedModalOpen(false);
+        setIsBoletoModalOpen(false);
+        setIsCrediarioModalOpen(false);
+        setIsCryptoModalOpen(false);
+        setIsCashbackModalOpen(false);
+        setCurrentModalIndex(null);
+    };
+
+    // Renderizar detalhes específicos de cada método de pagamento
+    const renderPaymentMethodDetails = (payment, index) => {
         if (payment.method === 'cartao' && payment.processed && payment.details) {
             return (
-                <div className="p-2 border border-gray-200 rounded-lg mt-2 bg-green-50">
+                <div className="p-2 border border-gray-200 rounded-sm mt-2 bg-green-50">
                     <p className="text-sm mb-1">
                         <span className="font-medium">Cartão:</span> **** **** **** {payment.details.ultimos_digitos}
                     </p>
@@ -65,165 +148,116 @@ const PaymentMethodPanel = ({
             );
         }
 
-        if (payment.method === 'cashback') {
+        if (payment.method === 'pix' && payment.processed && payment.details) {
             return (
-                <div className="p-2 border border-gray-200 rounded-lg mt-2 bg-amber-50">
-                    <div className="flex justify-between items-center">
-                        <p className="text-sm font-medium">Saldo disponível:</p>
-                        <p className="text-sm font-semibold text-green-700">
-                            {new Intl.NumberFormat('pt-BR', {
-                                style: 'currency',
-                                currency: 'BRL'
-                            }).format(cashbackDisponivel || 0)}
-                        </p>
-                    </div>
+                <div className="p-2 border border-gray-200 rounded-sm mt-2 bg-green-50">
+                    <p className="text-sm mb-1">
+                        <span className="font-medium">QR Code PIX gerado</span>
+                    </p>
+                    <p className="text-sm">
+                        <span className="font-medium">Valor:</span> {formatCurrency(payment.details.valor)}
+                    </p>
                 </div>
             );
         }
 
+        if (payment.method === 'ted' && payment.processed && payment.details) {
+            return (
+                <div className="p-2 border border-gray-200 rounded-sm mt-2 bg-green-50">
+                    <p className="text-sm mb-1">
+                        <span className="font-medium">TED processado</span>
+                    </p>
+                    <p className="text-sm">
+                        <span className="font-medium">Banco:</span> {payment.details.banco}
+                    </p>
+                    <p className="text-sm">
+                        <span className="font-medium">Valor:</span> {formatCurrency(payment.details.valor)}
+                    </p>
+                </div>
+            );
+        }
+
+        if (payment.method === 'boleto' && payment.processed && payment.details) {
+            return (
+                <div className="p-2 border border-gray-200 rounded-sm mt-2 bg-green-50">
+                    <p className="text-sm mb-1">
+                        <span className="font-medium">Boleto gerado</span>
+                    </p>
+                    <p className="text-sm">
+                        <span className="font-medium">Vencimento:</span> {payment.details.vencimento}
+                    </p>
+                    <p className="text-sm">
+                        <span className="font-medium">Valor:</span> {formatCurrency(payment.details.valor)}
+                    </p>
+                </div>
+            );
+        }
+
+        if (payment.method === 'crediario' && payment.processed && payment.details) {
+            return (
+                <div className="p-2 border border-gray-200 rounded-sm mt-2 bg-green-50">
+                    <p className="text-sm mb-1">
+                        <span className="font-medium">Crediário processado</span>
+                    </p>
+                    <p className="text-sm">
+                        <span className="font-medium">Parcelas:</span> {payment.details.parcelas}x
+                    </p>
+                    <p className="text-sm">
+                        <span className="font-medium">Valor por parcela:</span> {formatCurrency(payment.details.valorParcela)}
+                    </p>
+                </div>
+            );
+        }
+
+        if (payment.method === 'cashback' && payment.processed && payment.details) {
+            return (
+                <div className="p-2 border border-gray-200 rounded-sm mt-2 bg-green-50">
+                    <p className="text-sm mb-1">
+                        <span className="font-medium">Cashback aplicado</span>
+                    </p>
+                    <p className="text-sm">
+                        <span className="font-medium">Valor utilizado:</span> {formatCurrency(payment.details.valor)}
+                    </p>
+                    <p className="text-sm">
+                        <span className="font-medium">Saldo restante:</span> {formatCurrency(payment.details.saldoRestante)}
+                    </p>
+                </div>
+            );
+        }
+
+        if (payment.method === 'crypto' && payment.processed && payment.details) {
+            return (
+                <div className="p-2 border border-gray-200 rounded-sm mt-2 bg-green-50">
+                    <p className="text-sm mb-1">
+                        <span className="font-medium">Criptomoeda processada</span>
+                    </p>
+                    <p className="text-sm">
+                        <span className="font-medium">Moeda:</span> {payment.details.moeda}
+                    </p>
+                    <p className="text-sm">
+                        <span className="font-medium">Valor:</span> {formatCurrency(payment.details.valor)}
+                    </p>
+                </div>
+            );
+        }
+
+        if (payment.method === 'cashback' && !payment.processed) {
+            return null;
+        }
+
+        if (payment.method === 'boleto' && !payment.processed) {
+            return null;
+        }
+
+        if (payment.method === 'crediario' && !payment.processed) {
+            return null;
+        }
+
+        if (payment.method === 'crypto' && !payment.processed) {
+            return null;
+        }
+
         return null;
-    };
-
-    // Redistribuir valores automaticamente entre todos os métodos
-    const redistributeValues = () => {
-        if (valueDistribution !== 'auto') return;
-
-        const total = calculateTotal();
-        const numMethods = paymentMethods.length;
-
-        // Se houver apenas um método, atribui o valor total
-        if (numMethods === 1) {
-            const newMethods = [...paymentMethods];
-            newMethods[0].value = total;
-            setPaymentMethods(newMethods);
-            return;
-        }
-
-        // Versão atualizada: distribuir valor restante para o método atual
-        const newMethods = [...paymentMethods];
-
-        // Primeiro, preservar valores já definidos manualmente (se houver)
-        const allocatedSum = newMethods.reduce((sum, method, idx) =>
-            idx !== currentPaymentIndex ? sum + (parseFloat(method.value) || 0) : sum, 0
-        );
-
-        // Atribuir o valor restante ao método atual
-        const remainingValue = Math.max(0, total - allocatedSum);
-        newMethods[currentPaymentIndex].value = remainingValue;
-
-        setPaymentMethods(newMethods);
-    };
-
-    // Atualizar valor de um método de pagamento
-    const updatePaymentMethodValue = (index, customValue = null) => {
-        const total = calculateTotal();
-        let newValue;
-
-        if (customValue !== null) {
-            newValue = customValue;
-        } else if (valueDistribution === 'auto') {
-            if (paymentMethods.length === 1) {
-                newValue = total;
-            } else {
-                // Distribuir valor restante
-                const allocated = paymentMethods.reduce((sum, method, i) =>
-                    i !== index ? sum + (parseFloat(method.value) || 0) : sum, 0);
-                newValue = Math.max(0, total - allocated);
-            }
-        } else {
-            // Em modo manual, mantém o valor atual ou zero para novos métodos
-            newValue = paymentMethods[index]?.value || 0;
-        }
-
-        const newMethods = [...paymentMethods];
-        newMethods[index] = {
-            ...newMethods[index],
-            value: newValue
-        };
-
-        setPaymentMethods(newMethods);
-    };
-
-    // CORRIGIDO: Adicionar método de pagamento
-    const addPaymentMethod = () => {
-        // Criar novo array com o novo método adicionado
-        const newMethods = [
-            ...paymentMethods,
-            {
-                method: 'dinheiro',
-                value: 0,
-                details: {},
-                processed: false
-            }
-        ];
-
-        // Atualizar primeiro os métodos de pagamento
-        setPaymentMethods(newMethods);
-
-        // Em seguida, atualizar o índice atual para o novo método
-        const newIndex = newMethods.length - 1;
-        setCurrentPaymentIndex(newIndex);
-    };
-
-    useEffect(() => {
-        if (valueDistribution === 'auto') {
-            // Só redistribuir se houver métodos de pagamento
-            if (paymentMethods.length > 0) {
-                redistributeValues();
-            }
-        }
-        // Remover paymentMethods.length da dependência para evitar possíveis loops
-    }, [calculateTotal(), currentPaymentIndex, valueDistribution]);
-
-    useEffect(() => {
-        // Quando o número de métodos de pagamento mudar e estivermos em modo automático
-        if (valueDistribution === 'auto') {
-            // Pequeno timeout para garantir que o estado já foi atualizado
-            const timer = setTimeout(() => {
-                redistributeValues();
-            }, 50);
-            
-            return () => clearTimeout(timer);
-        }
-    }, [paymentMethods.length, valueDistribution]);
-
-    // Atualizar distribuição quando total ou método atual mudar
-    useEffect(() => {
-        if (valueDistribution === 'auto') {
-            redistributeValues();
-        }
-    }, [calculateTotal(), currentPaymentIndex, valueDistribution, paymentMethods.length]);
-
-    // Remover método de pagamento
-    const removePaymentMethod = (indexToRemove) => {
-        if (paymentMethods.length <= 1) return;
-
-        const updatedMethods = paymentMethods.filter((_, index) => index !== indexToRemove);
-
-        // Ajustar o índice atual selecionado
-        let newIndex = currentPaymentIndex;
-        if (currentPaymentIndex >= updatedMethods.length) {
-            newIndex = updatedMethods.length - 1;
-        } else if (currentPaymentIndex === indexToRemove) {
-            newIndex = Math.max(0, indexToRemove - 1);
-        } else if (currentPaymentIndex > indexToRemove) {
-            newIndex = currentPaymentIndex - 1;
-        }
-
-        setPaymentMethods(updatedMethods);
-        setCurrentPaymentIndex(newIndex);
-    };
-
-    // Modificar método de um pagamento
-    const changePaymentMethod = (index, method) => {
-        const newMethods = [...paymentMethods];
-        newMethods[index] = {
-            ...newMethods[index],
-            method: method,
-            details: {},
-            processed: method !== 'cartao' && method !== 'crypto'
-        };
-        setPaymentMethods(newMethods);
     };
 
     // Atualizar valor de um método de pagamento manualmente
@@ -240,25 +274,10 @@ const PaymentMethodPanel = ({
         setPaymentMethods(newMethods);
     };
 
-    // Formatar valor monetário
-    const formatCurrency = (value) => {
-        return new Intl.NumberFormat('pt-BR', {
-            style: 'currency',
-            currency: 'BRL'
-        }).format(value);
-    };
-
-    // Calcular valor restante a ser pago
-    const calculateRemainingValue = () => {
-        const total = calculateTotal();
-        const allocated = calculateTotalAllocated();
-        return Math.max(0, total - allocated);
-    };
-
     return (
         <div className="mb-6">
             <div className="flex justify-between items-center mb-3">
-                <label className="block text-[#81059e] font-medium flex items-center gap-1">
+                <label className="block text-[#81059e] font-medium flex items-center gap-1 text-xl">
                     <FiCreditCard /> Formas de Pagamento
                 </label>
 
@@ -268,7 +287,12 @@ const PaymentMethodPanel = ({
                             type="radio"
                             id="auto-distribution"
                             checked={valueDistribution === 'auto'}
-                            onChange={() => setValueDistribution('auto')}
+                            onChange={() => {
+                                setValueDistribution('auto');
+                                setTimeout(() => {
+                                    paymentMethods.forEach((_, i) => updatePaymentMethodValue(i));
+                                }, 0);
+                            }}
                             className="mr-1"
                         />
                         <label htmlFor="auto-distribution" className="text-sm">Auto</label>
@@ -291,19 +315,13 @@ const PaymentMethodPanel = ({
                 {paymentMethods.map((payment, index) => (
                     <div
                         key={index}
-                        className={`p-3 border-2 rounded-lg ${currentPaymentIndex === index
-                            ? 'border-[#81059e] bg-purple-50'
-                            : 'border-gray-200'
-                            }`}
+                        className={`p-3 border-2 rounded-sm ${currentPaymentIndex === index ? 'border-[#81059e] bg-purple-50' : 'border-gray-200'}`}
                     >
                         <div className="flex justify-between items-center mb-2">
                             <div className="flex items-center">
                                 <button
                                     onClick={() => setCurrentPaymentIndex(index)}
-                                    className={`mr-2 h-6 w-6 rounded-full flex items-center justify-center ${currentPaymentIndex === index
-                                        ? 'bg-[#81059e] text-white'
-                                        : 'bg-gray-200'
-                                        }`}
+                                    className={`mr-2 p-1 rounded-full ${currentPaymentIndex === index ? 'bg-[#81059e] text-white' : 'bg-gray-200'}`}
                                 >
                                     {index + 1}
                                 </button>
@@ -312,116 +330,153 @@ const PaymentMethodPanel = ({
 
                             {paymentMethods.length > 1 && (
                                 <button
+                                    type="button"
                                     onClick={() => removePaymentMethod(index)}
-                                    className="text-red-500 hover:text-red-700 p-1"
-                                    aria-label="Remover método de pagamento"
+                                    className="p-2 rounded-full hover:bg-red-100 text-red-500"
+                                    title="Remover forma de pagamento"
                                 >
-                                    <FiTrash2 size={16} />
+                                    <FiTrash2 size={18} />
                                 </button>
                             )}
                         </div>
 
-                        {/* Botões de métodos de pagamento em grid responsivo */}
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 mb-3">
-                            <PaymentMethodButton
-                                active={payment.method === 'dinheiro'}
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mb-3">
+                            <button
+                                type="button"
                                 onClick={() => changePaymentMethod(index, 'dinheiro')}
-                                icon={<FiDollarSign className="mr-1" />}
-                                label="Dinheiro"
-                            />
+                                className={`p-2 border rounded-sm flex items-center justify-center ${payment.method === 'dinheiro'
+                                    ? 'bg-[#81059e] text-white border-[#81059e]'
+                                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                    }`}
+                            >
+                                <FiDollarSign className="mr-1" /> Dinheiro
+                            </button>
 
-                            <PaymentMethodButton
-                                active={payment.method === 'cartao'}
+                            <button
+                                type="button"
                                 onClick={() => changePaymentMethod(index, 'cartao')}
-                                icon={<FiCreditCard className="mr-1" />}
-                                label="Cartão"
-                            />
+                                className={`p-2 border rounded-sm flex items-center justify-center ${payment.method === 'cartao'
+                                    ? 'bg-[#81059e] text-white border-[#81059e]'
+                                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                    }`}
+                            >
+                                <FiCreditCard className="mr-1" /> Cartão
+                            </button>
 
-                            <PaymentMethodButton
-                                active={payment.method === 'pix'}
+                            <button
+                                type="button"
                                 onClick={() => changePaymentMethod(index, 'pix')}
-                                label="PIX"
-                            />
+                                className={`p-2 border rounded-sm flex items-center justify-center ${payment.method === 'pix'
+                                    ? 'bg-[#81059e] text-white border-[#81059e]'
+                                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                    }`}
+                            >
+                                PIX
+                            </button>
 
-                            <PaymentMethodButton
-                                active={payment.method === 'crediario'}
+                            <button
+                                type="button"
                                 onClick={() => changePaymentMethod(index, 'crediario')}
-                                label="Crediário"
-                            />
+                                className={`p-2 border rounded-sm flex items-center justify-center ${payment.method === 'crediario'
+                                    ? 'bg-[#81059e] text-white border-[#81059e]'
+                                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                    }`}
+                            >
+                                Crediário
+                            </button>
 
-                            <PaymentMethodButton
-                                active={payment.method === 'boleto'}
+                            <button
+                                type="button"
                                 onClick={() => changePaymentMethod(index, 'boleto')}
-                                icon={<FiFileText className="mr-1" />}
-                                label="Boleto"
-                            />
+                                className={`p-2 border rounded-sm flex items-center justify-center ${payment.method === 'boleto'
+                                    ? 'bg-[#81059e] text-white border-[#81059e]'
+                                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                    }`}
+                            >
+                                <FiFileText className="mr-1" /> Boleto
+                            </button>
 
-                            <PaymentMethodButton
-                                active={payment.method === 'ted'}
+                            <button
+                                type="button"
                                 onClick={() => changePaymentMethod(index, 'ted')}
-                                label="TED"
-                            />
+                                className={`p-2 border rounded-sm flex items-center justify-center ${payment.method === 'ted'
+                                    ? 'bg-[#81059e] text-white border-[#81059e]'
+                                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                    }`}
+                            >
+                                <FiActivity className="mr-1" /> TEV
+                            </button>
 
-                            <PaymentMethodButton
-                                active={payment.method === 'cashback'}
+                            <button
+                                type="button"
                                 onClick={() => changePaymentMethod(index, 'cashback')}
-                                icon={<FiPercent className="mr-1" />}
-                                label="Cashback"
+                                className={`p-2 border rounded-sm flex items-center justify-center ${payment.method === 'cashback'
+                                    ? 'bg-[#81059e] text-white border-[#81059e]'
+                                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                    }`}
                                 disabled={cashbackDisponivel <= 0}
                                 title={cashbackDisponivel <= 0 ? "Cliente não possui saldo de cashback" : ""}
-                            />
+                            >
+                                <FiPercent className="mr-1" /> Cashback
+                            </button>
 
-                            <PaymentMethodButton
-                                active={payment.method === 'crypto'}
+                            <button
+                                type="button"
                                 onClick={() => changePaymentMethod(index, 'crypto')}
-                                icon={<FaBitcoin className="mr-1" />}
-                                label="Crypto"
+                                className={`p-2 border rounded-sm flex items-center justify-center ${payment.method === 'crypto'
+                                    ? 'bg-[#81059e] text-white border-[#81059e]'
+                                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                    }`}
+                            >
+                                <FaBitcoin className="mr-1" /> Crypto
+                            </button>
+                        </div>
+
+                        <div className="grid">
+                            <label className="text-sm font-medium text-gray-700 mb-2">Valor:</label>
+                            <input
+                                type="text"
+                                value={formatCurrency(payment.value)}
+                                onChange={(e) => handlePaymentValueChange(index, e.target.value)}
+                                className={`border p-2 w-32 mb-4 ${valueDistribution === 'auto' ? 'bg-gray-100' : ''}`}
+                                readOnly={valueDistribution === 'auto'}
                             />
+
+                            {/* Botão para configurar valor total */}
+                            {valueDistribution === 'manual' && (
+                                <button
+                                    onClick={() => {
+                                        const newMethods = [...paymentMethods];
+                                        newMethods[index] = {
+                                            ...newMethods[index],
+                                            value: getTotal()
+                                        };
+                                        setPaymentMethods(newMethods);
+                                    }}
+                                    className="p-2 border rounded-sm bg-gray-100 text-gray-700 hover:bg-gray-200 text-sm"
+                                    title="Definir valor total"
+                                >
+                                    Total
+                                </button>
+                            )}
+
+                            {/* Botão sempre visível para permitir processamento/reprocessamento */}
+                            <button
+                                onClick={() => handleProcessPayment(index)}
+                                className="p-2 border rounded-md bg-[#81059e] text-white hover:bg-[#6f0486] text-sm"
+                            >
+                                {payment.processed ? "Reprocessar" : "Processar"}
+                            </button>
+
+                            {/* Status de processado só aparece se tiver details (confirmado pelo modal) */}
+                            {payment.processed && payment.details && (
+                                <span className="text-green-600 flex items-center text-sm ml-2">
+                                    <FiCheck className="mr-1" /> Processado
+                                </span>
+                            )}
                         </div>
 
-                        {/* Valor e botões de ação em flex responsivo */}
-                        <div className="flex flex-wrap items-center gap-2">
-                            <div className="flex items-center min-w-[120px] flex-grow md:flex-grow-0">
-                                <label className="text-sm font-medium text-gray-700 mr-2 whitespace-nowrap">Valor:</label>
-                                <input
-                                    type="text"
-                                    value={formatCurrency(payment.value)}
-                                    onChange={(e) => handlePaymentValueChange(index, e.target.value)}
-                                    className={`p-2 rounded-lg w-full bg-transparent ${valueDistribution === 'auto' ? '' : ''
-                                        }`}
-                                    readOnly={valueDistribution === 'auto'}
-                                />
-                            </div>
-
-                            {/* Botões de ação */}
-                            <div className="flex gap-2 ml-auto">
-                                {valueDistribution === 'manual' && (
-                                    <button
-                                        onClick={() => handlePaymentValueChange(index, calculateTotal().toString())}
-                                        className="px-2 py-1 border rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 text-sm whitespace-nowrap"
-                                        title="Definir valor total"
-                                    >
-                                        Total
-                                    </button>
-                                )}
-
-                                {!payment.processed ? (
-                                    <button
-                                        onClick={() => processPaymentMethod(index)}
-                                        className="px-5 py-2 border rounded-md bg-[#81059e] text-white hover:bg-[#6f0486] text-sm whitespace-nowrap flex items-center"
-                                    >
-                                        Processar
-                                    </button>
-                                ) : (
-                                    <span className="px-3 py-1 bg-green-100 text-green-600 rounded-md flex items-center text-sm whitespace-nowrap border border-green-200">
-                                        <FiCheck className="mr-1" /> Processado
-                                    </span>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Renderização condicional de detalhes específicos para cada método */}
-                        {renderPaymentMethodDetails(payment)}
+                        {renderPaymentMethodDetails(payment, index)}
                     </div>
                 ))}
             </div>
@@ -429,53 +484,107 @@ const PaymentMethodPanel = ({
             {/* Botão para adicionar mais um método de pagamento */}
             <button
                 onClick={addPaymentMethod}
-                className="mt-3 flex items-center justify-center w-full p-2 border-2 border-dashed border-[#81059e] rounded-lg text-[#81059e] hover:bg-purple-50"
+                className="mt-3 flex items-center justify-center w-full p-2 border-2 border-dashed border-[#81059e] rounded-sm text-[#81059e] hover:bg-purple-50"
             >
-                <FiPlus className="mr-2" /> Adicionar Forma de Pagamento
+                <FiPlusCircle className="mr-2" /> Adicionar Forma de Pagamento
             </button>
 
-            {/* Resumo dos valores */}
-            <div className="mt-4 p-3 bg-gray-100 rounded-lg">
-                <div className="flex justify-between items-center text-sm">
-                    <span>Total da venda:</span>
-                    <span className="font-medium">{formatCurrency(calculateTotal())}</span>
-                </div>
+            {/* Modais */}
+            <CreditCardModal
+                isOpen={isCreditCardModalOpen}
+                onClose={() => {
+                    setIsCreditCardModalOpen(false);
+                    setCurrentModalIndex(null);
+                }}
+                onConfirm={handleModalConfirm}
+                value={currentModalIndex !== null ? paymentMethods[currentModalIndex].value : 0}
+                formatCurrency={formatCurrency}
+            />
 
-                <div className="flex justify-between items-center text-sm mt-1">
-                    <span>Total alocado:</span>
-                    <span className={`font-medium ${isPaymentComplete() ? 'text-green-600' : 'text-red-600'
-                        }`}>
-                        {formatCurrency(calculateTotalAllocated())}
-                    </span>
-                </div>
+            <CashModal
+                isOpen={isCashModalOpen}
+                onClose={() => {
+                    setIsCashModalOpen(false);
+                    setCurrentModalIndex(null);
+                }}
+                onConfirm={handleModalConfirm}
+                value={currentModalIndex !== null ? paymentMethods[currentModalIndex].value : 0}
+                formatCurrency={formatCurrency}
+            />
 
-                {!isPaymentComplete() && (
-                    <div className="flex justify-between items-center text-sm mt-1">
-                        <span>Valor restante:</span>
-                        <span className="font-medium text-red-600">
-                            {formatCurrency(calculateRemainingValue())}
-                        </span>
-                    </div>
-                )}
-            </div>
+            <TedModal
+                isOpen={isTedModalOpen}
+                onClose={() => {
+                    setIsTedModalOpen(false);
+                    setCurrentModalIndex(null);
+                }}
+                onConfirm={handleModalConfirm}
+                value={currentModalIndex !== null ? paymentMethods[currentModalIndex].value : 0}
+                formatCurrency={formatCurrency}
+            />
+
+            <BoletoModal
+                isOpen={isBoletoModalOpen}
+                onClose={() => {
+                    setIsBoletoModalOpen(false);
+                    setCurrentModalIndex(null);
+                }}
+                onConfirm={handleModalConfirm}
+                value={currentModalIndex !== null ? paymentMethods[currentModalIndex].value : 0}
+                formatCurrency={formatCurrency}
+                vencimento={boletoVencimento}
+            />
+
+            <CrediarioModal
+                isOpen={isCrediarioModalOpen}
+                onClose={() => {
+                    setIsCrediarioModalOpen(false);
+                    setCurrentModalIndex(null);
+                }}
+                onConfirm={handleModalConfirm}
+                value={currentModalIndex !== null ? paymentMethods[currentModalIndex].value : 0}
+                formatCurrency={formatCurrency}
+                parcelas={parcelasCredario}
+            />
+
+            <CryptoModal
+                isOpen={isCryptoModalOpen}
+                onClose={() => {
+                    setIsCryptoModalOpen(false);
+                    setCurrentModalIndex(null);
+                }}
+                onConfirm={handleModalConfirm}
+                value={currentModalIndex !== null ? paymentMethods[currentModalIndex].value : 0}
+                formatCurrency={formatCurrency}
+                selectedCrypto={selectedCrypto}
+                cryptoAddress={cryptoAddress}
+            />
+
+            <CashbackModal
+                isOpen={isCashbackModalOpen}
+                onClose={() => {
+                    setIsCashbackModalOpen(false);
+                    setCurrentModalIndex(null);
+                }}
+                onConfirm={handleModalConfirm}
+                value={currentModalIndex !== null ? paymentMethods[currentModalIndex].value : 0}
+                formatCurrency={formatCurrency}
+                availableCashback={cashbackDisponivel}
+            />
+
+            {/* Modal de QR Code PIX */}
+            <PixQRCodeModal
+                isOpen={isPixModalOpen}
+                onClose={() => {
+                    setIsPixModalOpen(false);
+                    setCurrentModalIndex(null);
+                }}
+                onConfirm={handleModalConfirm}
+                value={currentModalIndex !== null ? paymentMethods[currentModalIndex].value : 0}
+                formatCurrency={formatCurrency}
+            />
         </div>
     );
 };
-
-// Componente de botão de método de pagamento
-const PaymentMethodButton = ({ active, onClick, icon, label, disabled, title }) => (
-    <button
-        type="button"
-        onClick={onClick}
-        className={`p-2 border rounded-md flex items-center justify-center ${active
-            ? 'bg-[#81059e] text-white border-[#81059e]'
-            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-            } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-        disabled={disabled}
-        title={title}
-    >
-        {icon} {label}
-    </button>
-);
 
 export default PaymentMethodPanel;

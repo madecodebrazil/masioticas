@@ -20,11 +20,13 @@ import {
   faTable,
   faThLarge,
   faTrash,
-  faTimes
+  faTimes,
+  faQrcode
 } from '@fortawesome/free-solid-svg-icons';
 import { collection, getDocs, doc, updateDoc, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
 import { useAuth } from '@/hooks/useAuth';
 import { firestore } from '../../../lib/firebaseConfig';
+import QRCode from 'qrcodejs';
 
 export default function GerenciamentoEstoque() {
   const { userPermissions, userData } = useAuth();
@@ -64,14 +66,14 @@ export default function GerenciamentoEstoque() {
       try {
         setLoading(true);
         const produtosData = [];
-        
+
         // Mapeamento de categorias para o caminho correto no banco de dados
         const categoriasMapeadas = {
           'armacoes': 'armacoes',
           'lentes': 'lentes',
           'solares': 'solares'
         };
-        
+
         const categoriasEstoque = ['armacoes', 'lentes', 'solares'];
         const lojas = userPermissions?.lojas || ['loja1', 'loja2'];
 
@@ -101,7 +103,7 @@ export default function GerenciamentoEstoque() {
         // Calcular estatísticas
         const produtosLoja1Count = produtosData.filter(p => p.loja === 'loja1').length;
         const produtosLoja2Count = produtosData.filter(p => p.loja === 'loja2').length;
-        
+
         // Considerando que a quantidade está armazenada como string, convertemos para número
         const produtosBaixoEstoqueCount = produtosData.filter(p => parseInt(p.quantidade) < 10).length;
 
@@ -246,13 +248,13 @@ export default function GerenciamentoEstoque() {
   const toggleSelectAll = () => {
     const newSelectAll = !selectAll;
     setSelectAll(newSelectAll);
-    
+
     const newSelectedItems = {};
     currentProdutos.forEach(produto => {
       const produtoKey = `${produto.id}-${produto.loja}-${produto.categoria}`;
       newSelectedItems[produtoKey] = newSelectAll;
     });
-    
+
     setSelectedItems(newSelectedItems);
   };
 
@@ -399,39 +401,39 @@ export default function GerenciamentoEstoque() {
   // Função para excluir produtos
   const handleDelete = async () => {
     const selectedProducts = getSelectedProducts();
-    
+
     if (selectedProducts.length === 0) return;
-    
+
     try {
       // Excluir cada produto selecionado
       for (const produto of selectedProducts) {
         const produtoRef = doc(firestore, `estoque/${produto.loja}/${produto.categoria}`, produto.id);
         await deleteDoc(produtoRef);
       }
-      
+
       // Atualizar o estado local removendo os produtos excluídos
       const updatedProdutos = produtos.filter(produto => {
         const produtoKey = `${produto.id}-${produto.loja}-${produto.categoria}`;
         return !selectedItems[produtoKey];
       });
-      
+
       setProdutos(updatedProdutos);
       setFilteredProdutos(sortProdutos(updatedProdutos, sortField, sortDirection));
-      
+
       // Recalcular estatísticas
       const produtosLoja1Count = updatedProdutos.filter(p => p.loja === 'loja1').length;
       const produtosLoja2Count = updatedProdutos.filter(p => p.loja === 'loja2').length;
       const produtosBaixoEstoqueCount = updatedProdutos.filter(p => parseInt(p.quantidade) < 10).length;
-      
+
       setTotalProdutos(updatedProdutos.length);
       setProdutosLoja1(produtosLoja1Count);
       setProdutosLoja2(produtosLoja2Count);
       setProdutosBaixoEstoque(produtosBaixoEstoqueCount);
-      
+
       // Limpar seleções
       setSelectedItems({});
       setSelectAll(false);
-      
+
       alert(`${selectedProducts.length} produto(s) excluído(s) com sucesso!`);
       setShowDeleteModal(false);
     } catch (error) {
@@ -551,8 +553,8 @@ export default function GerenciamentoEstoque() {
         {currentProdutos.map((produto) => {
           const produtoKey = `${produto.id}-${produto.loja}-${produto.categoria}`;
           return (
-            <div 
-              key={produtoKey} 
+            <div
+              key={produtoKey}
               className="bg-white rounded-lg shadow-md overflow-hidden border border-gray-200 hover:shadow-lg transition-shadow"
             >
               <div className="p-4">
@@ -567,10 +569,10 @@ export default function GerenciamentoEstoque() {
                   </div>
                   <div className="flex justify-center mb-3 flex-grow">
                     {produto.imagemUrl ? (
-                      <img 
-                        src={produto.imagemUrl} 
-                        alt={produto.titulo || 'Produto'} 
-                        className="h-32 w-32 object-contain cursor-pointer" 
+                      <img
+                        src={produto.imagemUrl}
+                        alt={produto.titulo || 'Produto'}
+                        className="h-32 w-32 object-contain cursor-pointer"
                         onClick={() => openDetailModal(produto)}
                         onError={(e) => {
                           e.target.onerror = null;
@@ -578,7 +580,7 @@ export default function GerenciamentoEstoque() {
                         }}
                       />
                     ) : (
-                      <div 
+                      <div
                         className="h-32 w-32 bg-gray-200 flex items-center justify-center cursor-pointer"
                         onClick={() => openDetailModal(produto)}
                       >
@@ -587,15 +589,15 @@ export default function GerenciamentoEstoque() {
                     )}
                   </div>
                 </div>
-                
-                <h3 
-                  className="font-bold text-[#81059e] truncate cursor-pointer" 
+
+                <h3
+                  className="font-bold text-[#81059e] truncate cursor-pointer"
                   title={produto.titulo}
                   onClick={() => openDetailModal(produto)}
                 >
                   {produto.titulo || 'Sem título'}
                 </h3>
-                
+
                 <div className="mt-2 text-sm">
                   <p className="text-gray-700">
                     <span className="font-semibold">Código:</span> {produto.codigo || 'N/A'}
@@ -673,8 +675,8 @@ export default function GerenciamentoEstoque() {
           {currentProdutos.map((produto) => {
             const produtoKey = `${produto.id}-${produto.loja}-${produto.categoria}`;
             return (
-              <tr 
-                key={produtoKey} 
+              <tr
+                key={produtoKey}
                 className="text-black text-left hover:bg-gray-100 cursor-pointer"
                 onClick={() => openDetailModal(produto)}
               >
@@ -689,10 +691,10 @@ export default function GerenciamentoEstoque() {
                 <td className="border px-1 py-1 text-center">
                   <div className="w-10 h-10 mx-auto">
                     {produto.imagemUrl ? (
-                      <img 
-                        src={produto.imagemUrl} 
-                        alt={produto.titulo || 'Produto'} 
-                        className="w-10 h-10 object-contain rounded" 
+                      <img
+                        src={produto.imagemUrl}
+                        alt={produto.titulo || 'Produto'}
+                        className="w-10 h-10 object-contain rounded"
                         onError={(e) => {
                           e.target.onerror = null;
                           e.target.src = '/images/placeholder-product.png';
@@ -741,6 +743,44 @@ export default function GerenciamentoEstoque() {
       </table>
     );
   };
+
+  // Adicionar esta função antes do componente principal
+  const generateQRCode = (data) => {
+    if (!data) return null;
+
+    const qrCodeData = {
+      id: data.codigo,
+      nome: data.titulo,
+      marca: data.marca,
+      tipo: data.categoria
+    };
+
+    return JSON.stringify(qrCodeData);
+  };
+
+  // Adicionar este useEffect para gerar o QR code quando o modal é aberto
+  useEffect(() => {
+    if (showDetailModal && selectedProduto) {
+      const qrData = generateQRCode(selectedProduto);
+      if (qrData) {
+        // Limpar o elemento QR code existente
+        const qrElement = document.getElementById(`qrcode-${selectedProduto.id}`);
+        if (qrElement) {
+          qrElement.innerHTML = '';
+
+          // Criar novo QR code
+          const qr = new QRCode(qrElement, {
+            text: qrData,
+            width: 192,
+            height: 192,
+            colorDark: '#81059e',
+            colorLight: '#ffffff',
+            correctLevel: QRCode.CorrectLevel.H
+          });
+        }
+      }
+    }
+  }, [showDetailModal, selectedProduto]);
 
   return (
     <Layout>
@@ -833,15 +873,15 @@ export default function GerenciamentoEstoque() {
 
             {/* Modo de visualização */}
             <div className="flex h-10 border-2 border-gray-200 rounded-lg overflow-hidden">
-              <button 
-                onClick={() => setViewMode('table')} 
+              <button
+                onClick={() => setViewMode('table')}
                 className={`flex items-center justify-center px-3 ${viewMode === 'table' ? 'bg-[#81059e] text-white' : 'bg-white text-gray-700'}`}
                 title="Visualização em Tabela"
               >
                 <FontAwesomeIcon icon={faTable} />
               </button>
-              <button 
-                onClick={() => setViewMode('grid')} 
+              <button
+                onClick={() => setViewMode('grid')}
                 className={`flex items-center justify-center px-3 ${viewMode === 'grid' ? 'bg-[#81059e] text-white' : 'bg-white text-gray-700'}`}
                 title="Visualização em Grade"
               >
@@ -860,9 +900,9 @@ export default function GerenciamentoEstoque() {
                 <span className="hidden sm:inline">Filtrar</span>
                 {(categoriaFilter !== 'Todas' || estoqueFilter !== 'Todos' || faixaPrecoFilter !== 'Todas') && (
                   <span className="ml-1 bg-[#81059e] text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
-                    {(categoriaFilter !== 'Todas' ? 1 : 0) + 
-                     (estoqueFilter !== 'Todos' ? 1 : 0) + 
-                     (faixaPrecoFilter !== 'Todas' ? 1 : 0)}
+                    {(categoriaFilter !== 'Todas' ? 1 : 0) +
+                      (estoqueFilter !== 'Todos' ? 1 : 0) +
+                      (faixaPrecoFilter !== 'Todas' ? 1 : 0)}
                   </span>
                 )}
               </button>
@@ -973,7 +1013,7 @@ export default function GerenciamentoEstoque() {
             <span className="text-sm text-gray-700 mr-3">
               {countSelectedItems()} item(s) selecionado(s)
             </span>
-            
+
             <button
               onClick={openDetailModal}
               disabled={countSelectedItems() !== 1}
@@ -982,13 +1022,13 @@ export default function GerenciamentoEstoque() {
               <FontAwesomeIcon icon={faEye} className="h-3 w-3" />
               <span className="text-sm">Ver</span>
             </button>
-            
+
             <Link href={
-              countSelectedItems() === 1 
+              countSelectedItems() === 1
                 ? (() => {
-                    const selected = getSelectedProducts()[0];
-                    return `/products_and_services/${selected.categoria === 'armacoes' ? 'frames' : selected.categoria === 'lentes' ? 'lenses' : 'solar'}/edit?id=${selected.id}&loja=${selected.loja}`;
-                  })()
+                  const selected = getSelectedProducts()[0];
+                  return `/products_and_services/${selected.categoria === 'armacoes' ? 'frames' : selected.categoria === 'lentes' ? 'lenses' : 'solar'}/edit?id=${selected.id}&loja=${selected.loja}`;
+                })()
                 : '#'
             }>
               <button
@@ -999,7 +1039,7 @@ export default function GerenciamentoEstoque() {
                 <span className="text-sm">Editar</span>
               </button>
             </Link>
-            
+
             <button
               onClick={openTransferModal}
               disabled={countSelectedItems() !== 1}
@@ -1008,7 +1048,7 @@ export default function GerenciamentoEstoque() {
               <FontAwesomeIcon icon={faExchange} className="h-3 w-3" />
               <span className="text-sm">Transferir</span>
             </button>
-            
+
             <button
               onClick={openDeleteModal}
               className="flex items-center gap-1 px-3 py-1 rounded bg-red-500 text-white hover:bg-red-600"
@@ -1107,8 +1147,8 @@ export default function GerenciamentoEstoque() {
               <div className="bg-white rounded-lg shadow-lg w-full max-w-md">
                 <div className="bg-[#81059e] text-white p-4 rounded-t-lg flex justify-between items-center">
                   <h3 className="text-xl font-bold">Adicionar Novo Produto</h3>
-                  <button 
-                    onClick={() => setShowAddModal(false)} 
+                  <button
+                    onClick={() => setShowAddModal(false)}
                     className="text-white hover:text-gray-200 focus:outline-none"
                   >
                     <FontAwesomeIcon icon={faTimes} />
@@ -1157,8 +1197,8 @@ export default function GerenciamentoEstoque() {
               <div className="bg-white rounded-lg shadow-lg w-full max-w-md">
                 <div className="bg-[#81059e] text-white p-4 rounded-t-lg flex justify-between items-center">
                   <h3 className="text-xl font-bold">Transferir Produto</h3>
-                  <button 
-                    onClick={() => setShowTransferModal(false)} 
+                  <button
+                    onClick={() => setShowTransferModal(false)}
                     className="text-white hover:text-gray-200 focus:outline-none"
                   >
                     <FontAwesomeIcon icon={faTimes} />
@@ -1230,8 +1270,8 @@ export default function GerenciamentoEstoque() {
                     onClick={handleTransferencia}
                     disabled={transferQuantidade <= 0 || transferQuantidade > parseInt(selectedProduto.quantidade)}
                     className={`px-4 py-2 rounded-md ${transferQuantidade <= 0 || transferQuantidade > parseInt(selectedProduto.quantidade)
-                        ? 'bg-gray-400 cursor-not-allowed'
-                        : 'bg-[#81059e] hover:bg-[#690480]'
+                      ? 'bg-gray-400 cursor-not-allowed'
+                      : 'bg-[#81059e] hover:bg-[#690480]'
                       } text-white transition`}
                   >
                     Transferir
@@ -1247,7 +1287,7 @@ export default function GerenciamentoEstoque() {
               <div className="bg-white rounded-lg shadow-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
                 <div className="bg-[#81059e] text-white p-4 rounded-t-lg flex justify-between items-center">
                   <h3 className="text-xl font-bold">Detalhes do Produto</h3>
-                  <button 
+                  <button
                     onClick={() => setShowDetailModal(false)}
                     className="text-white hover:text-gray-200 focus:outline-none"
                   >
@@ -1264,41 +1304,41 @@ export default function GerenciamentoEstoque() {
                         <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                           <div className="font-medium">Código:</div>
                           <div>{selectedProduto.codigo || 'N/A'}</div>
-                          
+
                           <div className="font-medium">SKU:</div>
                           <div>{selectedProduto.sku || 'N/A'}</div>
-                          
+
                           <div className="font-medium">Categoria:</div>
                           <div>
                             {selectedProduto.categoria === 'armacoes' ? 'Armação' :
-                             selectedProduto.categoria === 'lentes' ? 'Lente' : 'Solar'}
+                              selectedProduto.categoria === 'lentes' ? 'Lente' : 'Solar'}
                           </div>
-                          
+
                           <div className="font-medium">Marca:</div>
                           <div>{selectedProduto.marca || 'N/A'}</div>
-                          
+
                           <div className="font-medium">Loja:</div>
                           <div>{selectedProduto.loja === 'loja1' ? 'Loja 1' : 'Loja 2'}</div>
-                          
+
                           <div className="font-medium">Fornecedor:</div>
                           <div>{selectedProduto.fornecedor || 'N/A'}</div>
-                          
+
                           <div className="font-medium">Fabricante:</div>
                           <div>{selectedProduto.fabricante || 'N/A'}</div>
-                          
+
                           <div className="font-medium">Quantidade:</div>
                           <div>{selectedProduto.quantidade} unidades</div>
-                          
+
                           <div className="font-medium">Preço de Custo:</div>
                           <div>R$ {parseFloat(selectedProduto.custo || 0).toFixed(2)}</div>
-                          
+
                           <div className="font-medium">Preço de Venda:</div>
                           <div>R$ {parseFloat(selectedProduto.valor || 0).toFixed(2)}</div>
-                          
+
                           <div className="font-medium">Margem de Lucro:</div>
                           <div>{selectedProduto.percentual_lucro || 'N/A'}%</div>
                         </div>
-                        
+
                         {/* Propriedades específicas por categoria */}
                         {(selectedProduto.categoria === 'armacoes' || selectedProduto.categoria === 'solares') && (
                           <div className="mt-4">
@@ -1320,7 +1360,7 @@ export default function GerenciamentoEstoque() {
                                 <>
                                   <div className="font-medium">Cor:</div>
                                   <div>{selectedProduto.cor}</div>
-                                  </>
+                                </>
                               )}
                               {selectedProduto.aro && (
                                 <>
@@ -1355,7 +1395,7 @@ export default function GerenciamentoEstoque() {
                             </div>
                           </div>
                         )}
-                        
+
                         {selectedProduto.categoria === 'lentes' && (
                           <div className="mt-4">
                             <h5 className="font-semibold text-[#81059e] mb-2">Especificações Técnicas</h5>
@@ -1411,23 +1451,23 @@ export default function GerenciamentoEstoque() {
                             </div>
                           </div>
                         )}
-                        
+
                         {/* Informações fiscais */}
                         <div className="mt-4">
                           <h5 className="font-semibold text-[#81059e] mb-2">Informações Fiscais</h5>
                           <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                             <div className="font-medium">NCM:</div>
                             <div>{selectedProduto.NCM || 'N/A'}</div>
-                            
+
                             <div className="font-medium">CEST:</div>
                             <div>{selectedProduto.CEST || selectedProduto.cest || 'N/A'}</div>
-                            
+
                             <div className="font-medium">CSOSN:</div>
                             <div>{selectedProduto.CSOSN || selectedProduto.csosn || 'N/A'}</div>
                           </div>
                         </div>
                       </div>
-                      
+
                       {/* Botões de ação */}
                       <div className="mt-6 flex space-x-3">
                         <Link href={`/products_and_services/${selectedProduto.categoria === 'armacoes' ? 'frames' : selectedProduto.categoria === 'lentes' ? 'lenses' : 'solar'}/edit?id=${selectedProduto.id}&loja=${selectedProduto.loja}`}>
@@ -1446,16 +1486,16 @@ export default function GerenciamentoEstoque() {
                         </button>
                       </div>
                     </div>
-                    
+
                     {/* Imagem do produto */}
                     <div>
                       <div className="bg-gray-100 rounded-lg p-4 h-full flex flex-col justify-between">
                         <div className="flex-grow flex items-center justify-center">
                           {selectedProduto.imagemUrl ? (
-                            <img 
-                              src={selectedProduto.imagemUrl} 
-                              alt={selectedProduto.titulo || 'Produto'} 
-                              className="max-w-full max-h-80 object-contain" 
+                            <img
+                              src={selectedProduto.imagemUrl}
+                              alt={selectedProduto.titulo || 'Produto'}
+                              className="max-w-full max-h-80 object-contain"
                               onError={(e) => {
                                 e.target.onerror = null;
                                 e.target.src = '/images/placeholder-product.png';
@@ -1467,12 +1507,12 @@ export default function GerenciamentoEstoque() {
                             </div>
                           )}
                         </div>
-                        
+
                         <div className="mt-4 text-center">
                           <div className="font-semibold text-gray-700">Código: {selectedProduto.codigo}</div>
                           <div className="text-gray-600">
                             {selectedProduto.categoria === 'armacoes' ? 'Armação' :
-                             selectedProduto.categoria === 'lentes' ? 'Lente' : 'Óculos Solar'} - 
+                              selectedProduto.categoria === 'lentes' ? 'Lente' : 'Óculos Solar'} -
                             {selectedProduto.loja === 'loja1' ? ' Loja 1' : ' Loja 2'}
                           </div>
                           <div className="mt-2 font-bold text-lg">
@@ -1486,7 +1526,7 @@ export default function GerenciamentoEstoque() {
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="bg-gray-100 px-6 py-4 rounded-b-lg flex justify-end">
                   <button
                     onClick={() => setShowDetailModal(false)}
@@ -1505,8 +1545,8 @@ export default function GerenciamentoEstoque() {
               <div className="bg-white rounded-lg shadow-lg w-full max-w-md">
                 <div className="bg-red-500 text-white p-4 rounded-t-lg flex justify-between items-center">
                   <h3 className="text-xl font-bold">Confirmar Exclusão</h3>
-                  <button 
-                    onClick={() => setShowDeleteModal(false)} 
+                  <button
+                    onClick={() => setShowDeleteModal(false)}
                     className="text-white hover:text-gray-200 focus:outline-none"
                   >
                     <FontAwesomeIcon icon={faTimes} />

@@ -112,7 +112,7 @@ export default function ProductsPage() {
         { icon: '/images/products_and_services/OS.png', label: 'OS', route: '/products_and_services/OS' },
         { icon: '/images/products_and_services/reparo.png', label: 'Reparos', route: '/products_and_services/repair/list-repairs' },
         { icon: '/images/products_and_services/malote.png', label: 'Malotes', route: '/products_and_services/pouch/list-pouches' },
-        { icon: '/images/products_and_services/pedido.png', label: 'Pedidos', route: '/products_and_services/orders' },
+        { icon: '/images/products_and_services/pedido.png', label: 'Pedidos', route: '/products_and_services/orders/list-orders' },
         { icon: '/images/products_and_services/distribuidor.png', label: 'Distribuidores', route: '/products_and_services/distribuidor' },
         { icon: '/images/products_and_services/prestador.png', label: 'Prestadores', route: '/products_and_services/service_provider' },
         { icon: '/images/products_and_services/laboratorio.png', label: 'Laboratórios', route: '/products_and_services/laboratory' },

@@ -30,7 +30,7 @@ export default function ContasPagar() {
     dataVencimento: '',
     horaVencimento: '',
     localPagamento: '', // Local de pagamento
-    categoriaDespesa: '', 
+    categoriaDespesa: '',
     lancamentoNoCaixa: '', // Lançamento no caixa
     parcelaAtual: '1', // Parcela atual
     totalParcelas: '1', // Total de parcelas
@@ -60,6 +60,7 @@ export default function ContasPagar() {
   }, [userPermissions]);
 
   const fetchCredores = async () => {
+    // Permitir busca com termos mais curtos (2+ caracteres)
     if (!searchTerm.trim() || !selectedLoja) {
       setCredores([]);
       return;
@@ -68,6 +69,7 @@ export default function ContasPagar() {
     setIsLoading(true);
     try {
       const allCredores = [];
+      const searchTermLower = searchTerm.toLowerCase().trim();
 
       // 1. Buscar fornecedores em /lojas/fornecedores/users
       try {
@@ -76,17 +78,79 @@ export default function ContasPagar() {
 
         fornecedoresSnapshot.docs.forEach(doc => {
           const data = doc.data();
-          // Verifique se o nome ou CNPJ corresponde ao termo de busca
-          if ((data.razaoSocial && data.razaoSocial.toLowerCase().includes(searchTerm.toLowerCase())) ||
-            (data.nomeFantasia && data.nomeFantasia.toLowerCase().includes(searchTerm.toLowerCase())) ||
-            (data.cnpj && data.cnpj.includes(searchTerm.replace(/\D/g, '')))) {
+          let matchScore = 0;
+          let matchFound = false;
+
+          // Verificar correspondência na Razão Social
+          if (data.razaoSocial) {
+            const razaoSocialLower = data.razaoSocial.toLowerCase();
+            // Match exato (prioridade mais alta)
+            if (razaoSocialLower === searchTermLower) {
+              matchScore = 100;
+              matchFound = true;
+            }
+            // Match no início (prioridade alta)
+            else if (razaoSocialLower.startsWith(searchTermLower)) {
+              matchScore = 80;
+              matchFound = true;
+            }
+            // Match parcial (prioridade média)
+            else if (razaoSocialLower.includes(searchTermLower)) {
+              matchScore = 60;
+              matchFound = true;
+            }
+            // Para termos curtos (menos de 3 caracteres), ser mais flexível
+            else if (searchTermLower.length < 3 && razaoSocialLower.split(' ').some(word => word.startsWith(searchTermLower))) {
+              matchScore = 40;
+              matchFound = true;
+            }
+          }
+
+          // Verificar correspondência no Nome Fantasia
+          if (data.nomeFantasia) {
+            const nomeFantasiaLower = data.nomeFantasia.toLowerCase();
+            // Match exato
+            if (nomeFantasiaLower === searchTermLower) {
+              matchScore = Math.max(matchScore, 100);
+              matchFound = true;
+            }
+            // Match no início
+            else if (nomeFantasiaLower.startsWith(searchTermLower)) {
+              matchScore = Math.max(matchScore, 80);
+              matchFound = true;
+            }
+            // Match parcial
+            else if (nomeFantasiaLower.includes(searchTermLower)) {
+              matchScore = Math.max(matchScore, 60);
+              matchFound = true;
+            }
+            // Para termos curtos (menos de 3 caracteres), ser mais flexível
+            else if (searchTermLower.length < 3 && nomeFantasiaLower.split(' ').some(word => word.startsWith(searchTermLower))) {
+              matchScore = Math.max(matchScore, 40);
+              matchFound = true;
+            }
+          }
+
+          // Verificar correspondência no CNPJ (apenas se o termo de busca parece ser um número)
+          if (data.cnpj && /^\d+$/.test(searchTerm.replace(/\D/g, ''))) {
+            const cnpjNumbers = data.cnpj.replace(/\D/g, '');
+            const searchNumbers = searchTerm.replace(/\D/g, '');
+
+            if (cnpjNumbers.includes(searchNumbers)) {
+              matchScore = Math.max(matchScore, 70);
+              matchFound = true;
+            }
+          }
+
+          if (matchFound) {
             allCredores.push({
               id: doc.id,
               nome: data.razaoSocial || data.nomeFantasia || 'Fornecedor sem nome',
               cnpj: data.cnpj,
-              tipo: 'fornecedor', // Marcador para identificar o tipo de credor
+              tipo: 'fornecedor',
               email: data.email,
-              telefone: data.telefone
+              telefone: data.telefone,
+              matchScore // Adicionamos o score para ordenação posterior
             });
           }
         });
@@ -101,17 +165,55 @@ export default function ContasPagar() {
 
         funcionariosLoja1Snapshot.docs.forEach(doc => {
           const data = doc.data();
-          // Verifique se o nome ou CPF corresponde ao termo de busca
-          if ((data.nome && data.nome.toLowerCase().includes(searchTerm.toLowerCase())) ||
-            (data.cpf && data.cpf.includes(searchTerm.replace(/\D/g, '')))) {
+          let matchScore = 0;
+          let matchFound = false;
+
+          // Verificar correspondência no Nome
+          if (data.nome) {
+            const nomeLower = data.nome.toLowerCase();
+            // Match exato
+            if (nomeLower === searchTermLower) {
+              matchScore = 100;
+              matchFound = true;
+            }
+            // Match no início
+            else if (nomeLower.startsWith(searchTermLower)) {
+              matchScore = 80;
+              matchFound = true;
+            }
+            // Match parcial
+            else if (nomeLower.includes(searchTermLower)) {
+              matchScore = 60;
+              matchFound = true;
+            }
+            // Para termos curtos (menos de 3 caracteres), ser mais flexível
+            else if (searchTermLower.length < 3 && nomeLower.split(' ').some(word => word.startsWith(searchTermLower))) {
+              matchScore = 40;
+              matchFound = true;
+            }
+          }
+
+          // Verificar correspondência no CPF (apenas se o termo de busca parece ser um número)
+          if (data.cpf && /^\d+$/.test(searchTerm.replace(/\D/g, ''))) {
+            const cpfNumbers = data.cpf.replace(/\D/g, '');
+            const searchNumbers = searchTerm.replace(/\D/g, '');
+
+            if (cpfNumbers.includes(searchNumbers)) {
+              matchScore = Math.max(matchScore, 70);
+              matchFound = true;
+            }
+          }
+
+          if (matchFound) {
             allCredores.push({
               id: doc.id,
               nome: data.nome || 'Funcionário sem nome',
               cpf: data.cpf,
-              tipo: 'funcionario', // Marcador para identificar o tipo de credor
+              tipo: 'funcionario',
               loja: 'loja1',
               email: data.email,
-              telefone: data.telefone
+              telefone: data.telefone,
+              matchScore
             });
           }
         });
@@ -126,23 +228,64 @@ export default function ContasPagar() {
 
         funcionariosLoja2Snapshot.docs.forEach(doc => {
           const data = doc.data();
-          // Verifique se o nome ou CPF corresponde ao termo de busca
-          if ((data.nome && data.nome.toLowerCase().includes(searchTerm.toLowerCase())) ||
-            (data.cpf && data.cpf.includes(searchTerm.replace(/\D/g, '')))) {
+          let matchScore = 0;
+          let matchFound = false;
+
+          // Verificar correspondência no Nome
+          if (data.nome) {
+            const nomeLower = data.nome.toLowerCase();
+            // Match exato
+            if (nomeLower === searchTermLower) {
+              matchScore = 100;
+              matchFound = true;
+            }
+            // Match no início
+            else if (nomeLower.startsWith(searchTermLower)) {
+              matchScore = 80;
+              matchFound = true;
+            }
+            // Match parcial
+            else if (nomeLower.includes(searchTermLower)) {
+              matchScore = 60;
+              matchFound = true;
+            }
+            // Para termos curtos (menos de 3 caracteres), ser mais flexível
+            else if (searchTermLower.length < 3 && nomeLower.split(' ').some(word => word.startsWith(searchTermLower))) {
+              matchScore = 40;
+              matchFound = true;
+            }
+          }
+
+          // Verificar correspondência no CPF (apenas se o termo de busca parece ser um número)
+          if (data.cpf && /^\d+$/.test(searchTerm.replace(/\D/g, ''))) {
+            const cpfNumbers = data.cpf.replace(/\D/g, '');
+            const searchNumbers = searchTerm.replace(/\D/g, '');
+
+            if (cpfNumbers.includes(searchNumbers)) {
+              matchScore = Math.max(matchScore, 70);
+              matchFound = true;
+            }
+          }
+
+          if (matchFound) {
             allCredores.push({
               id: doc.id,
               nome: data.nome || 'Funcionário sem nome',
               cpf: data.cpf,
-              tipo: 'funcionario', // Marcador para identificar o tipo de credor
+              tipo: 'funcionario',
               loja: 'loja2',
               email: data.email,
-              telefone: data.telefone
+              telefone: data.telefone,
+              matchScore
             });
           }
         });
       } catch (error) {
         console.error("Erro ao buscar funcionários da loja 2:", error);
       }
+
+      // Ordenar os resultados pelo score de relevância (do maior para o menor)
+      allCredores.sort((a, b) => b.matchScore - a.matchScore);
 
       // Define os credores encontrados
       setCredores(allCredores);
@@ -177,7 +320,7 @@ export default function ContasPagar() {
       tipoCredor: credor.tipo // Armazena se é 'fornecedor' ou 'funcionario'
     }));
     setSearchTerm(credor.nome);
-    setCredores([]);
+    setCredores([]); // Limpa a lista de credores após seleção
   };
 
   const handleSubmit = (e) => {
@@ -364,11 +507,12 @@ export default function ContasPagar() {
 
           <form onSubmit={handleSubmit} className="mt-8 mb-20">
             {/* Seção Credor */}
-            <div className="p-4 bg-gray-50 rounded-lg mb-6 h-60">
+            <div className="p-4 bg-gray-50 rounded-lg mb-6 h-64">
               <h3 className="text-lg font-semibold text-[#81059e] mb-4 flex items-center gap-2">
                 <FiUser /> Informações do Credor
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Componente de busca de credores */}
                 <div>
                   <label className="text-[#81059e] font-medium">Nome do Credor</label>
                   <input
@@ -382,28 +526,43 @@ export default function ContasPagar() {
                     className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
                     required
                   />
-                  {searchTerm && credores.length > 0 && (
-                    <ul className="bg-white border-2 border-[#81059e] rounded-lg w-full max-h-[104px] overflow-y-auto shadow-lg custom-scroll">
-                      {credores.map((credor) => (
-                        <li
-                          key={credor.id}
-                          onClick={() => handleCredorSelect(credor)}
-                          className="p-2 hover:bg-purple-50 cursor-pointer text-black border-b last:border-b-0"
-                        >
-                          {credor.nome} {" "}
-                          {credor.tipo === 'fornecedor' ? (
-                            <span className="text-xs text-gray-500">(Fornecedor - CNPJ: {credor.cnpj})</span>
+                  {searchTerm && (
+                    <>
+                      {isLoading ? (
+                        <div className="mt-2 p-3 text-sm text-gray-600">
+                          <span className="inline-block animate-pulse">Buscando credores...</span>
+                        </div>
+                      ) : (
+                        <>
+                          {credores.length > 0 ? (
+                            <ul className="bg-white border-2 border-[#81059e] rounded-lg w-full max-h-[104px] overflow-y-auto shadow-lg custom-scroll">
+                              {credores.map((credor) => (
+                                <li
+                                  key={credor.id}
+                                  onClick={() => handleCredorSelect(credor)}
+                                  className="p-2 hover:bg-purple-50 cursor-pointer text-black border-b last:border-b-0"
+                                >
+                                  {credor.nome} {" "}
+                                  {credor.tipo === 'fornecedor' ? (
+                                    <span className="text-xs text-gray-500">(Fornecedor - CNPJ: {credor.cnpj})</span>
+                                  ) : (
+                                    <span className="text-xs text-gray-500">
+                                      (Funcionário {credor.loja === 'loja1' ? 'Loja 1' : 'Loja 2'} - CPF: {credor.cpf})
+                                    </span>
+                                  )}
+                                </li>
+                              ))}
+                            </ul>
                           ) : (
-                            <span className="text-xs text-gray-500">
-                              (Funcionário {credor.loja === 'loja1' ? 'Loja 1' : 'Loja 2'} - CPF: {credor.cpf})
-                            </span>
+                            searchTerm && credores.length === 0 && !formData.documentoCredor && (
+                              <div className="mt-2 p-3 text-sm text-red-500  rounded border border-red-100">
+                                Não encontrado. Tente outro termo de busca.
+                              </div>
+                            )
                           )}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                  {isLoading && searchTerm && (
-                    <p className="text-sm text-gray-500 mt-1">Buscando credores...</p>
+                        </>
+                      )}
+                    </>
                   )}
                 </div>
                 <div>
@@ -509,7 +668,7 @@ export default function ContasPagar() {
                     <option value="18">18</option>
                     <option value="24">24</option>
                     <option value="Indefinido">Indefinido</option>
-                    
+
                   </select>
                 </div>
 

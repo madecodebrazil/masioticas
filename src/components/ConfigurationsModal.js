@@ -2,7 +2,8 @@
 import { createPortal } from 'react-dom';
 import React, { useState, useEffect } from 'react';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { firestore } from '@/lib/firebaseConfig';
+import { ref, uploadBytes, getDownloadURL, getStorage } from 'firebase/storage';
+import { firestore, storage, app } from '@/lib/firebaseConfig';
 import { useAuth } from '@/hooks/useAuth';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
@@ -14,11 +15,12 @@ import {
   faTimes,
   faSave,
   faExclamationTriangle,
-  faGear
+  faGear,
+  faUser
 } from '@fortawesome/free-solid-svg-icons';
 
 const ConfigurationsModal = ({ isOpen, onClose }) => {
-  const { userPermissions } = useAuth();
+  const { userPermissions, user } = useAuth();
   const [abaAtiva, setAbaAtiva] = useState('horarios');
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -29,8 +31,15 @@ const ConfigurationsModal = ({ isOpen, onClose }) => {
       aberturaSabado: '08:00',
       fechamentoSabado: '13:00',
       domingoFechado: true
+    },
+    perfil: {
+      fotoUrl: '',
+      nome: '',
+      cargo: ''
     }
   });
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   useEffect(() => {
     // Verificar se o usuário é administrador
@@ -55,7 +64,7 @@ const ConfigurationsModal = ({ isOpen, onClose }) => {
       carregarConfiguracoes();
       document.body.style.overflow = 'hidden';
     }
-    
+
     // Limpar efeito ao desmontar o componente
     return () => {
       document.body.style.overflow = 'auto';
@@ -76,7 +85,7 @@ const ConfigurationsModal = ({ isOpen, onClose }) => {
         await setDoc(doc(firestore, 'configuracoes', 'horarios'), config.horarios);
       }
       // Adicione mais condições para outras abas conforme necessário
-      
+
       alert("Configurações salvas com sucesso!");
       document.body.style.overflow = 'auto';
       onClose();
@@ -90,7 +99,7 @@ const ConfigurationsModal = ({ isOpen, onClose }) => {
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
-    
+
     // Atualiza o estado com base na aba ativa
     if (abaAtiva === 'horarios') {
       setConfig(prev => ({
@@ -100,17 +109,130 @@ const ConfigurationsModal = ({ isOpen, onClose }) => {
           [name]: type === 'checkbox' ? checked : value
         }
       }));
+    } else if (abaAtiva === 'perfil') {
+      setConfig(prev => ({
+        ...prev,
+        perfil: {
+          ...prev.perfil,
+          [name]: value
+        }
+      }));
     }
-    // Adicione lógica para outras abas conforme necessário
   };
-  
+
   const handleClose = () => {
     document.body.style.overflow = 'auto';
     onClose();
   };
 
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Validar o tipo do arquivo
+      if (!file.type.startsWith('image/')) {
+        alert('Por favor, selecione apenas arquivos de imagem.');
+        return;
+      }
+
+      // Validar o tamanho do arquivo (máximo 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('O arquivo é muito grande. Por favor, selecione uma imagem menor que 5MB.');
+        return;
+      }
+
+      setSelectedFile(file);
+    }
+  };
+
+  // Modifique a função handleUpload no ConfigurationsModal.js
+
+const handleUpload = async () => {
+  if (!selectedFile) return;
+
+  setIsLoading(true);
+
+  try {
+    // 1. Vamos usar uma solução alternativa contornando o Firebase Storage direto
+    // Converter a imagem para base64 e salvar no Firestore
+    const reader = new FileReader();
+    
+    reader.onload = async (e) => {
+      try {
+        const base64Image = e.target.result;
+        console.log("Imagem convertida para base64");
+
+        // 2. Determinar caminho do documento correto
+        let userDocRef;
+        
+        if (userPermissions?.isAdmin) {
+          userDocRef = doc(firestore, `admins/${user.uid}`);
+        } else {
+          const lojaId = userPermissions?.lojas?.[0] || 'loja1';
+          userDocRef = doc(firestore, `lojas/${lojaId}/users/${user.uid}`);
+        }
+        
+        // 3. Salvar a imagem base64 diretamente no Firestore
+        // Isto evita completamente o problema de CORS
+        await setDoc(userDocRef, {
+          fotoUrl: base64Image,
+          ultimaAtualizacao: new Date().toISOString()
+        }, { merge: true });
+        
+        // 4. Atualizar o estado local
+        setConfig(prev => ({
+          ...prev,
+          perfil: {
+            ...prev.perfil,
+            fotoUrl: base64Image
+          }
+        }));
+        
+        setSelectedFile(null);
+        setIsLoading(false);
+        alert("Foto de perfil atualizada com sucesso!");
+      } catch (error) {
+        console.error("Erro ao salvar imagem:", error);
+        setIsLoading(false);
+        alert(`Erro ao salvar imagem: ${error.message}`);
+      }
+    };
+
+    reader.onerror = (error) => {
+      console.error("Erro ao ler arquivo:", error);
+      setIsLoading(false);
+      alert("Erro ao processar a imagem. Por favor, tente novamente.");
+    };
+
+    // Inicia a leitura da imagem como base64
+    reader.readAsDataURL(selectedFile);
+    
+  } catch (error) {
+    console.error("Erro completo:", error);
+    setIsLoading(false);
+    alert(`Erro ao processar upload: ${error.message}`);
+  }
+};
+
+// Modifique também a renderização da imagem para suportar base64
+// Na seção que mostra a foto do perfil:
+
+{config.perfil.fotoUrl ? (
+  <img
+    src={config.perfil.fotoUrl.startsWith('data:image') 
+      ? config.perfil.fotoUrl 
+      : config.perfil.fotoUrl}
+    alt="Foto de perfil"
+    className="w-24 h-24 rounded-full object-cover border-2 border-[#81059e]"
+  />
+) : (
+  <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center border-2 border-[#81059e]">
+    <FontAwesomeIcon icon={faUser} className="text-gray-400 text-2xl" />
+  </div>
+)}
+
   // Definição das abas
   const abas = [
+    { id: 'perfil', nome: 'Perfil', icon: faUser },
     { id: 'empresa', nome: 'Geral', icon: faBuilding },
     { id: 'financeiro', nome: 'Financeiro', icon: faMoneyBill },
     { id: 'horarios', nome: 'Usuários', icon: faClock },
@@ -121,101 +243,82 @@ const ConfigurationsModal = ({ isOpen, onClose }) => {
   // Renderizar conteúdo da aba selecionada
   const renderConteudoAba = () => {
     switch (abaAtiva) {
-      case 'horarios':
+      case 'perfil':
         return (
           <div className="space-y-6">
-            {/* Horários durante a semana */}
             <div className="bg-gray-50 p-4 rounded-lg">
-              <h4 className="font-medium text-[#81059e] mb-3">Horário de Funcionamento (Seg-Sex)</h4>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm text-gray-600 mb-1">Horário de Abertura</label>
-                  <input
-                    type="time"
-                    name="abertura"
-                    value={config.horarios.abertura}
-                    onChange={handleInputChange}
-                    className="border border-gray-300 p-2 rounded w-full"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-600 mb-1">Horário de Fechamento</label>
-                  <input
-                    type="time"
-                    name="fechamento"
-                    value={config.horarios.fechamento}
-                    onChange={handleInputChange}
-                    className="border border-gray-300 p-2 rounded w-full"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Horários aos sábados */}
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <h4 className="font-medium text-[#81059e] mb-3">Horário de Funcionamento (Sábados)</h4>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm text-gray-600 mb-1">Horário de Abertura</label>
-                  <input
-                    type="time"
-                    name="aberturaSabado"
-                    value={config.horarios.aberturaSabado}
-                    onChange={handleInputChange}
-                    className="border border-gray-300 p-2 rounded w-full"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-600 mb-1">Horário de Fechamento</label>
-                  <input
-                    type="time"
-                    name="fechamentoSabado"
-                    value={config.horarios.fechamentoSabado}
-                    onChange={handleInputChange}
-                    className="border border-gray-300 p-2 rounded w-full"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Opção para domingo */}
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="domingoFechado"
-                  name="domingoFechado"
-                  checked={config.horarios.domingoFechado}
-                  onChange={handleInputChange}
-                  className="h-4 w-4 text-[#81059e] border-gray-300 rounded"
-                />
-                <label htmlFor="domingoFechado" className="ml-2 text-gray-700">
-                  Loja não funciona aos domingos
-                </label>
-              </div>
-            </div>
-
-            <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
-              <div className="flex">
-                <div className="flex-shrink-0">
-                  <FontAwesomeIcon icon={faExclamationTriangle} className="h-5 w-5 text-yellow-400" />
-                </div>
-                <div className="ml-3">
-                  <h3 className="text-sm font-medium text-yellow-800">
-                    Observação importante
-                  </h3>
-                  <div className="mt-2 text-sm text-yellow-700">
-                    <p>
-                      As configurações de horário afetam a permissão para abertura de caixa.
-                      Fora dos horários configurados, não será possível abrir o caixa.
-                    </p>
+              <h4 className="font-medium text-[#81059e] mb-3">Configurações de Perfil</h4>
+              <div className="space-y-4">
+                <div className="flex items-center space-x-4">
+                  <div className="relative">
+                    {config.perfil.fotoUrl ? (
+                      <img
+                        src={config.perfil.fotoUrl}
+                        alt="Foto de perfil"
+                        className="w-24 h-24 rounded-full object-cover border-2 border-[#81059e]"
+                      />
+                    ) : (
+                      <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center border-2 border-[#81059e]">
+                        <FontAwesomeIcon icon={faUser} className="text-gray-400 text-2xl" />
+                      </div>
+                    )}
                   </div>
+                  <div className="flex-1">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileChange}
+                      className="hidden"
+                      id="fotoPerfil"
+                    />
+                    <label
+                      htmlFor="fotoPerfil"
+                      className="inline-block px-4 py-2 bg-[#81059e] text-white rounded-md cursor-pointer hover:bg-[#690480] transition-colors"
+                    >
+                      {isLoading ? 'Enviando...' : 'Escolher Foto'}
+                    </label>
+                    {selectedFile && !isLoading && (
+                      <button
+                        onClick={handleUpload}
+                        className="ml-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+                      >
+                        Enviar
+                      </button>
+                    )}
+                    {selectedFile && (
+                      <p className="mt-2 text-sm text-gray-600">
+                        Arquivo selecionado: {selectedFile.name}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-600 mb-1">Nome</label>
+                  <input
+                    type="text"
+                    name="nome"
+                    value={config.perfil.nome}
+                    onChange={handleInputChange}
+                    className="border border-gray-300 p-2 rounded w-full"
+                    placeholder="Seu nome"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-600 mb-1">Cargo</label>
+                  <input
+                    type="text"
+                    name="cargo"
+                    value={config.perfil.cargo}
+                    onChange={handleInputChange}
+                    className="border border-gray-300 p-2 rounded w-full"
+                    placeholder="Seu cargo"
+                  />
                 </div>
               </div>
             </div>
           </div>
         );
-        
+
       case 'empresa':
         return (
           <div className="p-4 bg-gray-50 rounded-lg">
@@ -260,7 +363,7 @@ const ConfigurationsModal = ({ isOpen, onClose }) => {
             </div>
           </div>
         );
-      
+
       case 'financeiro':
         return (
           <div className="p-4 bg-gray-50 rounded-lg">
@@ -300,7 +403,7 @@ const ConfigurationsModal = ({ isOpen, onClose }) => {
             </div>
           </div>
         );
-      
+
       case 'usuarios':
         return (
           <div className="p-4 bg-gray-50 rounded-lg">
@@ -339,7 +442,7 @@ const ConfigurationsModal = ({ isOpen, onClose }) => {
             </div>
           </div>
         );
-      
+
       case 'estoque':
         return (
           <div className="p-4 bg-gray-50 rounded-lg">
@@ -369,7 +472,7 @@ const ConfigurationsModal = ({ isOpen, onClose }) => {
             </div>
           </div>
         );
-          
+
       default:
         return <div className="p-4">Selecione uma opção no menu</div>;
     }
@@ -378,24 +481,24 @@ const ConfigurationsModal = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   const modalContent = (
-    <div 
+    <div
       className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50"
     >
-      <div 
+      <div
         className="bg-[#81059e] rounded-lg shadow-lg w-full max-w-4xl max-h-[90vh] overflow-hidden relative"
       >
         <div className="flex justify-between items-center p-4 border-b">
           <h3 className="text-xl font-bold text-white">
             <FontAwesomeIcon icon={faGear} className="mr-2 text-white" /> Configurações do Sistema
           </h3>
-          <button 
+          <button
             onClick={handleClose}
             className="text-gray-500 hover:text-gray-700"
           >
             <FontAwesomeIcon icon={faTimes} size="lg" />
           </button>
         </div>
-        
+
         <div className="flex h-[calc(90vh-120px)]">
           {/* Menu lateral */}
           <div className="w-64 bg-gray-100 p-4 overflow-y-auto">
@@ -405,8 +508,8 @@ const ConfigurationsModal = ({ isOpen, onClose }) => {
                   <button
                     onClick={() => setAbaAtiva(aba.id)}
                     className={`w-full text-left p-3 rounded-md flex items-center
-                      ${abaAtiva === aba.id ? 
-                        'bg-[#81059e] text-gray-200 font-medium' : 
+                      ${abaAtiva === aba.id ?
+                        'bg-[#81059e] text-gray-200 font-medium' :
                         'text-gray-700 hover:bg-gray-200'}`}
                   >
                     <FontAwesomeIcon icon={aba.icon} className="mr-3" />
@@ -416,7 +519,7 @@ const ConfigurationsModal = ({ isOpen, onClose }) => {
               ))}
             </ul>
           </div>
-          
+
           {/* Conteúdo da aba */}
           <div className="flex-1 p-6 overflow-y-auto">
             {renderConteudoAba()}
@@ -449,8 +552,8 @@ const ConfigurationsModal = ({ isOpen, onClose }) => {
     </div>
   );
 
-   // Verifica se estamos no navegador antes de usar createPortal
-   if (typeof window === 'undefined') {
+  // Verifica se estamos no navegador antes de usar createPortal
+  if (typeof window === 'undefined') {
     return null;
   }
 

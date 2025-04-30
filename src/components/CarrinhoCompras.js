@@ -1,225 +1,156 @@
-// components/CarrinhoCompras.js
-import { useState, useEffect, useRef } from 'react';
-import {
-  FiSearch, FiPlus, FiMinus, FiTrash2, FiInfo,
-  FiShoppingBag, FiBarChart2, FiTag, FiPackage,
-  FiAlertCircle, FiLayers, FiPlusCircle, FiEye, FiCheckCircle
-} from 'react-icons/fi';
-import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
+// src/components/CarrinhoCompras.js
+import React, { useState, useEffect, useRef } from 'react';
+import { FiTrash2, FiPlus, FiMinus, FiSearch, FiLayers, FiShoppingBag, FiPlusCircle } from 'react-icons/fi';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faQrCode } from '@fortawesome/free-solid-svg-icons';
+import { collection, getDocs } from 'firebase/firestore';
 import { firestore } from '@/lib/firebaseConfig';
 import { useAuth } from '@/hooks/useAuth';
-import { QrReader } from 'react-qr-reader';
+import { Html5Qrcode } from 'html5-qrcode';
 
-// Substituir a declaração do componente e a definição de props
+const QrCodeScanner = ({ onScan, onClose }) => {
+  const qrRef = useRef(null);
+  const [scanner, setScanner] = useState(null);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (!qrRef.current) return;
+
+    // Gerar um ID único para o elemento
+    const scannerId = "qr-reader-" + Math.random().toString(36).substring(2, 9);
+    qrRef.current.id = scannerId;
+
+    // Inicializar o scanner
+    const html5QrCode = new Html5Qrcode(scannerId);
+    setScanner(html5QrCode);
+
+    const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+
+    // Iniciar a câmera com melhor tratamento de erros
+    html5QrCode.start(
+      { facingMode: "environment" },
+      config,
+      (decodedText) => {
+        console.log("QR Code detectado:", decodedText);
+        onScan(decodedText);
+        html5QrCode.stop().catch(e => console.error("Erro ao parar scanner:", e));
+        onClose();
+      },
+      (errorMessage) => {
+        // Ignorar erros de leitura normal - são esperados enquanto não há QR code
+        console.log("Erro de leitura QR:", errorMessage);
+      }
+    ).catch(err => {
+      console.error("Erro ao iniciar scanner:", err);
+      setError(`Erro ao iniciar câmera: ${err.message}`);
+    });
+
+    // Cleanup function
+    return () => {
+      if (html5QrCode && html5QrCode.isScanning) {
+        html5QrCode.stop().catch(e => console.error("Erro ao parar scanner:", e));
+      }
+    };
+  }, [onScan, onClose]);
+
+  return (
+    <div className="p-3">
+      {error ? (
+        <div className="text-red-500 text-center p-3 border border-red-300 rounded bg-red-50">
+          {error}
+          <button
+            onClick={onClose}
+            className="block mx-auto mt-2 bg-red-500 text-white px-3 py-1 rounded"
+          >
+            Fechar
+          </button>
+        </div>
+      ) : (
+        <>
+          <div
+            ref={qrRef}
+            style={{ width: '100%', maxWidth: 300, height: 300, margin: '0 auto' }}
+          />
+          <p className="text-sm text-center mt-2 text-gray-600">
+            Posicione o código QR no centro da câmera
+          </p>
+        </>
+      )}
+    </div>
+  );
+};
+
 const CarrinhoCompras = ({
-  products = [],
   cartItems = [],
   setCartItems,
   selectedLoja,
-  // Remova estas linhas que estão causando conflito com o useState interno
-  // collections = [],
-  // setCollections,
-  updateCartValue
+  formatCurrency,
+  calculateTotal,
+  updateCartValue,
+  updateCollections,
+  setActiveCollection
 }) => {
-  // Estados para busca de produtos
+  // Estados para a busca e controle de produtos
   const [productSearchTerm, setProductSearchTerm] = useState('');
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [newProductQty, setNewProductQty] = useState(1);
-  const produtoInputRef = useRef(null);
-  const [showDetails, setShowDetails] = useState(null);
-  const [loadingStates, setLoadingStates] = useState({});
-  const [expandedGroup, setExpandedGroup] = useState(null);
-  const [groupedCart, setGroupedCart] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [categorias] = useState(['armacoes', 'lentes', 'solares']);
   const [estoqueData, setEstoqueData] = useState([]);
-  const [debug, setDebug] = useState(null);
-  const { userPermissions } = useAuth();
+  const [showQrScanner, setShowQrScanner] = useState(false);
+  const searchInputRef = useRef(null);
 
-  // Mantenha o estado interno de collections
+  // Estados para coleções
   const [collections, setCollections] = useState([
     {
       id: 1,
       name: "Coleção 1",
       items: [],
-      requiresOS: true,
-      generateOS: true,
-      forceGenerateOS: false
     }
   ]);
-  const [activeCollection, setActiveCollection] = useState(1);
-  const [showOSForm, setShowOSForm] = useState(false);
-  const [generatedOS, setGeneratedOS] = useState([]);
-  const [showQrScanner, setShowQrScanner] = useState(false);
+  const [activeCollectionId, setActiveCollectionId] = useState(1);
 
-  // Exponha as collections para o componente pai
+  const { userPermissions } = useAuth();
+  const categorias = ['armacoes', 'lentes', 'solares'];
+  const [showQr, setShowQr] = useState(false);
+
+  // Notificar o componente pai quando as coleções são alteradas
   useEffect(() => {
-    // Se o componente pai tiver uma função para obter as collections
+    if (typeof updateCollections === 'function') {
+      updateCollections(collections);
+    }
+  }, [collections, updateCollections]);
+
+  // Notificar o componente pai quando a coleção ativa muda
+  useEffect(() => {
+    if (typeof setActiveCollection === 'function') {
+      setActiveCollection(activeCollectionId);
+    }
+  }, [activeCollectionId, setActiveCollection]);
+
+  // Buscar produtos do estoque quando a loja é selecionada
+  useEffect(() => {
+    if (selectedLoja && userPermissions) {
+      fetchProductsFromEstoque();
+    }
+  }, [selectedLoja, userPermissions]);
+
+  // Atualizar o componente pai quando o carrinho mudar
+  useEffect(() => {
     if (typeof updateCartValue === 'function') {
-      // Você pode adicionar um segundo parâmetro na função updateCartValue
-      // para passar as collections atualizadas para o componente pai
       const subtotal = cartItems.reduce((total, item) =>
         total + ((item.valor || item.preco || 0) * item.quantity), 0
       );
       updateCartValue(subtotal, collections);
     }
-  }, [collections, cartItems, updateCartValue]);
+  }, [cartItems, collections, updateCartValue]);
 
-
-  const addCollection = () => {
-    const newCollectionId = collections.length + 1;
-    setCollections([
-      ...collections,
-      {
-        id: newCollectionId,
-        name: `Coleção ${newCollectionId}`,
-        items: [],
-        requiresOS: true,
-        generateOS: true,
-        forceGenerateOS: false
-      }
-    ]);
-    setActiveCollection(newCollectionId);
-  };
-
-  const toggleForceGenerateOS = (collectionId, value) => {
-    const updatedCollections = collections.map(c => {
-      if (c.id === collectionId) {
-        return {
-          ...c,
-          forceGenerateOS: value
-        };
-      }
-      return c;
-    });
-    setCollections(updatedCollections);
-  };
-
-
-  // Adicionar produto à coleção ativa
-  const addToCollection = (product) => {
-    if (!product) return;
-
-    // Verificar o tipo de produto
-    const productType = product.categoria;
-    const isFrame = productType === 'armacoes';
-    const isLens = productType === 'lentes';
-    const isSunglass = productType === 'solares';
-
-    // Se for óculos de sol, não precisa de OS
-    const requiresOS = !isSunglass;
-
-    // Encontrar a coleção ativa
-    const collection = collections.find(c => c.id === activeCollection);
-
-    // Verificar limitações da coleção
-    if (requiresOS) {
-      // Verificar se já existe uma armação na coleção
-      const hasFrame = collection.items.some(item => item.categoria === 'armacoes');
-      if (isFrame && hasFrame) {
-        setError('Esta coleção já possui uma armação. Crie uma nova coleção para adicionar outra armação.');
-        return false;
-      }
-
-      // Verificar se já existe uma lente na coleção
-      const hasLens = collection.items.some(item => item.categoria === 'lentes');
-      if (isLens && hasLens) {
-        setError('Esta coleção já possui lentes. Crie uma nova coleção para adicionar outras lentes.');
-        return false;
-      }
-    }
-
-    // Adicionar o produto à coleção ativa
-    const updatedCollections = collections.map(c => {
-      if (c.id === activeCollection) {
-        return {
-          ...c,
-          items: [...c.items, { ...product, quantity: newProductQty }],
-          requiresOS: requiresOS
-        };
-      }
-      return c;
-    });
-
-    setCollections(updatedCollections);
-    return true;
-  }
-
-
-  // Adicione esta função para atualizar a opção de gerar OS
-  const toggleGenerateOS = (collectionId, value) => {
-    const updatedCollections = collections.map(c => {
-      if (c.id === collectionId) {
-        return {
-          ...c,
-          generateOS: value
-        };
-      }
-      return c;
-    });
-    setCollections(updatedCollections);
-  };
-
-
-  // Função para remover item de uma coleção
-  const removeFromCollection = (collectionId, productId, categoria) => {
-    // Atualizar collections
-    const updatedCollections = collections.map(c => {
-      if (c.id === collectionId) {
-        return {
-          ...c,
-          items: c.items.filter(item => !(item.id === productId && item.categoria === categoria))
-        };
-      }
-      return c;
-    });
-
-    setCollections(updatedCollections);
-
-    // Atualizar também o cartItems para manter compatibilidade
-    setCartItems(cartItems.filter(item =>
-      !(item.id === productId && item.categoria === categoria && item.collectionId === collectionId)
-    ));
-  };
-
-
-
-  // Função para verificar quais coleções precisam de OS
-  // Modificar a função getOSCollections para permitir OS em outros casos
-  const getOSCollections = () => {
-    return collections.filter(c => {
-      // Verifica se tem armação E lentes (caso padrão)
-      const hasFrameAndLens = c.items.some(item => item.categoria === 'armacoes') &&
-        c.items.some(item => item.categoria === 'lentes');
-
-      // Verifica se tem apenas armação ou apenas lentes mas com forceGenerateOS ativado
-      const hasFrameOrLensAndForced = c.forceGenerateOS &&
-        (c.items.some(item => item.categoria === 'armacoes') ||
-          c.items.some(item => item.categoria === 'lentes'));
-
-      // Gera OS se: 
-      // 1. generateOS está ativo E
-      // 2. Tem armação E lentes OU tem armação OU lentes com força ativada
-      return c.generateOS && (hasFrameAndLens || hasFrameOrLensAndForced);
-    });
-  };
-
-
-  // Buscar produtos do estoque
-  useEffect(() => {
-    if (userPermissions) {  // Verifique se userPermissions está disponível
-      fetchProductsFromEstoque();
-    }
-  }, [selectedLoja, userPermissions]);
-
-  // Buscar produtos do estoque no Firebase - CORRIGIDO
+  // Buscar produtos do estoque no Firebase
   const fetchProductsFromEstoque = async () => {
     try {
       setLoading(true);
       setError('');
       const produtosData = [];
-      let debugInfo = {};
 
       // Determinar quais lojas o usuário tem acesso
       const lojasAcessiveis = userPermissions?.isAdmin || userPermissions?.acesso_total
@@ -235,18 +166,8 @@ const CarrinhoCompras = ({
       for (const loja of lojasParaBuscar) {
         for (const categoria of categorias) {
           try {
-            // Caminho correto para o Firestore
             const produtosRef = collection(firestore, `estoque/${loja}/${categoria}`);
-
-            // Registrar informações para debug
-            debugInfo[`${loja}-${categoria}`] = {
-              path: `estoque/${loja}/${categoria}`,
-              attempt: true
-            };
-
             const produtosSnapshot = await getDocs(produtosRef);
-            debugInfo[`${loja}-${categoria}`].docsCount = produtosSnapshot.size;
-            debugInfo[`${loja}-${categoria}`].success = true;
 
             // Mapear documentos para o formato correto
             produtosSnapshot.docs.forEach((docProduto) => {
@@ -254,23 +175,15 @@ const CarrinhoCompras = ({
               produtosData.push({
                 id: docProduto.id,
                 ...produtoData,
-                loja: loja, // Importante incluir a loja de origem
+                loja: loja,
                 categoria: categoria
               });
             });
           } catch (err) {
-            debugInfo[`${loja}-${categoria}`] = {
-              path: `estoque/${loja}/${categoria}`,
-              error: err.message,
-              success: false
-            };
             console.error(`Erro ao buscar produtos da categoria ${categoria} na loja ${loja}:`, err);
           }
         }
       }
-
-      // Definir as informações de debug
-      setDebug(debugInfo);
 
       // Filtrar produtos com quantidade > 0
       const produtosComEstoque = produtosData.filter(p => parseInt(p.quantidade) > 0);
@@ -281,44 +194,16 @@ const CarrinhoCompras = ({
       } else if (produtosComEstoque.length > 0) {
         setEstoqueData(produtosComEstoque);
       } else {
-        setError(`Nenhum produto encontrado no estoque da loja ${selectedLoja}. Verifique a estrutura do banco de dados.`);
+        setError(`Nenhum produto encontrado no estoque.`);
       }
 
     } catch (err) {
       console.error('Erro ao carregar os produtos do estoque:', err);
       setError(`Erro ao carregar os dados do estoque: ${err.message}`);
-      setDebug({ error: err.message });
     } finally {
       setLoading(false);
     }
   };
-
-  // Exibir informações de debug quando solicitado
-  const showDebugInfo = () => {
-    console.log('DEBUG INFO:', debug);
-    alert('Informações de debug foram registradas no console.');
-  };
-
-  // Agrupar itens por categoria
-  useEffect(() => {
-    const grouped = cartItems.reduce((acc, item) => {
-      const categoria = item.categoria || 'outros';
-      if (!acc[categoria]) {
-        acc[categoria] = [];
-      }
-      acc[categoria].push(item);
-      return acc;
-    }, {});
-    setGroupedCart(grouped);
-
-    // Calcular e propagar os valores do carrinho para o componente pai
-    if (typeof updateCartValue === 'function') {
-      const subtotal = cartItems.reduce((total, item) =>
-        total + ((item.valor || item.preco || 0) * item.quantity), 0
-      );
-      updateCartValue(subtotal);
-    }
-  }, [cartItems, updateCartValue]);
 
   // Filtrar produtos com base no termo de busca
   useEffect(() => {
@@ -326,7 +211,7 @@ const CarrinhoCompras = ({
       setFilteredProducts([]);
     } else {
       const searchTermLower = productSearchTerm.toLowerCase();
-      // Busca nos produtos do estoque - CORRIGIDO para usar os mesmos campos que o componente de estoque
+      // Busca nos produtos do estoque
       const filtered = estoqueData.filter(product => {
         const titulo = (product.titulo || '').toLowerCase();
         const codigo = (product.codigo || '').toLowerCase();
@@ -343,19 +228,83 @@ const CarrinhoCompras = ({
   }, [productSearchTerm, estoqueData]);
 
   // Formatar para moeda brasileira (R$)
-  const formatCurrency = (value) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(value || 0);
+  const formatCurrencyValue = (value) => {
+    if (typeof formatCurrency === 'function') {
+      return formatCurrency(value);
+    } else {
+      return new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'BRL'
+      }).format(value || 0);
+    }
   };
 
-  // Adicionar produto ao carrinho
+  // Função para verificar se um produto precisa de OS
+  const precisaDeOS = (item) => {
+    if (!item || !item.categoria) return false;
+
+    const categoriasComOS = ['armacoes', 'lentes', 'solares'];
+
+    if (item.categoria === 'solares') {
+      return item.info_geral?.tem_grau || item.info_adicional?.tem_grau || false;
+    }
+
+    return categoriasComOS.includes(item.categoria);
+  };
+
+  // Adicionar uma nova coleção
+  const addCollection = () => {
+    const newCollectionId = collections.length + 1;
+    setCollections([
+      ...collections,
+      {
+        id: newCollectionId,
+        name: `Coleção ${newCollectionId}`,
+        items: []
+      }
+    ]);
+    setActiveCollectionId(newCollectionId);
+    setCartItems([]);
+  };
+
+  // Modificar setActiveCollection para filtrar cartItems por coleção ativa
+  const handleSetActiveCollection = (collectionId) => {
+    setActiveCollectionId(collectionId);
+
+    const activeCollectionItems = collections
+      .find(c => c.id === collectionId)?.items || [];
+
+    const cartItemsForCollection = activeCollectionItems.map(item => ({
+      ...item,
+      collectionId: collectionId
+    }));
+
+    setCartItems(cartItemsForCollection);
+  };
+
+  // Remover uma coleção
+  const removeCollection = (collectionId) => {
+    // Não permitir remover a última coleção
+    if (collections.length <= 1) return;
+
+    // Se a coleção sendo removida for a ativa, mudar para a primeira coleção
+    if (collectionId === activeCollectionId) {
+      setActiveCollectionId(collections[0].id);
+    }
+
+    // Remover a coleção
+    const updatedCollections = collections.filter(c => c.id !== collectionId);
+    setCollections(updatedCollections);
+
+    // Remover itens do carrinho que pertenciam à coleção removida
+    setCartItems(cartItems.filter(item => item.collectionId !== collectionId));
+  };
+
   // Adicionar produto ao carrinho
   const addToCart = (product) => {
     if (!product) return;
 
-    // Verificar se tem estoque disponível (ignorar se estivermos mostrando produtos sem estoque)
+    // Verificar se tem estoque disponível
     const quantidadeEstoque = parseInt(product.quantidade) || 0;
     if (quantidadeEstoque < newProductQty && error !== 'Aviso: Mostrando produtos sem estoque disponível') {
       setError(`Quantidade solicitada excede o estoque disponível (${quantidadeEstoque})`);
@@ -363,111 +312,80 @@ const CarrinhoCompras = ({
       return;
     }
 
-    // Simular loading ao adicionar
-    setLoadingStates(prev => ({ ...prev, [product.id]: true }));
+    // Adicionar à coleção ativa
+    const updatedCollections = collections.map(c => {
+      if (c.id === activeCollectionId) {
+        // Verificar se o produto já existe na coleção
+        const existingItemIndex = c.items.findIndex(item =>
+          item.id === product.id && item.categoria === product.categoria
+        );
 
-    setTimeout(() => {
-      // Adicionar à coleção ativa
-      const collection = collections.find(c => c.id === activeCollection);
-
-      // Verificar o tipo de produto
-      const productType = product.categoria;
-      const isFrame = productType === 'armacoes';
-      const isLens = productType === 'lentes';
-      const isSunglass = productType === 'solares';
-
-      // Se for óculos de sol, não precisa de OS
-      const requiresOS = !isSunglass;
-
-      // Verificar limitações da coleção
-      if (requiresOS) {
-        // Verificar se já existe uma armação na coleção
-        const hasFrame = collection.items.some(item => item.categoria === 'armacoes');
-        if (isFrame && hasFrame) {
-          setError('Esta coleção já possui uma armação. Crie uma nova coleção para adicionar outra armação.');
-          setTimeout(() => setError(''), 3000);
-          return;
-        }
-
-        // Verificar se já existe uma lente na coleção
-        const hasLens = collection.items.some(item => item.categoria === 'lentes');
-        if (isLens && hasLens) {
-          setError('Esta coleção já possui lentes. Crie uma nova coleção para adicionar outras lentes.');
-          setTimeout(() => setError(''), 3000);
-          return;
-        }
-      }
-
-      // Adicionar o produto à coleção ativa
-      const updatedCollections = collections.map(c => {
-        if (c.id === activeCollection) {
+        if (existingItemIndex >= 0) {
+          // Atualizar a quantidade do item existente
+          const updatedItems = [...c.items];
+          updatedItems[existingItemIndex].quantity += newProductQty;
           return {
             ...c,
-            items: [...c.items, { ...product, quantity: newProductQty }],
-            requiresOS: requiresOS
+            items: updatedItems
+          };
+        } else {
+          // Adicionar novo item à coleção
+          return {
+            ...c,
+            items: [...c.items, {
+              ...product,
+              quantity: newProductQty,
+              collectionId: activeCollectionId
+            }]
           };
         }
-        return c;
-      });
-
-      setCollections(updatedCollections);
-
-      // Verificar se o produto já está no carrinho
-      const existingItem = cartItems.find(item => item.id === product.id && item.categoria === product.categoria);
-
-      if (existingItem) {
-        // Verificar se a nova quantidade total excede o estoque
-        const newTotalQty = existingItem.quantity + newProductQty;
-        if (quantidadeEstoque < newTotalQty && error !== 'Aviso: Mostrando produtos sem estoque disponível') {
-          setError(`Quantidade total excede o estoque disponível (${quantidadeEstoque})`);
-          setLoadingStates(prev => ({ ...prev, [product.id]: false }));
-          setTimeout(() => setError(''), 3000);
-          return;
-        }
-
-        // Aumentar a quantidade se já estiver no carrinho
-        setCartItems(cartItems.map(item =>
-          (item.id === product.id && item.categoria === product.categoria)
-            ? { ...item, quantity: newTotalQty }
-            : item
-        ));
-      } else {
-        // Adicionar novo item ao carrinho - CORRIGIDO para usar a mesma estrutura do componente de estoque
-        const produtoFormatado = {
-          id: product.id,
-          categoria: product.categoria,
-          loja: product.loja || selectedLoja,
-          titulo: product.titulo || '',
-          nome: product.titulo || '', // Manter compatibilidade com ambos os campos
-          codigo: product.codigo || '',
-          marca: product.marca || '',
-          sku: product.sku || '',
-          valor: parseFloat(product.valor) || 0,
-          preco: parseFloat(product.valor) || 0, // Manter compatibilidade com ambos os campos
-          custo: parseFloat(product.custo) || 0,
-          quantidade: product.quantidade,
-          quantity: newProductQty, // Quantidade no carrinho
-          collectionId: activeCollection // Associar à coleção ativa
-        };
-
-        setCartItems([...cartItems, produtoFormatado]);
       }
+      return c;
+    });
 
-      // Limpar campos
-      setProductSearchTerm('');
-      setFilteredProducts([]);
-      setNewProductQty(1);
-      setLoadingStates(prev => ({ ...prev, [product.id]: false }));
+    setCollections(updatedCollections);
 
-      if (produtoInputRef.current) {
-        produtoInputRef.current.focus();
-      }
-    }, 300);
+    // Verificar se o produto já está no carrinho
+    const existingItemIndex = cartItems.findIndex(item =>
+      item.id === product.id && item.categoria === product.categoria
+    );
+
+    if (existingItemIndex >= 0) {
+      // Atualizar quantidade do item existente
+      const updatedCartItems = [...cartItems];
+      updatedCartItems[existingItemIndex].quantity += newProductQty;
+      setCartItems(updatedCartItems);
+    } else {
+      // Adicionar novo item ao carrinho
+      const produtoFormatado = {
+        id: product.id,
+        categoria: product.categoria,
+        loja: product.loja || selectedLoja,
+        titulo: product.titulo || '',
+        nome: product.titulo || '', // Manter compatibilidade com ambos os campos
+        codigo: product.codigo || '',
+        marca: product.marca || '',
+        sku: product.sku || '',
+        valor: parseFloat(product.valor) || 0,
+        preco: parseFloat(product.valor) || 0, // Manter compatibilidade com ambos os campos
+        quantity: newProductQty,
+        collectionId: activeCollectionId
+      };
+
+      setCartItems([...cartItems, produtoFormatado]);
+    }
+
+    // Limpar campos
+    setProductSearchTerm('');
+    setFilteredProducts([]);
+    setNewProductQty(1);
+
+    if (searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
   };
 
   // Atualizar quantidade no carrinho
-
-  // Modificação na função updateQuantity no CarrinhoCompras.js
   const updateQuantity = (productId, categoria, newQuantity) => {
     if (newQuantity < 1) return;
 
@@ -488,7 +406,7 @@ const CarrinhoCompras = ({
         : item
     ));
 
-    // IMPORTANTE: Atualizar também a quantidade na coleção correspondente
+    // Atualizar também a quantidade na coleção correspondente
     const updatedCollections = collections.map(collection => {
       const updatedItems = collection.items.map(item =>
         (item.id === productId && item.categoria === categoria)
@@ -507,205 +425,118 @@ const CarrinhoCompras = ({
 
   // Remover produto do carrinho
   const removeFromCart = (productId, categoria) => {
-    setCartItems(cartItems.filter(item => !(item.id === productId && item.categoria === categoria)));
-  };
+    // Remover do carrinho principal
+    setCartItems(cartItems.filter(item =>
+      !(item.id === productId && item.categoria === categoria)
+    ));
 
-  // Limpar carrinho
-  const clearCart = () => {
-    if (cartItems.length > 0 && confirm('Tem certeza que deseja limpar o carrinho?')) {
-      setCartItems([]);
-    }
-  };
+    // Remover da coleção
+    const updatedCollections = collections.map(collection => ({
+      ...collection,
+      items: collection.items.filter(item =>
+        !(item.id === productId && item.categoria === categoria)
+      )
+    }));
 
-  // Calcular totais por categoria
-  const calculateCategoryTotal = (category) => {
-    return groupedCart[category]?.reduce((total, item) =>
-      total + ((item.valor || item.preco || 0) * item.quantity), 0
-    ) || 0;
+    setCollections(updatedCollections);
   };
 
   // Calcular total do carrinho
-  const calculateTotal = () => {
-    return cartItems.reduce((total, item) =>
-      total + ((item.valor || item.preco || 0) * item.quantity), 0
-    );
-  };
-
-  // Determinar ícone da categoria
-  const getCategoryIcon = (category) => {
-    switch (category) {
-      case 'armacoes':
-        return <FiPackage />;
-      case 'lentes':
-        return <FiBarChart2 />;
-      case 'solares':
-        return <FiTag />;
-      default:
-        return <FiShoppingBag />;
+  const getTotal = () => {
+    if (typeof calculateTotal === 'function') {
+      return calculateTotal();
+    } else {
+      return cartItems.reduce((acc, item) => acc + (item.preco || item.valor || 0) * (item.quantity || 1), 0);
     }
   };
 
-  // Traduzir nome da categoria
-  const getCategoryName = (category) => {
-    const translations = {
-      'armacoes': 'Armações',
-      'lentes': 'Lentes',
-      'solares': 'Óculos Solares',
-      'outros': 'Outros Produtos'
-    };
-    return translations[category] || category;
-  };
+  // Função para processar o QR code lido
+  const handleScan = (data) => {
+    if (data) {
+      console.log(`QR Code lido: ${data}`);
 
-  // Adicionar função para remover coleção
-  const removeCollection = (collectionId) => {
-    // Verificar se há itens na coleção
-    const collection = collections.find(c => c.id === collectionId);
-    if (collection && collection.items.length > 0) {
-      if (!confirm(`Esta coleção contém ${collection.items.length} item(s). Deseja realmente removê-la?`)) {
-        return;
-      }
-    }
+      // Tentar encontrar o produto pelo código lido no QR
+      const foundProduct = estoqueData.find(product =>
+        product.codigo === data ||
+        product.sku === data ||
+        product.id === data
+      );
 
-    // Remover a coleção
-    const updatedCollections = collections.filter(c => c.id !== collectionId);
-    setCollections(updatedCollections);
-
-    // Atualizar o carrinho removendo os itens da coleção
-    const updatedCartItems = cartItems.filter(item => item.collectionId !== collectionId);
-    setCartItems(updatedCartItems);
-
-    // Se a coleção removida era a ativa, selecionar outra
-    if (activeCollection === collectionId) {
-      setActiveCollection(updatedCollections[0]?.id || null);
-    }
-  };
-
-  // Função para processar o QR code escaneado
-  const handleQrScan = async (result) => {
-    if (result) {
-      try {
-        const qrData = JSON.parse(result?.text);
-        if (qrData.tipo === 'armacao') {
-          // Buscar a armação no Firestore
-          const armacaoRef = doc(firestore, `estoque/${selectedLoja}/armacoes`, qrData.id);
-          const armacaoDoc = await getDoc(armacaoRef);
-
-          if (armacaoDoc.exists()) {
-            const armacaoData = armacaoDoc.data();
-            // Adicionar ao carrinho
-            addToCart({
-              ...armacaoData,
-              id: qrData.id,
-              quantidade: 1
-            });
-            setShowQrScanner(false);
-          } else {
-            setError('Armação não encontrada!');
-            setTimeout(() => setError(''), 3000);
-          }
-        }
-      } catch (error) {
-        console.error('Erro ao processar QR code:', error);
-        setError('Erro ao processar QR code. Por favor, tente novamente.');
+      if (foundProduct) {
+        addToCart(foundProduct);
+        setShowQrScanner(false);
+      } else {
+        // Se não encontrou o produto, mostrar mensagem
+        setError(`Produto com código ${data} não encontrado no estoque`);
         setTimeout(() => setError(''), 3000);
       }
     }
   };
 
   return (
-    <div className="border-2 border-gray-200 rounded-lg bg-white overflow-hidden">
+    <div className="border-2 border-gray-200 rounded-sm bg-white overflow-hidden">
       {/* Mensagem de erro */}
       {error && (
         <div className={`p-2 text-center ${error.includes('Aviso') ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'} flex items-center justify-center`}>
-          <FiAlertCircle className="mr-2" />
           {error}
-          {error.includes('estrutura') && (
-            <button
-              onClick={showDebugInfo}
-              className="ml-2 underline text-blue-600 text-xs"
-            >
-              Debug
-            </button>
-          )}
         </div>
       )}
-
-      {/* Botões de seleção de loja - ADICIONE AQUI */}
-      <div className="flex justify-between items-center p-2 bg-gray-50 border-b border-gray-200">
-        <span className="text-sm text-gray-500">Selecionar loja:</span>
-        <div className="flex gap-2">
-          <button
-            onClick={() => {
-              console.log("Buscando produtos da loja1");
-              const newSelectedLoja = "loja1";
-              fetchProductsFromEstoque(newSelectedLoja);
-            }}
-            className="px-2 py-1 text-xs bg-purple-100 text-purple-700 rounded"
-          >
-            Loja 1
-          </button>
-          <button
-            onClick={() => {
-              console.log("Buscando produtos da loja2");
-              const newSelectedLoja = "loja2";
-              fetchProductsFromEstoque(newSelectedLoja);
-            }}
-            className="px-2 py-1 text-xs bg-purple-100 text-purple-700 rounded"
-          >
-            Loja 2
-          </button>
-        </div>
-      </div>
 
       {/* Seleção de coleções */}
       <div className="p-3 bg-gray-50 border-b border-gray-200">
         <div className="flex justify-between items-center mb-2">
-          <h3 className="text-sm font-medium text-gray-700 flex items-center">
+          <h3 className="text-base font-medium text-gray-700 flex items-center">
             <FiLayers className="mr-2 text-[#81059e]" /> Coleções de Produtos
           </h3>
           <button
             onClick={addCollection}
-            className="text-xs bg-[#81059e] text-white px-3 py-1 rounded flex items-center"
+            className="text-xs bg-[#81059e] opacity-70 text-white px-3 py-1 rounded-sm flex items-center transition-colors"
           >
-            <FiPlusCircle className="mr-1" /> Nova Coleção
+            <FiPlusCircle className="mr-1 text-lg" /> <p className='text-sm'>Nova Coleção</p>
           </button>
         </div>
 
         <div className="flex flex-wrap gap-2">
           {collections.map(collection => (
-            <div key={collection.id} className="relative">
+            <div key={collection.id} className="relative group">
               <button
-                onClick={() => setActiveCollection(collection.id)}
-                className={`px-3 py-1 text-xs rounded-full flex items-center ${activeCollection === collection.id
-                  ? 'bg-[#81059e] text-white'
-                  : 'bg-gray-200 text-gray-700'
+                onClick={() => handleSetActiveCollection(collection.id)}
+                className={`px-4 py-2 text-xs rounded-sm flex items-center transition-all duration-200 ${activeCollectionId === collection.id
+                  ? 'bg-[#81059e] text-white shadow-md'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                   }`}
               >
                 {collection.name}
-                {getOSCollections().some(c => c.id === collection.id) && (
-                  <FiCheckCircle className="ml-1 text-green-400" />
-                )}
-                <span className="ml-1 bg-gray-600 text-white text-xs px-1.5 rounded-full">
+                <span className={`ml-1 px-1.5 rounded-full text-xs ${activeCollectionId === collection.id
+                  ? 'bg-white text-[#81059e]'
+                  : 'bg-gray-600 text-white'
+                  }`}>
                   {collection.items.length}
                 </span>
+                {collection.items && collection.items.some(item => precisaDeOS(item)) && (
+                  <span className="ml-1 w-2 h-2 rounded-full bg-purple-500"></span>
+                )}
+              </button>
+              {collections.length > 1 && (
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     removeCollection(collection.id);
                   }}
-                  className="ml-2 text-red-500 hover:text-red-600 font-bold"
+                  className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-red-600"
                 >
                   ×
                 </button>
-              </button>
+              )}
             </div>
           ))}
         </div>
       </div>
 
-      {/* Barra de Busca de Produtos */}
-      <div className="p-4 border-b border-gray-200">
-        <div className="flex gap-2 items-center">
+      {/* Barra de busca e controles */}
+      <div className="p-3 flex flex-col gap-2">
+        <div className="flex gap-2">
+          {/* Input de busca */}
           <div className="relative flex-1">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <FiSearch className="text-gray-400" />
@@ -714,403 +545,164 @@ const CarrinhoCompras = ({
               type="text"
               value={productSearchTerm}
               onChange={(e) => setProductSearchTerm(e.target.value)}
-              className="border-2 border-[#81059e] pl-10 p-2 rounded-lg w-full"
-              placeholder="Buscar produto por título, código ou marca"
-              ref={produtoInputRef}
+              className="border-2 rounded-md pl-10 p-2 w-full"
+              placeholder="Buscar produtos..."
+              ref={searchInputRef}
             />
-            {filteredProducts.length > 0 && (
-              <div className="absolute z-20 mt-1 w-[400px] bg-white shadow-xl rounded-md border border-gray-300 max-h-80 overflow-auto">
-                <div className="sticky top-0 bg-[#81059e] text-white p-2 text-sm font-medium">
-                  {filteredProducts.length} produtos encontrados
-                </div>
-                {filteredProducts.map(product => (
-                  <div
-                    key={`${product.id}-${product.categoria}`}
-                    className="p-3 hover:bg-purple-50 cursor-pointer border-b last:border-b-0 transition-colors"
-                    onClick={() => addToCart(product)}
-                  >
-                    <div className="flex justify-between items-center">
-                      <div className="flex-1">
-                        <div className="font-medium text-[#81059e]">
-                          {product.titulo || "Produto sem título"}
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">
-                            {product.marca || "Sem marca"} |
-                            Cód: {product.codigo || "N/A"}
-                          </span>
-                        </div>
-                        <div className="text-xs text-gray-500 mt-1">
-                          {getCategoryName(product.categoria)} - Estoque: {product.quantidade || 0}
-                        </div>
-                      </div>
-                      <div className="flex flex-col items-end">
-                        <span className="font-semibold text-[#81059e]">
-                          {formatCurrency(product.valor || 0)}
-                        </span>
-                        <button
-                          className="mt-1 text-xs bg-[#81059e] text-white px-2 py-1 rounded flex items-center gap-1"
-                          disabled={loadingStates[product.id]}
-                        >
-                          {loadingStates[product.id] ? (
-                            <span className="flex items-center">
-                              <svg className="animate-spin h-3 w-3 mr-1" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                              </svg>
-                              Adicionando
-                            </span>
-                          ) : (
-                            <>
-                              <FiPlus size={12} /> Adicionar
-                            </>
-                          )}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
 
-          {/* Botão de Scanner QR Code */}
+          {/* Botão de QR Code */}
           <button
             onClick={() => setShowQrScanner(!showQrScanner)}
-            className="px-4 py-2 bg-[#81059e] text-white rounded-lg flex items-center gap-2"
+            className="p-2 bg-[#81059e] text-white rounded-sm flex items-center gap-1"
+            type="button"
           >
-            <FiSearch className="text-lg" />
-            {showQrScanner ? 'Fechar Scanner' : 'QR Code'}
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" className="w-6 h-6 fill-current">
+              <path d="M0 80C0 53.5 21.5 32 48 32l96 0c26.5 0 48 21.5 48 48l0 96c0 26.5-21.5 48-48 48l-96 0c-26.5 0-48-21.5-48-48L0 80zM64 96l0 64 64 0 0-64L64 96zM0 336c0-26.5 21.5-48 48-48l96 0c26.5 0 48 21.5 48 48l0 96c0 26.5-21.5 48-48 48l-96 0c-26.5 0-48-21.5-48-48l0-96zm64 16l0 64 64 0 0-64-64 0zM304 32l96 0c26.5 0 48 21.5 48 48l0 96c0 26.5-21.5 48-48 48l-96 0c-26.5 0-48-21.5-48-48l0-96c0-26.5 21.5-48 48-48zm80 64l-64 0 0 64 64 0 0-64zM256 304c0-8.8 7.2-16 16-16l64 0c8.8 0 16 7.2 16 16s7.2 16 16 16l32 0c8.8 0 16-7.2 16-16s7.2-16 16-16s16 7.2 16 16l0 96c0 8.8-7.2 16-16 16l-64 0c-8.8 0-16-7.2-16-16s-7.2-16-16-16s-16 7.2-16 16l0 64c0 8.8-7.2 16-16 16l-32 0c-8.8 0-16-7.2-16-16l0-160zM368 480a16 16 0 1 1 0-32 16 16 0 1 1 0 32zm64 0a16 16 0 1 1 0-32 16 16 0 1 1 0 32z" />
+            </svg>
+            QR
           </button>
-
-          {/* Controles de quantidade */}
-          <div className="flex border border-[#81059e] rounded-lg overflow-hidden">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setNewProductQty(prev => Math.max(1, prev - 1));
-              }}
-              className="px-3 py-2 bg-gray-100 text-[#81059e] hover:bg-gray-200 border-r border-[#81059e]"
-            >
-              <FiMinus size={16} />
-            </button>
-            <input
-              type="number"
-              min="1"
-              value={newProductQty}
-              onChange={(e) => setNewProductQty(parseInt(e.target.value) || 1)}
-              className="w-14 text-center p-2 focus:outline-none focus:ring-2 focus:ring-[#81059e] focus:ring-opacity-50"
-            />
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setNewProductQty(prev => prev + 1);
-              }}
-              className="px-3 py-2 bg-gray-100 text-[#81059e] hover:bg-gray-200 border-l border-[#81059e]"
-            >
-              <FiPlus size={16} />
-            </button>
-          </div>
         </div>
+
+        {/* Exibição dos produtos filtrados */}
+        {productSearchTerm && filteredProducts.length > 0 && (
+          <div className="mt-2 max-h-60 overflow-y-auto border rounded-md">
+            {filteredProducts.map((product) => (
+              <div
+                key={`${product.id}-${product.categoria}`}
+                className="p-3 border-b last:border-b-0 hover:bg-gray-50 cursor-pointer"
+                onClick={() => addToCart(product)}
+              >
+                <div className="font-medium">{product.titulo || "Produto sem título"}</div>
+                <div className="text-sm text-gray-600">
+                  {formatCurrencyValue(product.valor || 0)} - Estoque: {product.quantidade}
+                </div>
+                <div className="text-xs text-gray-500">
+                  {product.codigo && `Código: ${product.codigo}`} {product.marca && `- Marca: ${product.marca}`}
+                  <span className="ml-2 inline-block px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">
+                    {product.categoria === 'armacoes' ? 'Armação' :
+                      product.categoria === 'lentes' ? 'Lente' :
+                        product.categoria === 'solares' ? 'Óculos Solar' :
+                          'Categoria não definida'}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* Scanner de QR code */}
+      {/* Scanner de QR Code */}
       {showQrScanner && (
-        <div className="mt-4 p-4 bg-white rounded-lg border-2 border-[#81059e]">
-          <QrReader
-            onResult={(result, error) => {
-              if (result) {
-                handleQrScan(result);
-              }
-              if (error) {
-                console.error(error);
-              }
-            }}
-            constraints={{ facingMode: 'environment' }}
-            className="w-full max-w-md mx-auto"
+        <div className="p-3 border-t border-gray-200">
+          <div className="flex justify-between items-center mb-2">
+            <h3 className="text-sm font-medium text-gray-700">Scanner de QR Code</h3>
+            <button
+              onClick={() => setShowQrScanner(false)}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              ×
+            </button>
+          </div>
+          <QrCodeScanner
+            onScan={handleScan}
+            onClose={() => setShowQrScanner(false)}
           />
-          <p className="text-sm text-gray-600 text-center mt-2">
-            Posicione o QR code da armação no centro da câmera
-          </p>
         </div>
       )}
 
-      {/* Lista de Produtos no Carrinho */}
-      <div className="divide-y divide-gray-100">
+      {/* Lista de produtos */}
+      <div className="p-3">
         {loading ? (
-          <div className="p-8 text-center">
-            <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-purple-100 mb-4">
-              <svg className="animate-spin h-6 w-6 text-[#81059e]" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-              </svg>
-            </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-1">Carregando produtos...</h3>
+          <div className="text-center p-5">
+            <svg className="animate-spin h-8 w-8 mx-auto text-[#81059e]" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+            </svg>
+            <p className="mt-2 text-gray-600">Carregando produtos...</p>
           </div>
         ) : cartItems.length === 0 ? (
-          <div className="p-8 text-center">
-            <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-purple-100 mb-4">
-              <FiShoppingBag className="h-6 w-6 text-[#81059e]" />
+          <div className="text-center p-5">
+            <div className="bg-purple-100 rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-3">
+              <FiShoppingBag className="text-[#81059e] text-xl" />
             </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-1">Seu carrinho está vazio</h3>
-            <p className="text-gray-500 mb-4">Busque produtos para adicionar à venda</p>
-
-            {/* Status do estoque */}
-            <div className="mt-4 text-sm text-gray-500">
-              {estoqueData.length === 0 ? (
-                <p>Nenhum produto encontrado no estoque</p>
-              ) : (
-                <p>{estoqueData.length} produtos disponíveis para venda</p>
-              )}
-              <button
-                onClick={() => {
-                  setProductSearchTerm('a');
-                  setTimeout(() => setProductSearchTerm(''), 100);
-                }}
-                className="mt-2 text-[#81059e] underline"
-              >
-                Ver todos os produtos
-              </button>
-            </div>
+            <h3 className="text-lg font-medium">Seu carrinho está vazio</h3>
+            <p className="text-gray-500 mb-3">Busque produtos para adicionar à venda</p>
+            <p className="text-sm text-gray-500">{estoqueData.length} produtos disponíveis para venda</p>
+            <button
+              onClick={() => setProductSearchTerm('a')}
+              className="text-[#81059e] text-sm underline"
+            >
+              Ver todos os produtos
+            </button>
           </div>
         ) : (
-          <>
-            {/* Lista de Produtos no Carrinho Agrupados por Coleção */}
-            {collections.map(collection => (
+          <div className="space-y-3">
+            {cartItems.map(item => (
               <div
-                key={collection.id}
-                className={`p-3 cursor-pointer ${expandedGroup === `collection-${collection.id}`
-                  ? 'bg-purple-50'
-                  : 'bg-gray-50'
+                key={`${item.id}-${item.categoria}`}
+                className={`p-3 border rounded-md flex justify-between items-center ${precisaDeOS(item) ? 'border-purple-200 bg-purple-50' : ''
                   }`}
-                onClick={() => setExpandedGroup(
-                  expandedGroup === `collection-${collection.id}`
-                    ? null
-                    : `collection-${collection.id}`
-                )}
               >
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center gap-2 text-[#81059e] font-medium">
-                    <FiLayers />
-                    <span>{collection.name}</span>
-                    <span className="bg-[#81059e] text-white text-xs px-2 py-0.5 rounded-full">
-                      {collection.items.length}
-                    </span>
-
-                    {/* Controles para gerar OS, com novos checks para diferentes cenários */}
-                    <div className="flex items-center ml-2" onClick={(e) => e.stopPropagation()}>
-                      {/* Armação + Lentes = OS automática */}
-                      {collection.items.some(item => item.categoria === 'armacoes') &&
-                        collection.items.some(item => item.categoria === 'lentes') && (
-                          <label className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full flex items-center gap-1">
-                            <input
-                              type="checkbox"
-                              checked={collection.generateOS === true}
-                              onChange={(e) => toggleGenerateOS(collection.id, e.target.checked)}
-                              className="form-checkbox h-3 w-3 text-[#81059e]"
-                            />
-                            Gerar OS (Kit completo)
-                          </label>
-                        )}
-
-                      {/* Apenas armação ou apenas lentes = OS opcional */}
-                      {((collection.items.some(item => item.categoria === 'armacoes') &&
-                        !collection.items.some(item => item.categoria === 'lentes')) ||
-                        (!collection.items.some(item => item.categoria === 'armacoes') &&
-                          collection.items.some(item => item.categoria === 'lentes'))) && (
-                          <label className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full flex items-center gap-1 ml-1">
-                            <input
-                              type="checkbox"
-                              checked={collection.forceGenerateOS === true}
-                              onChange={(e) => toggleForceGenerateOS(collection.id, e.target.checked)}
-                              className="form-checkbox h-3 w-3 text-[#81059e]"
-                            />
-                            Gerar OS (Kit incompleto)
-                          </label>
-                        )}
-
-                      {/* Nem armação nem lentes */}
-                      {!collection.items.some(item => item.categoria === 'armacoes') &&
-                        !collection.items.some(item => item.categoria === 'lentes') && (
-                          <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
-                            Sem produtos para OS
-                          </span>
-                        )}
-
-                      {/* Óculos solares - Nunca gera OS */}
-                      {collection.items.some(item => item.categoria === 'solares') &&
-                        !collection.items.some(item => item.categoria === 'armacoes') &&
-                        !collection.items.some(item => item.categoria === 'lentes') && (
-                          <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
-                            Sem OS (Solar)
-                          </span>
-                        )}
-                    </div>
+                <div className="flex-1">
+                  <div className="font-medium flex items-center">
+                    {item.titulo || item.nome || "Produto sem título"}
+                    {precisaDeOS(item) && (
+                      <span className="ml-2 text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">
+                        OS
+                      </span>
+                    )}
                   </div>
-
-                  <div className="flex items-center gap-3">
-                    <span className="font-semibold text-[#81059e]">
-                      {formatCurrency(
-                        collection.items.reduce((total, item) =>
-                          total + ((item.valor || item.preco || 0) * item.quantity), 0
-                        )
-                      )}
-                    </span>
-                    <svg
-                      className={`w-5 h-5 text-gray-500 transition-transform ${expandedGroup === `collection-${collection.id}` ? 'transform rotate-180' : ''
-                        }`}
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                    </svg>
+                  <div className="text-sm text-gray-600">
+                    {formatCurrencyValue(item.valor || item.preco || 0)} x {item.quantity}
                   </div>
                 </div>
-                {expandedGroup === `collection-${collection.id}` && (
-                  <div className="divide-y divide-gray-100">
-                    {collection.items.map(item => (
-                      <div key={`${item.id}-${item.categoria}`} className="p-4 hover:bg-gray-50 transition-colors">
-                        {/* Renderização do item como já feito anteriormente */}
-                        <div className="flex items-start gap-4">
-                          {/* Imagem do produto (placeholder) */}
-                          <div className="w-16 h-16 bg-gray-100 flex items-center justify-center rounded border border-gray-200 flex-shrink-0">
-                            {getCategoryIcon(item.categoria)}
-                          </div>
 
-                          {/* Detalhes do produto */}
-                          <div className="flex-1">
-                            <div className="flex justify-between">
-                              <h3 className="font-medium text-gray-900">
-                                {item.titulo || item.nome || "Produto sem título"}
-                              </h3>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  removeFromCollection(collection.id, item.id, item.categoria);
-                                }}
-                                className="text-red-500 hover:text-red-700 p-1"
-                                title="Remover produto"
-                              >
-                                <FiTrash2 size={16} />
-                              </button>
-                            </div>
-
-                            <div className="text-sm text-gray-500 mb-2">
-                              {item.categoria === 'armacoes' ? 'Armação' :
-                                item.categoria === 'lentes' ? 'Lentes' :
-                                  item.categoria === 'solares' ? 'Óculos Solar' : 'Outro Produto'}
-                              {item.marca && ` | Marca: ${item.marca}`}
-                              {item.codigo && ` | Código: ${item.codigo}`}
-                            </div>
-
-                            {/* Informações adicionais (expansível) */}
-                            {showDetails === `${item.id}-${item.categoria}` && (
-                              <div className="mt-2 text-sm text-gray-600 bg-gray-50 p-3 rounded-lg border border-gray-200">
-                                <div className="grid grid-cols-2 gap-2">
-                                  <div>
-                                    <span className="font-semibold">Categoria:</span> {getCategoryName(item.categoria)}
-                                  </div>
-                                  <div>
-                                    <span className="font-semibold">Estoque disponível:</span> {item.quantidade || "N/A"}
-                                  </div>
-                                  <div>
-                                    <span className="font-semibold">Loja:</span> {item.loja === 'loja1' ? 'Loja 1' : 'Loja 2'}
-                                  </div>
-                                  <div>
-                                    <span className="font-semibold">Valor de custo:</span> {formatCurrency(item.custo || 0)}
-                                  </div>
-                                  {item.sku && (
-                                    <div>
-                                      <span className="font-semibold">SKU:</span> {item.sku}
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Controles e preço */}
-                            <div className="flex justify-between items-center mt-2">
-                              <div className="flex items-center">
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    updateQuantity(item.id, item.categoria, item.quantity - 1);
-                                  }}
-                                  className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-l-md bg-gray-50 text-gray-600 hover:bg-gray-100"
-                                  disabled={item.quantity <= 1}
-                                >
-                                  <FiMinus size={14} />
-                                </button>
-                                <input
-                                  type="number"
-                                  min="1"
-                                  value={item.quantity}
-                                  onChange={(e) => updateQuantity(item.id, item.categoria, parseInt(e.target.value) || 1)}
-                                  className="w-12 h-8 border-t border-b border-gray-300 text-center text-sm focus:outline-none focus:ring-1 focus:ring-[#81059e]"
-                                />
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    updateQuantity(item.id, item.categoria, item.quantity + 1);
-                                  }}
-                                  className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-r-md bg-gray-50 text-gray-600 hover:bg-gray-100"
-                                >
-                                  <FiPlus size={14} />
-                                </button>
-
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setShowDetails(showDetails === `${item.id}-${item.categoria}` ? null : `${item.id}-${item.categoria}`);
-                                  }}
-                                  className="ml-2 p-1 text-gray-500 hover:text-[#81059e]"
-                                  title="Mostrar detalhes"
-                                >
-                                  <FiInfo size={18} />
-                                </button>
-                              </div>
-
-                              <div className="text-right">
-                                <div className="text-sm text-gray-500">
-                                  {formatCurrency(item.valor || item.preco || 0)} x {item.quantity}
-                                </div>
-                                <div className="font-medium text-[#81059e]">
-                                  {formatCurrency((item.valor || item.preco || 0) * item.quantity)}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => updateQuantity(item.id, item.categoria, item.quantity - 1)}
+                    className="p-1 text-gray-500 hover:text-gray-700"
+                  >
+                    <FiMinus />
+                  </button>
+                  <span className="w-6 text-center">{item.quantity}</span>
+                  <button
+                    onClick={() => updateQuantity(item.id, item.categoria, item.quantity + 1)}
+                    className="p-1 text-gray-500 hover:text-gray-700"
+                  >
+                    <FiPlus />
+                  </button>
+                  <button
+                    onClick={() => removeFromCart(item.id, item.categoria)}
+                    className="p-1 text-red-500 hover:text-red-700"
+                  >
+                    <FiTrash2 />
+                  </button>
+                </div>
               </div>
             ))}
-
-            {/* Resumo do carrinho */}
-            <div className="p-4 bg-gray-50 flex justify-between items-center">
-              <div>
-                <span className="text-sm text-gray-500">Total de itens: {cartItems.length}</span>
-                <button
-                  onClick={clearCart}
-                  className="ml-4 text-red-500 hover:text-red-700 text-sm flex items-center gap-1"
-                >
-                  <FiTrash2 size={14} /> Limpar
-                </button>
-              </div>
-              <div className="text-right">
-                <div className="text-xs text-gray-500">SUBTOTAL</div>
-                <div className="text-lg font-semibold text-[#81059e]">
-                  {formatCurrency(calculateTotal())}
-                </div>
-              </div>
-            </div>
-          </>
+          </div>
         )}
       </div>
-    </div >
+
+      {/* Total do carrinho */}
+      {cartItems.length > 0 && (
+        <div className="p-3 bg-gray-50 border-t border-gray-200">
+          <div className="flex justify-between items-center mb-2">
+            <span className="font-medium">Total:</span>
+            <span className="font-medium text-lg text-[#81059e]">
+              {formatCurrencyValue(getTotal())}
+            </span>
+          </div>
+
+          {/* Legenda */}
+          <div className="mt-2 text-xs text-gray-600 flex items-center gap-1">
+            <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full">OS</span>
+            <span>= Produto requer Ordem de Serviço</span>
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 

@@ -594,13 +594,7 @@ export default function AddAccountPage() {
 
             {/* Botões de ação */}
             <div className="flex justify-center gap-6 mt-8">
-              <button
-                type="submit"
-                className="bg-[#81059e] p-2 px-3 rounded-sm text-white flex items-center gap-2"
-                disabled={isLoading}
-              >
-                {isLoading ? 'PROCESSANDO...' : 'REGISTRAR'}
-              </button>
+              
               <button
                 type="button"
                 onClick={handleClear}
@@ -608,6 +602,13 @@ export default function AddAccountPage() {
                 disabled={isLoading}
               >
                 CANCELAR
+              </button>
+              <button
+                type="submit"
+                className="bg-[#81059e] p-3 px-6 rounded-sm text-white flex items-center gap-2"
+                disabled={isLoading}
+              >
+                {isLoading ? 'PROCESSANDO...' : 'SALVAR'}
               </button>
             </div>
           </form>
