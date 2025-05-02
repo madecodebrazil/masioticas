@@ -454,20 +454,38 @@ const CarrinhoCompras = ({
   const handleScan = (data) => {
     if (data) {
       console.log(`QR Code lido: ${data}`);
+      console.log('Produtos disponíveis:', estoqueData);
 
-      // Tentar encontrar o produto pelo código lido no QR
-      const foundProduct = estoqueData.find(product =>
-        product.codigo === data ||
-        product.sku === data ||
-        product.id === data
-      );
+      // Limpar o código de caracteres especiais e espaços
+      const cleanedData = data.trim().toLowerCase();
+
+      // Tentar encontrar o produto usando diferentes campos
+      const foundProduct = estoqueData.find(product => {
+        // Verificar se o produto tem os campos necessários
+        if (!product) return false;
+
+        // Criar um array de campos para verificar
+        const fieldsToCheck = [
+          product.codigo,
+          product.sku,
+          product.id,
+          product.titulo,
+          product.nome
+        ].filter(Boolean); // Remove valores undefined/null
+
+        // Verificar se algum dos campos contém o código lido
+        return fieldsToCheck.some(field =>
+          field.toString().toLowerCase().includes(cleanedData)
+        );
+      });
 
       if (foundProduct) {
+        console.log('Produto encontrado:', foundProduct);
         addToCart(foundProduct);
         setShowQrScanner(false);
       } else {
-        // Se não encontrou o produto, mostrar mensagem
-        setError(`Produto com código ${data} não encontrado no estoque`);
+        console.log('Produto não encontrado. Código:', cleanedData);
+        setError(`Produto com código "${cleanedData}" não encontrado no estoque`);
         setTimeout(() => setError(''), 3000);
       }
     }

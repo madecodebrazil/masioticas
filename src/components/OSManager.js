@@ -274,7 +274,7 @@ const OSManager = ({ cartItems, selectedClient, onOSChange, collections, activeC
                                 <select
                                     name="laboratorio"
                                     defaultValue={formData.laboratorio || ''}
-                                    className="w-full border border-gray-300 p-2 rounded-md"
+                                    className="w-full border border-gray-300 p-2 rounded-sm"
                                     required
                                 >
                                     <option value="">Selecione...</option>
@@ -289,7 +289,7 @@ const OSManager = ({ cartItems, selectedClient, onOSChange, collections, activeC
                                 <select
                                     name="status"
                                     defaultValue={formData.status || 'processamentoInicial'}
-                                    className="w-full border border-gray-300 p-2 rounded-md"
+                                    className="w-full border border-gray-300 p-2 rounded-sm"
                                     required
                                 >
                                     <option value="processamentoInicial">Em processamento inicial</option>
@@ -311,7 +311,7 @@ const OSManager = ({ cartItems, selectedClient, onOSChange, collections, activeC
                                     <div className="flex justify-between">
                                         <label className="block text-sm font-medium text-gray-700">Armação</label>
                                         {osFormTipo === "somente_lente" && (
-                                            <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full">
+                                            <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-sm">
                                                 Cliente traz
                                             </span>
                                         )}
@@ -323,11 +323,11 @@ const OSManager = ({ cartItems, selectedClient, onOSChange, collections, activeC
                                                 name="armacaoClienteDescricao"
                                                 defaultValue={formData.armacaoClienteDescricao || ""}
                                                 placeholder="Descrição da armação do cliente"
-                                                className="w-full border border-gray-300 p-2 rounded-md"
+                                                className="w-full border border-gray-300 p-2 rounded-sm"
                                             />
                                         </div>
                                     ) : (
-                                        <div className="mt-2 p-3 bg-white border border-gray-200 rounded-md">
+                                        <div className="mt-2 p-3 bg-white border border-gray-200 rounded-sm">
                                             {armacaoDados}
                                         </div>
                                     )}
@@ -338,7 +338,7 @@ const OSManager = ({ cartItems, selectedClient, onOSChange, collections, activeC
                                     <div className="flex justify-between">
                                         <label className="block text-sm font-medium text-gray-700">Lentes</label>
                                         {osFormTipo === "somente_armacao" && (
-                                            <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full">
+                                            <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-sm">
                                                 Cliente traz
                                             </span>
                                         )}
@@ -350,11 +350,11 @@ const OSManager = ({ cartItems, selectedClient, onOSChange, collections, activeC
                                                 name="lentesClienteDescricao"
                                                 defaultValue={formData.lentesClienteDescricao || ""}
                                                 placeholder="Descrição das lentes do cliente"
-                                                className="w-full border border-gray-300 p-2 rounded-md"
+                                                className="w-full border border-gray-300 p-2 rounded-sm"
                                             />
                                         </div>
                                     ) : (
-                                        <div className="mt-2 p-3 bg-white border border-gray-200 rounded-md">
+                                        <div className="mt-2 p-3 bg-white border border-gray-200 rounded-sm">
                                             {lenteDados}
                                         </div>
                                     )}
@@ -376,7 +376,7 @@ const OSManager = ({ cartItems, selectedClient, onOSChange, collections, activeC
                                                 type="text"
                                                 name="esferaDireito"
                                                 defaultValue={formData.esferaDireito || ''}
-                                                className="w-full border border-gray-300 p-1 rounded-md text-sm"
+                                                className="w-full border border-gray-300 p-1 rounded-sm text-sm"
                                                 required
                                             />
                                         </div>
@@ -386,7 +386,7 @@ const OSManager = ({ cartItems, selectedClient, onOSChange, collections, activeC
                                                 type="text"
                                                 name="cilindroDireito"
                                                 defaultValue={formData.cilindroDireito || ''}
-                                                className="w-full border border-gray-300 p-1 rounded-md text-sm"
+                                                className="w-full border border-gray-300 p-1 rounded-sm text-sm"
                                                 required
                                             />
                                         </div>
@@ -396,7 +396,7 @@ const OSManager = ({ cartItems, selectedClient, onOSChange, collections, activeC
                                                 type="text"
                                                 name="eixoDireito"
                                                 defaultValue={formData.eixoDireito || ''}
-                                                className="w-full border border-gray-300 p-1 rounded-md text-sm"
+                                                className="w-full border border-gray-300 p-1 rounded-sm text-sm"
                                                 required
                                             />
                                         </div>
@@ -406,7 +406,7 @@ const OSManager = ({ cartItems, selectedClient, onOSChange, collections, activeC
                                                 type="text"
                                                 name="adicaoDireito"
                                                 defaultValue={formData.adicaoDireito || ''}
-                                                className="w-full border border-gray-300 p-1 rounded-md text-sm"
+                                                className="w-full border border-gray-300 p-1 rounded-sm text-sm"
                                             />
                                         </div>
                                     </div>
@@ -421,7 +421,7 @@ const OSManager = ({ cartItems, selectedClient, onOSChange, collections, activeC
                                                 type="text"
                                                 name="esferaEsquerdo"
                                                 defaultValue={formData.esferaEsquerdo || ''}
-                                                className="w-full border border-gray-300 p-1 rounded-md text-sm"
+                                                className="w-full border border-gray-300 p-1 rounded-sm text-sm"
                                                 required
                                             />
                                         </div>
@@ -431,7 +431,7 @@ const OSManager = ({ cartItems, selectedClient, onOSChange, collections, activeC
                                                 type="text"
                                                 name="cilindroEsquerdo"
                                                 defaultValue={formData.cilindroEsquerdo || ''}
-                                                className="w-full border border-gray-300 p-1 rounded-md text-sm"
+                                                className="w-full border border-gray-300 p-1 rounded-sm text-sm"
                                                 required
                                             />
                                         </div>
@@ -441,7 +441,7 @@ const OSManager = ({ cartItems, selectedClient, onOSChange, collections, activeC
                                                 type="text"
                                                 name="eixoEsquerdo"
                                                 defaultValue={formData.eixoEsquerdo || ''}
-                                                className="w-full border border-gray-300 p-1 rounded-md text-sm"
+                                                className="w-full border border-gray-300 p-1 rounded-sm text-sm"
                                                 required
                                             />
                                         </div>
@@ -451,7 +451,7 @@ const OSManager = ({ cartItems, selectedClient, onOSChange, collections, activeC
                                                 type="text"
                                                 name="adicaoEsquerdo"
                                                 defaultValue={formData.adicaoEsquerdo || ''}
-                                                className="w-full border border-gray-300 p-1 rounded-md text-sm"
+                                                className="w-full border border-gray-300 p-1 rounded-sm text-sm"
                                             />
                                         </div>
                                     </div>
@@ -470,7 +470,7 @@ const OSManager = ({ cartItems, selectedClient, onOSChange, collections, activeC
                                         type="text"
                                         name="distanciaInterpupilar"
                                         defaultValue={formData.distanciaInterpupilar || ''}
-                                        className="w-full border border-gray-300 p-2 rounded-md"
+                                        className="w-full border border-gray-300 p-2 rounded-sm"
                                         required
                                     />
                                 </div>
@@ -480,7 +480,7 @@ const OSManager = ({ cartItems, selectedClient, onOSChange, collections, activeC
                                         type="text"
                                         name="altura"
                                         defaultValue={formData.altura || ''}
-                                        className="w-full border border-gray-300 p-2 rounded-md"
+                                        className="w-full border border-gray-300 p-2 rounded-sm"
                                         required
                                     />
                                 </div>
@@ -493,7 +493,7 @@ const OSManager = ({ cartItems, selectedClient, onOSChange, collections, activeC
                             <textarea
                                 name="observacoes"
                                 defaultValue={formData.observacoes || ''}
-                                className="w-full border border-gray-300 p-2 rounded-md h-20"
+                                className="w-full border border-gray-300 p-2 rounded-sm h-20"
                                 placeholder="Observações adicionais sobre a OS..."
                             />
                         </div>
@@ -505,22 +505,22 @@ const OSManager = ({ cartItems, selectedClient, onOSChange, collections, activeC
                                 type="date"
                                 name="dataPrevistaEntrega"
                                 defaultValue={formData.dataPrevistaEntrega || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
-                                className="w-full border border-gray-300 p-2 rounded-md"
+                                className="w-full border border-gray-300 p-2 rounded-sm"
                                 required
                             />
                         </div>
 
-                        <div className="flex justify-end space-x-3">
+                        <div className="flex justify-end space-x-4">
                             <button
                                 type="button"
                                 onClick={closeOSForm}
-                                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                                className=" text-[#81059e] hover:bg-gray-50"
                             >
                                 Cancelar
                             </button>
                             <button
                                 type="submit"
-                                className="px-4 py-2 bg-[#81059e] text-white rounded-md hover:bg-[#6f0486]"
+                                className="px-4 py-2 bg-[#81059e] text-white rounded-sm hover:bg-[#6f0486]"
                             >
                                 Salvar OS
                             </button>
@@ -639,12 +639,12 @@ const OSManager = ({ cartItems, selectedClient, onOSChange, collections, activeC
                                                 <FiFileText className="text-[#81059e]" />
                                                 <span className="font-medium">{colecao.name}</span>
                                                 {isOSCompleta(colecao) && (
-                                                    <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
+                                                    <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-sm">
                                                         OS Completa
                                                     </span>
                                                 )}
                                                 {isOSIncompleta(colecao) && (
-                                                    <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full">
+                                                    <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-sm">
                                                         OS Incompleta
                                                     </span>
                                                 )}
@@ -745,14 +745,14 @@ const OSManager = ({ cartItems, selectedClient, onOSChange, collections, activeC
                         <div className="flex items-center">
                             {allOSFormsCompleted() ? (
                                 <>
-                                    <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center mr-2">
+                                    <div className="w-8 h-8 rounded-sm bg-green-100 flex items-center justify-center mr-2">
                                         <FiCheck className="text-green-600" />
                                     </div>
                                     <span className="text-green-600">Todas as OS foram preenchidas</span>
                                 </>
                             ) : (
                                 <>
-                                    <div className="w-8 h-8 rounded-full bg-yellow-100 flex items-center justify-center mr-2">
+                                    <div className="w-8 h-8 rounded-sm bg-yellow-100 flex items-center justify-center mr-2">
                                         <FiAlertTriangle className="text-yellow-600" />
                                     </div>
                                     <span className="text-yellow-600">

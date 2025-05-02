@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { collection, addDoc } from 'firebase/firestore';
+import { useState, useEffect } from 'react';
+import { collection, addDoc, getDocs } from 'firebase/firestore';
 import { firestore } from '../lib/firebaseConfig';
 
 const useModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
@@ -56,6 +56,40 @@ const useModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
         allCompleted: true
     });
     const [osFormsCompleted, setOsFormsCompleted] = useState(true);
+
+    // Implementação da função fetchClients
+    const fetchClients = async () => {
+        try {
+            const clientsRef = collection(firestore, `lojas/clientes/users`);
+            const querySnapshot = await getDocs(clientsRef);
+            const clientsList = querySnapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
+            setClients(clientsList);
+            setFilteredClients([]); // Não mostra clientes por padrão
+        } catch (error) {
+            console.error('Erro ao buscar clientes:', error);
+            setError('Erro ao carregar lista de clientes');
+        }
+    };
+
+    // Atualizar filteredClients quando searchTerm mudar
+    useEffect(() => {
+        if (searchTerm) {
+            const filtered = clients.filter(client => {
+                const searchTermLower = searchTerm.toLowerCase();
+                return (
+                    client.nome.toLowerCase().includes(searchTermLower) ||
+                    (client.cpf && client.cpf.includes(searchTermLower)) ||
+                    (client.telefone && client.telefone.includes(searchTermLower))
+                );
+            });
+            setFilteredClients(filtered);
+        } else {
+            setFilteredClients([]); // Não mostra clientes se não houver busca
+        }
+    }, [searchTerm, clients]);
 
     const handleOSChange = (data) => {
         setOsStatus(data);
@@ -193,6 +227,12 @@ const useModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
         }
     };
 
+    // Função para selecionar cliente
+    const handleSelectClient = (client) => {
+        setSelectedClient(client);
+        setSearchTerm('');
+    };
+
     return {
         // Estados
         searchTerm,
@@ -272,7 +312,8 @@ const useModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
         colecaoPrecisaDeOS,
         processPaymentMethod,
         handleClose: onClose,
-        fetchClients: () => { }, // Implementar
+        fetchClients,
+        handleSelectClient,
         fetchProducts: () => { }, // Implementar
         calculateSubtotal: () => 0, // Implementar
         calculateDiscount: () => 0, // Implementar
@@ -286,7 +327,6 @@ const useModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
         addToCart: () => { }, // Implementar
         removeFromCart: () => { }, // Implementar
         updateQuantity: () => { }, // Implementar
-        handleSelectClient: () => { }, // Implementar
         formatCurrency: (value) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), // Implementar melhor
         handleValorPagoChange: () => { }, // Implementar
         handleCreditCardSubmit: () => { } // Implementar
