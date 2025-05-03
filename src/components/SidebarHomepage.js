@@ -87,6 +87,13 @@ export default function SidebarHomepage({ userPhotoURL, userData, userPermission
             </>
         );
     };
+
+    const userMenuVariants = {
+        hidden: { opacity: 0, x: '100%' }, // começa fora da tela à direita
+        visible: { opacity: 1, x: 0, transition: { type: 'spring', stiffness: 200, damping: 25 } },
+        exit: { opacity: 0, x: '100%', transition: { type: 'spring', stiffness: 200, damping: 25 } },
+    };
+
     return (
         <>
             {/* Sidebar no mobile como um dropdown na lateral direita */}

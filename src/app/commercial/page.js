@@ -11,6 +11,7 @@ export default function ProductsPage() {
         { icon: '/images/FA.png', label: 'Venda', route: '/sales' },
         { icon: '/images/CD.png', label: 'Caixa diário', route: '/finance/cashier_day' },
         { icon: '/images/catalogos.png', label: 'Catálogos', route: '/commercial/brochure' },
+        { icon: '/images/catalogos.png', label: 'Consulta SPC e SERASA', route: '/commercial/brochure' },
     ];
 
     return (

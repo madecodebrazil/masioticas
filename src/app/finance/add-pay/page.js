@@ -5,8 +5,6 @@ import Layout from '@/components/Layout';
 import { collection, getDocs, addDoc, getDoc, Timestamp, doc, setDoc } from 'firebase/firestore';
 import { firestore } from '../../../lib/firebaseConfig';
 import { useAuth } from '@/hooks/useAuth';
-import DatePicker from 'react-datepicker';
-import "react-datepicker/dist/react-datepicker.css";
 import Link from 'next/link';
 import ConfirmationModal from '../../../components/ConfirmationModalPay.js';
 import { FiCalendar, FiDollarSign, FiTag, FiFileText, FiUser, FiCreditCard, FiMapPin, FiLayers, FiTrendingUp, FiHome } from 'react-icons/fi';
@@ -674,22 +672,38 @@ export default function ContasPagar() {
 
                 <div>
                   <label className="text-[#81059e] font-medium">Data de Emissão</label>
-                  <DatePicker
-                    selected={formData.dataEntrada}
-                    onChange={(date) => setFormData(prev => ({ ...prev, dataEntrada: date }))}
-                    dateFormat="dd/MM/yyyy"
+                  <input
+                    type="date"
+                    name="dataEntrada"
+                    value={formData.dataEntrada instanceof Date && !isNaN(formData.dataEntrada)
+                      ? formData.dataEntrada.toISOString().split('T')[0]
+                      : ''}
+                    onChange={(e) => {
+                      const selectedDate = e.target.value ? new Date(e.target.value) : null;
+                      setFormData((prev) => ({
+                        ...prev,
+                        dataEntrada: selectedDate,
+                      }));
+                    }}
                     className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
-                    placeholderText="Selecione a data de emissão"
                   />
                 </div>
                 <div>
                   <label className="text-[#81059e] font-medium">Data de Vencimento</label>
-                  <DatePicker
-                    selected={formData.dataVencimento}
-                    onChange={(date) => setFormData(prev => ({ ...prev, dataVencimento: date }))}
-                    dateFormat="dd/MM/yyyy"
+                  <input
+                    type="date"
+                    name="dataVencimento"
+                    value={formData.dataVencimento instanceof Date && !isNaN(formData.dataVencimento)
+                      ? formData.dataVencimento.toISOString().split('T')[0]
+                      : ''}
+                    onChange={(e) => {
+                      const selectedDate = e.target.value ? new Date(e.target.value) : null;
+                      setFormData((prev) => ({
+                        ...prev,
+                        dataVencimento: selectedDate,
+                      }));
+                    }}
                     className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
-                    placeholderText="Selecione a data"
                   />
                 </div>
                 <div>

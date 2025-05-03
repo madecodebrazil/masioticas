@@ -1,10 +1,12 @@
 // components/ClientForm.js
 import { useState, useEffect } from 'react';
-import { getDoc, setDoc, doc, serverTimestamp, collection, addDoc, getDocs, query, where } from 'firebase/firestore';
+import { getDoc, setDoc, doc, serverTimestamp, collection, addDoc, getDocs, query, where, updateDoc } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { firestore } from '@/lib/firebaseConfig';
 import InputMask from 'react-input-mask';
-import { FiUser, FiMail, FiPhone, FiCalendar, FiMapPin, FiHash, FiHome, FiImage, FiFileText, FiCamera, FiCheckCircle, FiX } from 'react-icons/fi';
+import { FiUser, FiMail, FiPhone, FiCalendar, FiMapPin, FiHash, FiHome, FiImage, FiFileText, FiCamera, FiCheckCircle, FiX, FiFile } from 'react-icons/fi';
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faUsers } from "@fortawesome/free-solid-svg-icons";
 
 const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
     const [formData, setFormData] = useState({
@@ -31,10 +33,70 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
     const [imagePreview, setImagePreview] = useState(null);
     const [documentoFile, setDocumentoFile] = useState(null);
     const [comprovanteFile, setComprovanteFile] = useState(null);
+    const [documentoPreview, setDocumentoPreview] = useState(null);
+    const [comprovantePreview, setComprovantePreview] = useState(null);
     const [showSuccessPopup, setShowSuccessPopup] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [fetchingCep, setFetchingCep] = useState(false);
+    const [isTitular, setIsTitular] = useState(true);
+    const [titulares, setTitulares] = useState([]);
+    const [selectedTitular, setSelectedTitular] = useState('');
+    const [parentescoOptions] = useState([
+        'Cônjuge',
+        'Filho(a)',
+        'Pai/Mãe',
+        'Irmão/Irmã',
+        'Avô/Avó',
+        'Tio(a)',
+        'Sobrinho(a)',
+        'Outro'
+    ]);
+
+    // Função para buscar endereço pelo CEP
+    const fetchAddressByCep = async (cep) => {
+        // Limpa o CEP de qualquer caractere não numérico
+        const cleanCep = cep.replace(/\D/g, '');
+
+        // Valida se tem 8 dígitos
+        if (!cleanCep || cleanCep.length !== 8) return;
+
+        setFetchingCep(true);
+        try {
+            const response = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
+            const data = await response.json();
+
+            if (response.ok && !data.erro) {
+                setFormData(prev => ({
+                    ...prev,
+                    endereco: {
+                        ...prev.endereco,
+                        cep: cep, // Mantém o formato com máscara
+                        logradouro: data.logradouro || '',
+                        bairro: data.bairro || '',
+                        cidade: data.localidade || '',
+                        estado: data.uf || ''
+                    }
+                }));
+            } else {
+                console.error('CEP não encontrado ou inválido');
+                setError('CEP não encontrado. Verifique se o número está correto.');
+            }
+        } catch (error) {
+            console.error('Erro ao buscar CEP:', error);
+            setError('Erro ao buscar CEP. Tente novamente mais tarde.');
+        } finally {
+            setFetchingCep(false);
+        }
+    };
+
+    // Observar mudanças no CEP para buscar endereço automaticamente
+    useEffect(() => {
+        const cep = formData.endereco.cep;
+        if (cep && cep.replace(/\D/g, '').length === 8) {
+            fetchAddressByCep(cep);
+        }
+    }, [formData.endereco.cep]);
 
     const handleChange = (e) => {
         const { name, value, files } = e.target;
@@ -76,8 +138,10 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
         if (file) {
             if (type === 'documento') {
                 setDocumentoFile(file);
+                createFilePreview(file, setDocumentoPreview);
             } else if (type === 'comprovante') {
                 setComprovanteFile(file);
+                createFilePreview(file, setComprovantePreview);
             }
         }
     };
@@ -85,25 +149,20 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
     const handleCameraClick = (type) => {
         const input = document.createElement('input');
         input.type = 'file';
-        input.accept = 'image/*';
+        input.accept = type === 'foto' ? 'image/*' : '.pdf,.jpg,.jpeg,.png';
 
         // Verifica se o dispositivo tem câmera
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        if (isMobile) {
+        if (isMobile && type === 'foto') {
             input.capture = 'environment';
         }
 
         input.onchange = (e) => {
             const file = e.target.files[0];
             if (file) {
-                // Cria um nome mais curto para exibição
-                const displayName = file.name.length > 20
-                    ? file.name.substring(0, 15) + '...' + file.name.split('.').pop()
-                    : file.name;
-
                 if (type === 'foto') {
                     setSelectedFile(file);
-                    setSelectedFileName(displayName);
+                    setSelectedFileName(file.name);
                     const reader = new FileReader();
                     reader.onloadend = () => {
                         setImagePreview(reader.result);
@@ -111,51 +170,42 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
                     reader.readAsDataURL(file);
                 } else if (type === 'documento') {
                     setDocumentoFile(file);
+                    createFilePreview(file, setDocumentoPreview);
                 } else if (type === 'comprovante') {
                     setComprovanteFile(file);
+                    createFilePreview(file, setComprovantePreview);
                 }
             }
         };
         input.click();
     };
 
-    // Função para buscar endereço pelo CEP
-    const fetchAddressByCep = async (cep) => {
-        if (!cep || cep.replace(/\D/g, '').length !== 8) return;
-
-        setFetchingCep(true);
-        try {
-            const cleanCep = cep.replace(/\D/g, '');
-            const response = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
-            const data = await response.json();
-
-            if (!data.erro) {
-                setFormData(prev => ({
-                    ...prev,
-                    endereco: {
-                        ...prev.endereco,
-                        cep: cep, // Mantém o formato com máscara
-                        logradouro: data.logradouro || '',
-                        bairro: data.bairro || '',
-                        cidade: data.localidade || '',
-                        estado: data.uf || ''
-                    }
-                }));
-            }
-        } catch (error) {
-            console.error('Erro ao buscar CEP:', error);
-        } finally {
-            setFetchingCep(false);
-        }
-    };
-
-    // Observar mudanças no CEP para buscar endereço automaticamente
+    // Buscar titulares disponíveis
     useEffect(() => {
-        const cep = formData.endereco.cep;
-        if (cep && cep.replace(/\D/g, '').length === 8) {
-            fetchAddressByCep(cep);
-        }
-    }, [formData.endereco.cep]);
+        const fetchTitulares = async () => {
+            try {
+                const usersCollection = collection(firestore, 'lojas/clientes/users');
+                const querySnapshot = await getDocs(
+                    query(usersCollection, where('dependentesDe', '==', null))
+                );
+
+                const titularesData = [];
+                querySnapshot.forEach((doc) => {
+                    titularesData.push({
+                        id: doc.id,
+                        nome: doc.data().nome,
+                        cpf: doc.data().cpf
+                    });
+                });
+
+                setTitulares(titularesData);
+            } catch (error) {
+                console.error('Erro ao buscar titulares:', error);
+            }
+        };
+
+        fetchTitulares();
+    }, []);
 
     const uploadImage = async (cpf) => {
         if (!selectedFile) return null;
@@ -291,6 +341,15 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
             const documentoUrl = await uploadDocument(documentoFile, cpf, 'documento');
             const comprovanteUrl = await uploadDocument(comprovanteFile, cpf, 'comprovante');
 
+            // Adicionar informações de dependência
+            const dependenteInfo = !isTitular && selectedTitular ? {
+                dependentesDe: selectedTitular,
+                parentesco: formData.parentesco || 'Não especificado'
+            } : {
+                dependentesDe: null,
+                parentesco: null
+            };
+
             const clienteData = {
                 ...formData,
                 cpf,
@@ -303,13 +362,24 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
                     userId: userId,
                     nome: userName
                 },
-                telefones: [formData.telefone]
+                telefones: [formData.telefone],
+                ...dependenteInfo,
+                // Campo para facilitar a consulta de dependentes
+                temDependentes: false
             };
 
             try {
-                // Caminho correto: /lojas/clientes/users/{autoID}
+                // Adicionar cliente ao Firestore
                 const usersCollection = collection(firestore, 'lojas/clientes/users');
-                await addDoc(usersCollection, clienteData);
+                const docRef = await addDoc(usersCollection, clienteData);
+
+                // Se for dependente, atualizar titular para indicar que possui dependentes
+                if (!isTitular && selectedTitular) {
+                    const titularRef = doc(firestore, 'lojas/clientes/users', selectedTitular);
+                    await updateDoc(titularRef, {
+                        temDependentes: true
+                    });
+                }
 
                 setShowSuccessPopup(true);
                 // Limpar formulário após sucesso
@@ -337,6 +407,8 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
                 setImagePreview(null);
                 setDocumentoFile(null);
                 setComprovanteFile(null);
+                setIsTitular(true);
+                setSelectedTitular('');
 
                 setTimeout(() => {
                     setShowSuccessPopup(false);
@@ -360,6 +432,34 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
         'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC',
         'SP', 'SE', 'TO'
     ];
+
+    // Função auxiliar para criar previews
+    const createFilePreview = (file, setPreviewFunction) => {
+        if (!file) return;
+
+        if (file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setPreviewFunction(reader.result);
+            };
+            reader.readAsDataURL(file);
+        } else if (file.type === 'application/pdf') {
+            // Para PDFs, apenas setamos um valor para indicar que há um PDF
+            setPreviewFunction('pdf');
+        } else {
+            // Para outros tipos de arquivo
+            setPreviewFunction('file');
+        }
+    };
+
+    // Função auxiliar para truncar nomes de arquivos
+    const truncateFileName = (name, maxLength = 15) => {
+        if (!name) return '';
+        if (name.length <= maxLength) return name;
+
+        const extension = name.split('.').pop();
+        return `${name.substring(0, maxLength)}...${extension}`;
+    };
 
     return (
         <form onSubmit={handleSubmit} className="mt-8 mb-20">
@@ -440,6 +540,7 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
                         value={formData.dataNascimento}
                         onChange={handleChange}
                         className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                        required
                     />
                 </div>
 
@@ -452,6 +553,7 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
                         value={formData.genero}
                         onChange={handleChange}
                         className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                        required
                     >
                         <option value="">Selecione</option>
                         <option value="masculino">Masculino</option>
@@ -462,17 +564,91 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
                 </div>
 
                 <div>
-                    <label className="flex text-[#81059e] font-medium items-center gap-1">
-                        <FiUser /> Parentesco
-                    </label>
-                    <input
-                        type="text"
-                        name="parentesco"
-                        value={formData.parentesco}
-                        onChange={handleChange}
-                        placeholder="Ex: Pai, Mãe, Filho(a), etc."
-                        className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
-                    />
+                    {/* Seção de Tipo de Cadastro */}
+                    <div className="mt-6 bg-purple-50 p-4 rounded-lg border-2 border-purple-100">
+                        <h3 className="text-lg font-medium text-[#81059e] flex items-center gap-1 mb-4">
+                            <FontAwesomeIcon icon={faUsers} className="h-5 w-5" /> Tipo de Cadastro
+                        </h3>
+
+                        {/* Opção Titular/Dependente */}
+                        <div className="flex items-center space-x-4 mb-4">
+                            <label className="inline-flex items-center">
+                                <input
+                                    type="radio"
+                                    className="form-radio text-[#81059e]"
+                                    name="tipoCliente"
+                                    checked={isTitular}
+                                    onChange={() => setIsTitular(true)}
+                                />
+                                <span className="ml-2 text-gray-700">Cliente Titular</span>
+                            </label>
+
+                            <label className="inline-flex items-center">
+                                <input
+                                    type="radio"
+                                    className="form-radio text-[#81059e]"
+                                    name="tipoCliente"
+                                    checked={!isTitular}
+                                    onChange={() => setIsTitular(false)}
+                                />
+                                <span className="ml-2 text-gray-700">Dependente</span>
+                            </label>
+                        </div>
+
+                        {/* Seleção de Titular e Parentesco (aparece apenas se for dependente) */}
+                        {!isTitular && (
+                            <div className="space-y-4">
+                                <div className="space-y-2">
+                                    <label className="block text-[#81059e] font-medium">
+                                        Selecione o Titular
+                                    </label>
+                                    <select
+                                        value={selectedTitular}
+                                        onChange={(e) => setSelectedTitular(e.target.value)}
+                                        className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                                        required={!isTitular}
+                                    >
+                                        <option value="">Selecione o cliente titular</option>
+                                        {titulares.map((titular) => (
+                                            <option key={titular.id} value={titular.id}>
+                                                {titular.nome} - CPF: {titular.cpf}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="block text-[#81059e] font-medium">
+                                        Parentesco com o Titular
+                                    </label>
+                                    <select
+                                        name="parentesco"
+                                        value={formData.parentesco}
+                                        onChange={handleChange}
+                                        className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                                        required={!isTitular}
+                                    >
+                                        <option value="">Selecione o parentesco</option>
+                                        {parentescoOptions.map((option) => (
+                                            <option key={option} value={option}>
+                                                {option}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Explicação */}
+                        <div className="mt-4 text-sm text-gray-600 bg-white p-3 rounded-lg border border-gray-200">
+                            <p className="font-semibold mb-1">Informações:</p>
+                            <ul className="list-disc pl-5 space-y-1">
+                                <li>Cliente <span className="font-medium">Titular</span> é o cliente principal.</li>
+                                <li><span className="font-medium">Dependentes</span> são clientes vinculados a um titular (cônjuge, filhos, etc).</li>
+                                <li>Ao cadastrar dependentes, você poderá visualizar todos os membros da família facilmente.</li>
+                            </ul>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -494,6 +670,7 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
                                 onChange={handleChange}
                                 placeholder="00000-000"
                                 className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                                required
                             />
                             {fetchingCep && (
                                 <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
@@ -513,6 +690,7 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
                             value={formData.endereco.logradouro}
                             onChange={handleChange}
                             className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                            required
                         />
                     </div>
 
@@ -526,6 +704,7 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
                             value={formData.endereco.numero}
                             onChange={handleChange}
                             className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                            required
                         />
                     </div>
 
@@ -552,6 +731,7 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
                             value={formData.endereco.bairro}
                             onChange={handleChange}
                             className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                            required
                         />
                     </div>
 
@@ -565,6 +745,7 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
                             value={formData.endereco.cidade}
                             onChange={handleChange}
                             className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                            required
                         />
                     </div>
 
@@ -577,6 +758,7 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
                             value={formData.endereco.estado}
                             onChange={handleChange}
                             className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                            required
                         >
                             <option value="">Selecione</option>
                             {estados.map(estado => (
@@ -604,27 +786,28 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
             </div>
 
             <div className="mt-6">
-                <h3 className="text-lg font-medium text-[#81059e] flex items-center gap-1">
+                <h3 className="text-lg font-medium text-[#81059e] flex items-center gap-1 mb-4">
                     <FiFileText /> Documentos
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
-                    <div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
                         <label className="flex text-[#81059e] font-medium items-center gap-1">
                             <FiImage /> Foto do Cliente
                         </label>
-                        <div className="flex gap-4">
+                        <div className="flex gap-2">
                             <div className="relative flex-1">
                                 <input
                                     type="file"
                                     accept="image/*"
                                     onChange={handleImageChange}
                                     className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-10"
+                                    required
                                 />
                                 <div className="flex items-center border-2 border-[#81059e] py-2 px-3 rounded-lg w-full text-black">
-                                    <span className="flex-1 truncate text-sm">
-                                        {selectedFileName || "Escolher arquivo..."}
+                                    <span className="flex-1 truncate text-sm" title={selectedFileName}>
+                                        {selectedFileName ? truncateFileName(selectedFileName) : "Escolher arquivo..."}
                                     </span>
-                                    <button type="button" className="bg-purple-100 text-[#81059e] px-3 py-1 rounded-md ml-2 whitespace-nowrap">
+                                    <button type="button" className="bg-purple-100 text-[#81059e] px-3 py-1 rounded-md ml-2 text-xs sm:text-sm whitespace-nowrap">
                                         Procurar
                                     </button>
                                 </div>
@@ -632,10 +815,10 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
                             <button
                                 type="button"
                                 onClick={() => handleCameraClick('foto')}
-                                className="bg-purple-100 text-[#81059e] p-3 rounded-lg flex items-center justify-center whitespace-nowrap"
+                                className="bg-purple-100 text-[#81059e] p-2 rounded-lg flex items-center justify-center"
                                 title="Tirar foto"
                             >
-                                <FiCamera size={24} />
+                                <FiCamera size={20} />
                             </button>
                         </div>
                         {imagePreview && (
@@ -660,11 +843,11 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
                         )}
                     </div>
 
-                    <div>
+                    <div className="space-y-2">
                         <label className="flex text-[#81059e] font-medium items-center gap-1">
                             <FiFileText /> RG ou CNH
                         </label>
-                        <div className="flex gap-4">
+                        <div className="flex gap-2">
                             <div className="relative flex-1">
                                 <input
                                     type="file"
@@ -673,10 +856,10 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
                                     className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-10"
                                 />
                                 <div className="flex items-center border-2 border-[#81059e] py-2 px-3 rounded-lg w-full text-black">
-                                    <span className="flex-1 truncate">
-                                        {documentoFile ? documentoFile.name : "Escolher arquivo..."}
+                                    <span className="flex-1 truncate text-sm" title={documentoFile?.name}>
+                                        {documentoFile ? truncateFileName(documentoFile.name) : "Escolher arquivo..."}
                                     </span>
-                                    <button type="button" className="bg-purple-100 text-[#81059e] px-3 py-1 rounded-md ml-2">
+                                    <button type="button" className="bg-purple-100 text-[#81059e] px-3 py-1 rounded-md ml-2 text-xs sm:text-sm whitespace-nowrap">
                                         Procurar
                                     </button>
                                 </div>
@@ -684,19 +867,54 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
                             <button
                                 type="button"
                                 onClick={() => handleCameraClick('documento')}
-                                className="bg-purple-100 text-[#81059e] p-3 rounded-lg flex items-center justify-center whitespace-nowrap"
+                                className="bg-purple-100 text-[#81059e] p-2 rounded-lg flex items-center justify-center"
                                 title="Tirar foto"
                             >
-                                <FiCamera size={24} />
+                                <FiCamera size={20} />
                             </button>
                         </div>
+                        {documentoPreview && (
+                            <div className="mt-2 relative">
+                                {typeof documentoPreview === 'string' && documentoPreview === 'pdf' ? (
+                                    <div className="w-full h-36 bg-red-100 rounded-lg border-2 border-[#81059e] flex flex-col items-center justify-center">
+                                        <FiFile size={36} className="text-red-500" />
+                                        <span className="text-xs mt-2 text-center px-2 truncate w-full">
+                                            {documentoFile?.name || 'Documento PDF'}
+                                        </span>
+                                    </div>
+                                ) : typeof documentoPreview === 'string' && documentoPreview === 'file' ? (
+                                    <div className="w-full h-36 bg-gray-100 rounded-lg border-2 border-[#81059e] flex flex-col items-center justify-center">
+                                        <FiFileText size={36} className="text-gray-500" />
+                                        <span className="text-xs mt-2 text-center px-2 truncate w-full">
+                                            {documentoFile?.name || 'Documento'}
+                                        </span>
+                                    </div>
+                                ) : (
+                                    <img
+                                        src={documentoPreview}
+                                        alt="Preview documento"
+                                        className="w-full h-36 object-cover rounded-lg border-2 border-[#81059e]"
+                                    />
+                                )}
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setDocumentoFile(null);
+                                        setDocumentoPreview(null);
+                                    }}
+                                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1"
+                                >
+                                    <FiX size={16} />
+                                </button>
+                            </div>
+                        )}
                     </div>
 
-                    <div>
+                    <div className="space-y-2">
                         <label className="flex text-[#81059e] font-medium items-center gap-1">
                             <FiFileText /> Comprovante de Residência
                         </label>
-                        <div className="flex gap-4">
+                        <div className="flex gap-2">
                             <div className="relative flex-1">
                                 <input
                                     type="file"
@@ -705,10 +923,10 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
                                     className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-10"
                                 />
                                 <div className="flex items-center border-2 border-[#81059e] py-2 px-3 rounded-lg w-full text-black">
-                                    <span className="flex-1 truncate">
-                                        {comprovanteFile ? comprovanteFile.name : "Escolher arquivo..."}
+                                    <span className="flex-1 truncate text-sm" title={comprovanteFile?.name}>
+                                        {comprovanteFile ? truncateFileName(comprovanteFile.name) : "Escolher arquivo..."}
                                     </span>
-                                    <button type="button" className="bg-purple-100 text-[#81059e] px-3 py-1 rounded-md ml-2">
+                                    <button type="button" className="bg-purple-100 text-[#81059e] px-3 py-1 rounded-md ml-2 text-xs sm:text-sm whitespace-nowrap">
                                         Procurar
                                     </button>
                                 </div>
@@ -716,12 +934,51 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
                             <button
                                 type="button"
                                 onClick={() => handleCameraClick('comprovante')}
-                                className="bg-purple-100 text-[#81059e] p-3 rounded-lg flex items-center justify-center whitespace-nowrap"
+                                className="bg-purple-100 text-[#81059e] p-2 rounded-lg flex items-center justify-center"
                                 title="Tirar foto"
                             >
-                                <FiCamera size={24} />
+                                <FiCamera size={20} />
                             </button>
                         </div>
+                        {comprovantePreview && (
+                            <div className="mt-2 relative">
+                                {typeof comprovantePreview === 'string' && comprovantePreview === 'pdf' ? (
+                                    <div className="w-full h-36 bg-red-100 rounded-lg border-2 border-[#81059e] flex flex-col items-center justify-center">
+                                        <FiFile size={36} className="text-red-500" />
+                                        <span className="text-xs mt-2 text-center px-2 truncate w-full">
+                                            {comprovanteFile?.name || 'Comprovante PDF'}
+                                        </span>
+                                    </div>
+                                ) : typeof comprovantePreview === 'string' && comprovantePreview === 'file' ? (
+                                    <div className="w-full h-36 bg-gray-100 rounded-lg border-2 border-[#81059e] flex flex-col items-center justify-center">
+                                        <FiFileText size={36} className="text-gray-500" />
+                                        <span className="text-xs mt-2 text-center px-2 truncate w-full">
+                                            {comprovanteFile?.name || 'Comprovante'}
+                                        </span>
+                                    </div>
+                                ) : (
+                                    <img
+                                        src={comprovantePreview}
+                                        alt="Preview comprovante"
+                                        className="w-full h-36 object-cover rounded-lg border-2 border-[#81059e]"
+                                    />
+                                )}
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setComprovanteFile(null);
+                                        setComprovantePreview(null);
+                                    }}
+                                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1"
+                                >
+                                    <FiX size={16} />
+                                </button>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="hidden lg:block">
+                        {/* Reservado para expansão futura */}
                     </div>
                 </div>
             </div>

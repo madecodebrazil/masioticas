@@ -2,8 +2,8 @@
 import { createPortal } from 'react-dom';
 import React, { useState, useEffect } from 'react';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL, getStorage } from 'firebase/storage';
-import { firestore, storage, app } from '@/lib/firebaseConfig';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { firestore, storage } from '@/lib/firebaseConfig';
 import { useAuth } from '@/hooks/useAuth';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
@@ -14,16 +14,19 @@ import {
   faBox,
   faTimes,
   faSave,
-  faExclamationTriangle,
+  faUser,
   faGear,
-  faUser
+  faChevronLeft,
+  faBars
 } from '@fortawesome/free-solid-svg-icons';
 
 const ConfigurationsModal = ({ isOpen, onClose }) => {
   const { userPermissions, user } = useAuth();
-  const [abaAtiva, setAbaAtiva] = useState('horarios');
+  const [abaAtiva, setAbaAtiva] = useState('perfil');
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(true); // Menu aberto por padrão em desktop
+  const [isMobile, setIsMobile] = useState(false);
   const [config, setConfig] = useState({
     horarios: {
       abertura: '08:00',
@@ -33,13 +36,25 @@ const ConfigurationsModal = ({ isOpen, onClose }) => {
       domingoFechado: true
     },
     perfil: {
-      fotoUrl: '',
+      imageUrl: '',
       nome: '',
       cargo: ''
     }
   });
   const [selectedFile, setSelectedFile] = useState(null);
-  const [uploadProgress, setUploadProgress] = useState(0);
+
+  // Verificar tamanho da tela quando o componente montar e quando a janela for redimensionada
+  useEffect(() => {
+    const checkScreenSize = () => {
+      setIsMobile(window.innerWidth < 768);
+      // Em dispositivos móveis, o menu começa fechado
+      setMenuOpen(window.innerWidth >= 768);
+    };
+
+    checkScreenSize();
+    window.addEventListener('resize', checkScreenSize);
+    return () => window.removeEventListener('resize', checkScreenSize);
+  }, []);
 
   useEffect(() => {
     // Verificar se o usuário é administrador
@@ -144,91 +159,50 @@ const ConfigurationsModal = ({ isOpen, onClose }) => {
     }
   };
 
-  // Modifique a função handleUpload no ConfigurationsModal.js
+  const handleUpload = async () => {
+    if (!selectedFile) return;
 
-const handleUpload = async () => {
-  if (!selectedFile) return;
+    setIsLoading(true);
 
-  setIsLoading(true);
+    try {
+      // 1. Upload da imagem para o Firebase Storage
+      const storageRef = ref(storage, `profile-images/${user.uid}`);
+      await uploadBytes(storageRef, selectedFile);
+      const downloadURL = await getDownloadURL(storageRef);
 
-  try {
-    // 1. Vamos usar uma solução alternativa contornando o Firebase Storage direto
-    // Converter a imagem para base64 e salvar no Firestore
-    const reader = new FileReader();
-    
-    reader.onload = async (e) => {
-      try {
-        const base64Image = e.target.result;
-        console.log("Imagem convertida para base64");
-
-        // 2. Determinar caminho do documento correto
-        let userDocRef;
-        
-        if (userPermissions?.isAdmin) {
-          userDocRef = doc(firestore, `admins/${user.uid}`);
-        } else {
-          const lojaId = userPermissions?.lojas?.[0] || 'loja1';
-          userDocRef = doc(firestore, `lojas/${lojaId}/users/${user.uid}`);
-        }
-        
-        // 3. Salvar a imagem base64 diretamente no Firestore
-        // Isto evita completamente o problema de CORS
-        await setDoc(userDocRef, {
-          fotoUrl: base64Image,
-          ultimaAtualizacao: new Date().toISOString()
-        }, { merge: true });
-        
-        // 4. Atualizar o estado local
-        setConfig(prev => ({
-          ...prev,
-          perfil: {
-            ...prev.perfil,
-            fotoUrl: base64Image
-          }
-        }));
-        
-        setSelectedFile(null);
-        setIsLoading(false);
-        alert("Foto de perfil atualizada com sucesso!");
-      } catch (error) {
-        console.error("Erro ao salvar imagem:", error);
-        setIsLoading(false);
-        alert(`Erro ao salvar imagem: ${error.message}`);
+      // 2. Determinar caminho do documento correto
+      let userDocRef;
+      if (userPermissions?.isAdmin) {
+        userDocRef = doc(firestore, `admins/${user.uid}`);
+      } else {
+        const lojaId = userPermissions?.lojas?.[0] || 'loja1';
+        userDocRef = doc(firestore, `lojas/${lojaId}/users/${user.uid}`);
       }
-    };
 
-    reader.onerror = (error) => {
-      console.error("Erro ao ler arquivo:", error);
+      // 3. Salvar a URL da imagem no Firestore
+      await setDoc(userDocRef, {
+        imageUrl: downloadURL,
+        ultimaAtualizacao: new Date().toISOString()
+      }, { merge: true });
+
+      // 4. Atualizar o estado local
+      setConfig(prev => ({
+        ...prev,
+        perfil: {
+          ...prev.perfil,
+          imageUrl: downloadURL
+        }
+      }));
+
+      setSelectedFile(null);
       setIsLoading(false);
-      alert("Erro ao processar a imagem. Por favor, tente novamente.");
-    };
-
-    // Inicia a leitura da imagem como base64
-    reader.readAsDataURL(selectedFile);
-    
-  } catch (error) {
-    console.error("Erro completo:", error);
-    setIsLoading(false);
-    alert(`Erro ao processar upload: ${error.message}`);
-  }
-};
-
-// Modifique também a renderização da imagem para suportar base64
-// Na seção que mostra a foto do perfil:
-
-{config.perfil.fotoUrl ? (
-  <img
-    src={config.perfil.fotoUrl.startsWith('data:image') 
-      ? config.perfil.fotoUrl 
-      : config.perfil.fotoUrl}
-    alt="Foto de perfil"
-    className="w-24 h-24 rounded-full object-cover border-2 border-[#81059e]"
-  />
-) : (
-  <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center border-2 border-[#81059e]">
-    <FontAwesomeIcon icon={faUser} className="text-gray-400 text-2xl" />
-  </div>
-)}
+      alert("Foto de perfil atualizada com sucesso!");
+    } catch (error) {
+      console.error("Erro ao salvar imagem:", error);
+      setIsLoading(false);
+      alert(`Erro ao salvar imagem: ${error.message}`);
+    }
+  };
 
   // Definição das abas
   const abas = [
@@ -240,6 +214,14 @@ const handleUpload = async () => {
     { id: 'estoque', nome: 'Estoque', icon: faBox }
   ];
 
+  const handleAbaClick = (id) => {
+    setAbaAtiva(id);
+    // Em mobile, fecha o menu ao selecionar uma aba
+    if (isMobile) {
+      setMenuOpen(false);
+    }
+  };
+
   // Renderizar conteúdo da aba selecionada
   const renderConteudoAba = () => {
     switch (abaAtiva) {
@@ -249,11 +231,11 @@ const handleUpload = async () => {
             <div className="bg-gray-50 p-4 rounded-lg">
               <h4 className="font-medium text-[#81059e] mb-3">Configurações de Perfil</h4>
               <div className="space-y-4">
-                <div className="flex items-center space-x-4">
+                <div className="flex flex-col sm:flex-row items-center gap-4">
                   <div className="relative">
-                    {config.perfil.fotoUrl ? (
+                    {config.perfil.imageUrl ? (
                       <img
-                        src={config.perfil.fotoUrl}
+                        src={config.perfil.imageUrl}
                         alt="Foto de perfil"
                         className="w-24 h-24 rounded-full object-cover border-2 border-[#81059e]"
                       />
@@ -263,7 +245,7 @@ const handleUpload = async () => {
                       </div>
                     )}
                   </div>
-                  <div className="flex-1">
+                  <div className="w-full">
                     <input
                       type="file"
                       accept="image/*"
@@ -271,23 +253,25 @@ const handleUpload = async () => {
                       className="hidden"
                       id="fotoPerfil"
                     />
-                    <label
-                      htmlFor="fotoPerfil"
-                      className="inline-block px-4 py-2 bg-[#81059e] text-white rounded-md cursor-pointer hover:bg-[#690480] transition-colors"
-                    >
-                      {isLoading ? 'Enviando...' : 'Escolher Foto'}
-                    </label>
-                    {selectedFile && !isLoading && (
-                      <button
-                        onClick={handleUpload}
-                        className="ml-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+                    <div className="flex flex-wrap gap-2">
+                      <label
+                        htmlFor="fotoPerfil"
+                        className="inline-block px-4 py-2 bg-[#81059e] text-white rounded-md cursor-pointer hover:bg-[#690480] transition-colors"
                       >
-                        Enviar
-                      </button>
-                    )}
+                        {isLoading ? 'Enviando...' : 'Escolher Foto'}
+                      </label>
+                      {selectedFile && !isLoading && (
+                        <button
+                          onClick={handleUpload}
+                          className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+                        >
+                          Enviar
+                        </button>
+                      )}
+                    </div>
                     {selectedFile && (
-                      <p className="mt-2 text-sm text-gray-600">
-                        Arquivo selecionado: {selectedFile.name}
+                      <p className="mt-2 text-sm text-gray-600 break-all">
+                        Arquivo: {selectedFile.name}
                       </p>
                     )}
                   </div>
@@ -480,57 +464,72 @@ const handleUpload = async () => {
 
   if (!isOpen) return null;
 
+  // Encontra a aba ativa para exibir no cabeçalho em modo móvel
+  const abaAtual = abas.find(aba => aba.id === abaAtiva);
+
   const modalContent = (
-    <div
-      className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50"
-    >
-      <div
-        className="bg-[#81059e] rounded-lg shadow-lg w-full max-w-4xl max-h-[90vh] overflow-hidden relative"
-      >
-        <div className="flex justify-between items-center p-4 border-b">
-          <h3 className="text-xl font-bold text-white">
-            <FontAwesomeIcon icon={faGear} className="mr-2 text-white" /> Configurações do Sistema
-          </h3>
+    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50 p-0 sm:p-4">
+      <div className="bg-white rounded-lg shadow-lg w-full max-w-4xl h-full sm:h-auto sm:max-h-[90vh] overflow-hidden relative flex flex-col">
+        {/* Cabeçalho */}
+        <div className="bg-[#81059e] p-3 sm:p-4 flex justify-between items-center">
+          <div className="flex items-center">
+            {isMobile && (
+              <button 
+                onClick={() => setMenuOpen(!menuOpen)} 
+                className="text-white mr-3"
+              >
+                <FontAwesomeIcon icon={menuOpen ? faChevronLeft : faBars} size="lg" />
+              </button>
+            )}
+            <h3 className="text-lg sm:text-xl font-bold text-white flex items-center">
+              <FontAwesomeIcon icon={faGear} className="mr-2" />
+              {isMobile && !menuOpen ? abaAtual?.nome || 'Configurações' : 'Configurações do Sistema'}
+            </h3>
+          </div>
           <button
             onClick={handleClose}
-            className="text-gray-500 hover:text-gray-700"
+            className="text-white hover:text-gray-200"
           >
             <FontAwesomeIcon icon={faTimes} size="lg" />
           </button>
         </div>
 
-        <div className="flex h-[calc(90vh-120px)]">
-          {/* Menu lateral */}
-          <div className="w-64 bg-gray-100 p-4 overflow-y-auto">
-            <ul className="space-y-2">
-              {abas.map((aba) => (
-                <li key={aba.id}>
-                  <button
-                    onClick={() => setAbaAtiva(aba.id)}
-                    className={`w-full text-left p-3 rounded-md flex items-center
-                      ${abaAtiva === aba.id ?
-                        'bg-[#81059e] text-gray-200 font-medium' :
-                        'text-gray-700 hover:bg-gray-200'}`}
-                  >
-                    <FontAwesomeIcon icon={aba.icon} className="mr-3" />
-                    {aba.nome}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
+        {/* Área de conteúdo com layout ajustável */}
+        <div className="flex flex-1 overflow-hidden">
+          {/* Menu lateral - tem visibilidade controlada no mobile */}
+          {(menuOpen || !isMobile) && (
+            <div className={`${isMobile ? 'absolute inset-0 z-10 bg-white' : 'w-64'} bg-gray-100 overflow-y-auto`}>
+              <ul className="p-2 space-y-1">
+                {abas.map((aba) => (
+                  <li key={aba.id}>
+                    <button
+                      onClick={() => handleAbaClick(aba.id)}
+                      className={`w-full text-left p-3 rounded-md flex items-center
+                        ${abaAtiva === aba.id ?
+                          'bg-[#81059e] text-white font-medium' :
+                          'text-gray-700 hover:bg-gray-200'}`}
+                    >
+                      <FontAwesomeIcon icon={aba.icon} className="mr-3" />
+                      {aba.nome}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {/* Conteúdo da aba */}
-          <div className="flex-1 p-6 overflow-y-auto">
+          <div className={`flex-1 p-4 overflow-y-auto ${(menuOpen && isMobile) ? 'hidden' : 'block'}`}>
             {renderConteudoAba()}
           </div>
         </div>
 
-        <div className="flex justify-end gap-3 p-4 border-t bg-gray-50">
+        {/* Rodapé com botões */}
+        <div className="flex justify-end gap-2 p-3 border-t bg-gray-50">
           <button
             type="button"
             onClick={handleClose}
-            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 bg-white hover:bg-gray-50"
+            className="px-3 py-2 border border-gray-300 rounded-md text-gray-700 bg-white hover:bg-gray-50 text-sm sm:text-base"
             disabled={isLoading}
           >
             Cancelar
@@ -538,14 +537,11 @@ const handleUpload = async () => {
           <button
             type="button"
             onClick={handleSalvar}
-            className="px-4 py-2 rounded-md text-white bg-[#81059e] hover:bg-[#690480] flex items-center gap-2"
+            className="px-3 py-2 rounded-md text-white bg-[#81059e] hover:bg-[#690480] flex items-center gap-1 text-sm sm:text-base"
             disabled={isLoading || !isAdmin}
           >
-            {isLoading ? 'Salvando...' : (
-              <>
-                <FontAwesomeIcon icon={faSave} /> Salvar
-              </>
-            )}
+            <FontAwesomeIcon icon={faSave} /> 
+            <span className="hidden sm:inline">Salvar</span>
           </button>
         </div>
       </div>

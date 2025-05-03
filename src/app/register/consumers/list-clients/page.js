@@ -8,6 +8,7 @@ import {
   deleteDoc,
 } from "firebase/firestore";
 import { firestore } from "@/lib/firebaseConfig";
+import { getStorage, ref, getDownloadURL, listAll } from "firebase/storage";
 import Layout from "@/components/Layout";
 import { jsPDF } from "jspdf";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -22,6 +23,25 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
+import ClientDetailsModal from "./ClientDetailsModal";
+
+// Função auxiliar para debug do Storage
+const debugStoragePath = async (path) => {
+  console.log("Tentando acessar caminho:", path);
+  const storage = getStorage();
+  const pathRef = ref(storage, path);
+  try {
+    console.log("Referência criada:", pathRef);
+    const list = await listAll(pathRef);
+    console.log("Conteúdo do diretório:", path);
+    console.log("Pastas:", list.prefixes.map(p => p.fullPath));
+    console.log("Arquivos:", list.items.map(i => i.fullPath));
+    return list;
+  } catch (error) {
+    console.error("Erro ao listar diretório:", path, error);
+    return null;
+  }
+};
 
 const ClientsTable = () => {
   const { userPermissions } = useAuth();
@@ -35,26 +55,90 @@ const ClientsTable = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(15);
   const [selectedForDeletion, setSelectedForDeletion] = useState([]);
+  const [expandedFamilies, setExpandedFamilies] = useState({});
+  const [clientesAgrupados, setClientesAgrupados] = useState({ titulares: [], dependentes: {} });
+  const [clientImages, setClientImages] = useState({});
+
+  // Função para construir o caminho do diretório do cliente
+  const getImagePath = (cpf) => {
+    return `clientes/${cpf}`;
+  };
+
+  // Função para obter URL da imagem
+  const getImageUrl = async (cpf) => {
+    if (!cpf) return null;
+    try {
+      const storage = getStorage();
+      const imagePath = `clientes/${cpf}`;
+      const imageRef = ref(storage, imagePath);
+      try {
+        const url = await getDownloadURL(imageRef);
+        return url;
+      } catch (error) {
+        // Abordagem alternativa
+        try {
+          const folderRef = ref(storage, `clientes/${cpf}`);
+          const listResult = await listAll(folderRef);
+          if (listResult.items.length > 0) {
+            const fileRef = listResult.items[0];
+            const url = await getDownloadURL(fileRef);
+            return url;
+          }
+        } catch (listError) {
+          console.log(`Page: Falha ao listar arquivos para ${cpf}`);
+        }
+        return null;
+      }
+    } catch (error) {
+      console.error("Erro ao obter URL da imagem:", error);
+      return null;
+    }
+  };
+
+  // Buscar URLs das imagens
+  useEffect(() => {
+    const fetchImageUrls = async () => {
+      const urls = {};
+      for (const client of clients) {
+        if (client.cpf) {
+          urls[client.id] = await getImageUrl(client.cpf);
+        }
+      }
+      setClientImages(urls);
+    };
+
+    if (clients.length > 0) {
+      fetchImageUrls();
+    }
+  }, [clients]);
+
+  useEffect(() => {
+    debugStoragePath("");  // Listar a raiz do storage
+    debugStoragePath("clientes");  // Listar o diretório 'clientes'
+  }, []);
 
   useEffect(() => {
     const fetchClients = async () => {
       try {
         setLoading(true);
         const fetchedClients = [];
-
-        // Usar o caminho correto: lojas/clientes/users
         const clientsCollection = collection(firestore, 'lojas/clientes/users');
         const snapshot = await getDocs(clientsCollection);
-
-        snapshot.docs.forEach((doc) => {
-          fetchedClients.push({
+        const clientsWithPromises = snapshot.docs.map(async (doc) => {
+          const clientData = doc.data();
+          let imageUrl = null;
+          if (clientData.cpf) {
+            imageUrl = await getImageUrl(clientData.cpf);
+          }
+          return {
             id: doc.id,
-            ...doc.data()
-          });
+            ...clientData,
+            imagemUrl: imageUrl
+          };
         });
-
-        setClients(fetchedClients);
-        setFilteredClients(fetchedClients);
+        const resolvedClients = await Promise.all(clientsWithPromises);
+        setClients(resolvedClients);
+        setFilteredClients(resolvedClients);
         setLoading(false);
       } catch (error) {
         console.error("Erro ao buscar clientes:", error);
@@ -62,7 +146,6 @@ const ClientsTable = () => {
         setLoading(false);
       }
     };
-
     fetchClients();
   }, []);
 
@@ -83,6 +166,41 @@ const ClientsTable = () => {
       setFilteredClients(filtered);
     }
   }, [searchQuery, clients]);
+
+  // Agrupar clientes por família
+  useEffect(() => {
+    const agruparClientesPorFamilia = () => {
+      const titularesArray = [];
+      const dependentesObj = {};
+
+      // Separar titulares e dependentes
+      clients.forEach(cliente => {
+        if (!cliente.dependentesDe) {
+          titularesArray.push(cliente);
+
+          // Inicializar array para dependentes deste titular
+          if (cliente.temDependentes) {
+            dependentesObj[cliente.id] = [];
+          }
+        } else {
+          // Adicionar ao array de dependentes do titular
+          if (!dependentesObj[cliente.dependentesDe]) {
+            dependentesObj[cliente.dependentesDe] = [];
+          }
+          dependentesObj[cliente.dependentesDe].push(cliente);
+        }
+      });
+
+      setClientesAgrupados({
+        titulares: titularesArray,
+        dependentes: dependentesObj
+      });
+    };
+
+    if (clients.length > 0) {
+      agruparClientesPorFamilia();
+    }
+  }, [clients]);
 
   const handleModalOpen = (client) => {
     setSelectedClient(client);
@@ -160,6 +278,14 @@ const ClientsTable = () => {
         alert('Erro ao excluir os clientes selecionados.');
       }
     }
+  };
+
+  // Função para alternar a exibição de dependentes
+  const toggleFamilyExpand = (titularId) => {
+    setExpandedFamilies(prev => ({
+      ...prev,
+      [titularId]: !prev[titularId]
+    }));
   };
 
   // Calcular clientes para a página atual
@@ -354,6 +480,7 @@ const ClientsTable = () => {
                           <th className="px-3 py-2 w-12">
                             <span className="sr-only">Selecionar</span>
                           </th>
+                          <th className="px-3 py-2 w-20">Foto</th>
                           <th className="px-3 py-2">Nome</th>
                           <th className="px-3 py-2">CPF</th>
                           <th className="px-3 py-2">Telefones</th>
@@ -361,67 +488,212 @@ const ClientsTable = () => {
                           <th className="px-3 py-2">Bairro</th>
                           <th className="px-3 py-2">Logradouro</th>
                           <th className="px-3 py-2">Número</th>
-                          <th className="px-3 py-2">Whatsapp
-                          </th>
+                          <th className="px-3 py-2">Whatsapp</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {currentClients.map((client) => (
-                          <tr
-                            key={client.id}
-                            className="text-black text-left hover:bg-gray-100 cursor-pointer"
-                          >
-                            <td className="border px-2 py-2 text-center">
-                              <input
-                                type="checkbox"
-                                checked={selectedForDeletion.includes(client.id)}
-                                onChange={(e) => toggleDeletion(e, client.id)}
-                                className="h-4 w-4 cursor-pointer"
-                                onClick={(e) => e.stopPropagation()}
-                              />
-                            </td>
-                            <td className="border px-3 py-2" onClick={() => handleModalOpen(client)}>
-                              {client.nome || 'N/A'}
-                            </td>
-                            <td className="border px-3 py-2" onClick={() => handleModalOpen(client)}>
-                              {client.cpf || 'N/A'}
-                            </td>
-                            <td className="border px-3 py-2" onClick={() => handleModalOpen(client)}>
-                              {client.telefones && client.telefones.length > 0
-                                ? client.telefones.join(", ")
-                                : "N/A"}
-                            </td>
-                            <td className="border px-3 py-2" onClick={() => handleModalOpen(client)}>
-                              {client.endereco?.cidade || 'N/A'}
-                            </td>
-                            <td className="border px-3 py-2" onClick={() => handleModalOpen(client)}>
-                              {client.endereco?.bairro || 'N/A'}
-                            </td>
-                            <td className="border px-3 py-2" onClick={() => handleModalOpen(client)}>
-                              {client.endereco?.logradouro || 'N/A'}
-                            </td>
-                            <td className="border px-3 py-2" onClick={() => handleModalOpen(client)}>
-                              {client.endereco?.numero || 'N/A'}
-                            </td>
-                            <td className="border px-3 py-2 text-center">
-                              {client.telefones && client.telefones.length > 0 ? (
-                                <a
-                                  href={generateWhatsAppLink(client.telefones[0])}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="inline-block p-2 bg-green-500 text-green-600 hover:text-green-100 hover:bg-green-500 rounded-full transition-all"
+                        {currentClients.map((client) => {
+                          // Verifica se é um titular com dependentes
+                          const isTitularWithDependents = !client.dependentesDe && client.temDependentes;
+                          const isExpanded = expandedFamilies[client.id];
+
+                          return (
+                            <>
+                              <tr
+                                key={client.id}
+                                className={`text-black text-left hover:bg-gray-100 cursor-pointer ${isTitularWithDependents ? 'border-b-0 bg-gray-50' : ''
+                                  } h-16`}
+                              >
+                                <td className="border px-2 py-2 text-center">
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedForDeletion.includes(client.id)}
+                                    onChange={(e) => toggleDeletion(e, client.id)}
+                                    className="h-4 w-4 cursor-pointer"
+                                    onClick={(e) => e.stopPropagation()}
+                                  />
+                                </td>
+                                <td className="border px-3 py-2 text-center" onClick={() => handleModalOpen(client)}>
+                                  {clientImages[client.id] ? (
+                                    <img
+                                      src={clientImages[client.id]}
+                                      alt={`Foto de ${client.nome}`}
+                                      className="h-12 w-12 rounded-full object-cover inline-block"
+                                      onError={(e) => {
+                                        console.log("Erro ao carregar imagem:", client.cpf);
+                                        e.target.src = "https://via.placeholder.com/48?text=NA";
+                                      }}
+                                    />
+                                  ) : (
+                                    <div className="h-12 w-12 rounded-full bg-purple-200 flex items-center justify-center text-purple-800 font-bold inline-block">
+                                      {client.nome ? client.nome.charAt(0).toUpperCase() : "?"}
+                                    </div>
+                                  )}
+                                </td>
+                                <td
+                                  className="border px-3 py-2"
+                                  onClick={() => isTitularWithDependents
+                                    ? toggleFamilyExpand(client.id)
+                                    : handleModalOpen(client)
+                                  }
                                 >
-                                  <FontAwesomeIcon icon={faPhone} className="h-5 w-5" />
-                                </a>
-                              ) : (
-                                <span className="inline-block p-2 text-gray-400">
-                                  <FontAwesomeIcon icon={faWhatsapp} className="h-5 w-5" />
-                                </span>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
+                                  <div className="flex items-center">
+                                    {isTitularWithDependents && (
+                                      <button
+                                        className="mr-2 text-[#81059e] hover:text-[#690480] focus:outline-none"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          toggleFamilyExpand(client.id);
+                                        }}
+                                      >
+                                        {isExpanded ? (
+                                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                          </svg>
+                                        ) : (
+                                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                          </svg>
+                                        )}
+                                      </button>
+                                    )}
+                                    <div className="flex flex-col">
+                                      <span className="font-medium">{client.nome || 'N/A'}</span>
+                                      {isTitularWithDependents && (
+                                        <span className="text-xs text-[#81059e]">
+                                          {clientesAgrupados.dependentes[client.id]?.length || 0} dependente(s)
+                                        </span>
+                                      )}
+                                      {client.dependentesDe && (
+                                        <span className="text-xs text-gray-500">
+                                          Dependente • {client.parentesco || 'Não especificado'}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="border px-3 py-2" onClick={() => handleModalOpen(client)}>
+                                  {client.cpf || 'N/A'}
+                                </td>
+                                <td className="border px-3 py-2" onClick={() => handleModalOpen(client)}>
+                                  {client.telefones && client.telefones.length > 0
+                                    ? client.telefones.join(", ")
+                                    : "N/A"}
+                                </td>
+                                <td className="border px-3 py-2" onClick={() => handleModalOpen(client)}>
+                                  {client.endereco?.cidade || 'N/A'}
+                                </td>
+                                <td className="border px-3 py-2" onClick={() => handleModalOpen(client)}>
+                                  {client.endereco?.bairro || 'N/A'}
+                                </td>
+                                <td className="border px-3 py-2" onClick={() => handleModalOpen(client)}>
+                                  {client.endereco?.logradouro || 'N/A'}
+                                </td>
+                                <td className="border px-3 py-2" onClick={() => handleModalOpen(client)}>
+                                  {client.endereco?.numero || 'N/A'}
+                                </td>
+                                <td className="border px-3 py-2 text-center">
+                                  {client.telefones && client.telefones.length > 0 ? (
+                                    <a
+                                      href={generateWhatsAppLink(client.telefones[0])}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="inline-block p-2 bg-green-500 text-green-600 hover:text-green-100 hover:bg-green-500 rounded-full transition-all"
+                                    >
+                                      <FontAwesomeIcon icon={faPhone} className="h-5 w-5" />
+                                    </a>
+                                  ) : (
+                                    <span className="inline-block p-2 text-gray-400">
+                                      <FontAwesomeIcon icon={faWhatsapp} className="h-5 w-5" />
+                                    </span>
+                                  )}
+                                </td>
+                              </tr>
+
+                              {/* Exibir dependentes se expandido */}
+                              {isTitularWithDependents && isExpanded &&
+                                clientesAgrupados.dependentes[client.id]?.map(dependente => (
+                                  <tr
+                                    key={dependente.id}
+                                    className="text-black text-left hover:bg-gray-100 cursor-pointer bg-purple-50 h-16"
+                                  >
+                                    <td className="border px-2 py-2 text-center">
+                                      <input
+                                        type="checkbox"
+                                        checked={selectedForDeletion.includes(dependente.id)}
+                                        onChange={(e) => toggleDeletion(e, dependente.id)}
+                                        className="h-4 w-4 cursor-pointer"
+                                        onClick={(e) => e.stopPropagation()}
+                                      />
+                                    </td>
+                                    <td className="border px-3 py-2 text-center" onClick={() => handleModalOpen(dependente)}>
+                                      {clientImages[dependente.id] ? (
+                                        <img
+                                          src={clientImages[dependente.id]}
+                                          alt={`Foto de ${dependente.nome}`}
+                                          className="h-10 w-10 rounded-full object-cover inline-block"
+                                          onError={(e) => {
+                                            e.target.src = "https://via.placeholder.com/40?text=NA";
+                                          }}
+                                        />
+                                      ) : (
+                                        <div className="h-10 w-10 rounded-full bg-purple-100 flex items-center justify-center text-purple-700 font-bold inline-block">
+                                          {dependente.nome ? dependente.nome.charAt(0).toUpperCase() : "?"}
+                                        </div>
+                                      )}
+                                    </td>
+                                    <td className="border px-3 py-2 pl-8" onClick={() => handleModalOpen(dependente)}>
+                                      <div className="flex items-center">
+                                        <span className="text-xs text-purple-600 font-medium mr-2">
+                                          ↳ {dependente.parentesco || 'Dependente'}:
+                                        </span>
+                                        {dependente.nome || 'N/A'}
+                                      </div>
+                                    </td>
+                                    <td className="border px-3 py-2" onClick={() => handleModalOpen(dependente)}>
+                                      {dependente.cpf || 'N/A'}
+                                    </td>
+                                    <td className="border px-3 py-2" onClick={() => handleModalOpen(dependente)}>
+                                      {dependente.telefones && dependente.telefones.length > 0
+                                        ? dependente.telefones.join(", ")
+                                        : "N/A"}
+                                    </td>
+                                    <td className="border px-3 py-2" onClick={() => handleModalOpen(dependente)}>
+                                      {dependente.endereco?.cidade || 'N/A'}
+                                    </td>
+                                    <td className="border px-3 py-2" onClick={() => handleModalOpen(dependente)}>
+                                      {dependente.endereco?.bairro || 'N/A'}
+                                    </td>
+                                    <td className="border px-3 py-2" onClick={() => handleModalOpen(dependente)}>
+                                      {dependente.endereco?.logradouro || 'N/A'}
+                                    </td>
+                                    <td className="border px-3 py-2" onClick={() => handleModalOpen(dependente)}>
+                                      {dependente.endereco?.numero || 'N/A'}
+                                    </td>
+                                    <td className="border px-3 py-2 text-center">
+                                      {dependente.telefones && dependente.telefones.length > 0 ? (
+                                        <a
+                                          href={generateWhatsAppLink(dependente.telefones[0])}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          onClick={(e) => e.stopPropagation()}
+                                          className="inline-block p-2 bg-green-500 text-green-600 hover:text-green-100 hover:bg-green-500 rounded-full transition-all"
+                                        >
+                                          <FontAwesomeIcon icon={faPhone} className="h-5 w-5" />
+                                        </a>
+                                      ) : (
+                                        <span className="inline-block p-2 text-gray-400">
+                                          <FontAwesomeIcon icon={faWhatsapp} className="h-5 w-5" />
+                                        </span>
+                                      )}
+                                    </td>
+                                  </tr>
+                                ))
+                              }
+                            </>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
@@ -488,170 +760,15 @@ const ClientsTable = () => {
             </div>
           )}
 
-          {/* Modal para detalhes do cliente */}
+          {/* Replace the old modal with the new component */}
           {showModal && selectedClient && (
-            <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-              <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md relative text-black overflow-y-auto max-h-[90vh]">
-                <h3 className="text-xl font-bold mb-4" style={{ color: "#81059e" }}>
-                  Dados do Cliente
-                </h3>
-
-                <div className="space-y-2">
-                  <p className="text-black">
-                    <strong>ID:</strong> {selectedClient.id}
-                  </p>
-                  <p className="text-black">
-                    <strong>Nome:</strong> {selectedClient.nome || 'N/A'}
-                  </p>
-                  <p className="text-black">
-                    <strong>CPF:</strong> {selectedClient.cpf || 'N/A'}
-                  </p>
-                  <p className="text-black">
-                    <strong>Email:</strong> {selectedClient.email || 'N/A'}
-                  </p>
-                  <p className="text-black">
-                    <strong>Telefones:</strong>{" "}
-                    {selectedClient.telefones && selectedClient.telefones.length > 0
-                      ? selectedClient.telefones.join(", ")
-                      : "Não informado"}
-                  </p>
-                  <p className="text-black">
-                    <strong>Data de Nascimento:</strong>{" "}
-                    {selectedClient.dataNascimento ?
-                      (typeof selectedClient.dataNascimento === 'string' ?
-                        selectedClient.dataNascimento :
-                        new Date(selectedClient.dataNascimento.seconds * 1000).toLocaleDateString('pt-BR'))
-                      : 'N/A'}
-                  </p>
-                  <p className="text-black">
-                    <strong>Gênero:</strong> {selectedClient.genero || 'N/A'}
-                  </p>
-                  <p className="text-black">
-                    <strong>Estado Civil:</strong>{" "}
-                    {selectedClient.estadoCivil || 'N/A'}
-                  </p>
-                  <p className="text-black">
-                    <strong>Escolaridade:</strong>{" "}
-                    {selectedClient.escolaridade || 'N/A'}
-                  </p>
-                  <p className="text-black">
-                    <strong>Cidade:</strong> {selectedClient.endereco?.cidade || 'N/A'}
-                  </p>
-                  <p className="text-black">
-                    <strong>Estado:</strong> {selectedClient.endereco?.estado || 'N/A'}
-                  </p>
-                  <p className="text-black">
-                    <strong>Bairro:</strong> {selectedClient.endereco?.bairro || 'N/A'}
-                  </p>
-                  <p className="text-black">
-                    <strong>Logradouro:</strong>{" "}
-                    {selectedClient.endereco?.logradouro || 'N/A'}
-                  </p>
-                  <p className="text-black">
-                    <strong>Número:</strong> {selectedClient.endereco?.numero || 'N/A'}
-                  </p>
-                  <p className="text-black">
-                    <strong>Complemento:</strong>{" "}
-                    {selectedClient.endereco?.complemento || 'N/A'}
-                  </p>
-                  <p className="text-black">
-                    <strong>CEP:</strong> {selectedClient.endereco?.cep || 'N/A'}
-                  </p>
-                </div>
-
-                <div className="mt-4 flex flex-col space-y-2">
-                  {selectedClient.imagem && (
-                    <button
-                      className="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition"
-                      onClick={() =>
-                        window.open(selectedClient.imagem, "_blank")
-                      }
-                    >
-                      Ver Imagem do Cliente
-                    </button>
-                  )}
-                  {selectedClient.rgImageUrl && (
-                    <button
-                      className="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition"
-                      onClick={() =>
-                        window.open(selectedClient.rgImageUrl, "_blank")
-                      }
-                    >
-                      Ver Foto do RG
-                    </button>
-                  )}
-                  {selectedClient.cpfImageUrl && (
-                    <button
-                      className="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition"
-                      onClick={() =>
-                        window.open(selectedClient.cpfImageUrl, "_blank")
-                      }
-                    >
-                      Ver Foto do CPF
-                    </button>
-                  )}
-                  {selectedClient.addressImageUrl && (
-                    <button
-                      className="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition"
-                      onClick={() =>
-                        window.open(
-                          selectedClient.addressImageUrl,
-                          "_blank"
-                        )
-                      }
-                    >
-                      Ver Comprovante de Endereço
-                    </button>
-                  )}
-                </div>
-
-                <div className="mt-4 flex flex-wrap gap-2 justify-center">
-                  <button
-                    className="bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600 transition"
-                    onClick={handlePrint}
-                  >
-                    Imprimir
-                  </button>
-                  <button
-                    className="bg-[#81059e] text-white py-2 px-4 rounded hover:bg-[#690480] transition"
-                    onClick={handleDownloadPDF}
-                  >
-                    Baixar PDF
-                  </button>
-                  {selectedClient.telefones && selectedClient.telefones.length > 0 && (
-                    <a
-                      href={generateWhatsAppLink(selectedClient.telefones[0])}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600 transition flex items-center gap-2"
-                    >
-                      <FontAwesomeIcon icon={faPhone} className="h-5 w-5 " />
-                      WhatsApp
-                    </a>
-                  )}
-                  <Link href={`/clients/edit/${selectedClient.id}`}>
-                    <button
-                      className="bg-yellow-500 text-white py-2 px-4 rounded hover:bg-yellow-600 transition"
-                    >
-                      Editar
-                    </button>
-                  </Link>
-                  <button
-                    className="bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-600 transition"
-                    onClick={handleModalClose}
-                  >
-                    Fechar
-                  </button>
-                </div>
-
-                <button
-                  onClick={handleModalClose}
-                  className="absolute top-2 right-2 text-gray-600 hover:text-gray-800"
-                >
-                  &times;
-                </button>
-              </div>
-            </div>
+            <ClientDetailsModal
+              client={selectedClient}
+              onClose={() => {
+                setShowModal(false);
+                setSelectedClient(null);
+              }}
+            />
           )}
         </div>
       </div>

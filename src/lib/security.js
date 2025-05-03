@@ -28,7 +28,7 @@ export const securityConfig = {
             "script-src 'self' 'unsafe-inline' 'unsafe-eval';",
             "style-src 'self' 'unsafe-inline' fonts.googleapis.com;",
             "font-src 'self' fonts.gstatic.com data:;",
-            "img-src 'self' data: https://www.google.com https://*.google.com;",
+            "img-src 'self' data: https://www.google.com https://*.google.com https://firebasestorage.googleapis.com https://storage.googleapis.com;",
             "connect-src 'self' https://identitytoolkit.googleapis.com https://firebasestorage.googleapis.com https://firestore.googleapis.com https://*.googleapis.com https://firebase.googleapis.com https://*.firebaseio.com;",
         ].join(' '),
     },

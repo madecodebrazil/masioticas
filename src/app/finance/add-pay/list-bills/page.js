@@ -943,7 +943,7 @@ export default function ListaContas() {
             <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
               <div className="bg-white rounded-lg shadow-lg w-full max-w-md flex flex-col h-3/5 overflow-y-auto p-4">
                 <div className="bg-[#81059e] text-white p-4 flex justify-between items-center">
-                  <h3 className="text-xl font-bold text-[#81059e] mb-4">
+                  <h3 className="text-xl font-bold text-white mb-4">
                     Detalhes da Conta a Pagar
                   </h3>
                 </div>
