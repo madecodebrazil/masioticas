@@ -1,5 +1,8 @@
+// /src/lib/security.js
+const crypto = require('crypto');
+
 // Configurações de segurança
-export const securityConfig = {
+const securityConfig = {
     // Tempo de expiração do token em segundos (1 hora)
     tokenExpiration: 3600,
 
@@ -35,7 +38,7 @@ export const securityConfig = {
 };
 
 // Função para validar senha
-export const validatePassword = (password) => {
+const validatePassword = (password) => {
     const minLength = 8;
     const hasUpperCase = /[A-Z]/.test(password);
     const hasLowerCase = /[a-z]/.test(password);
@@ -55,7 +58,7 @@ export const validatePassword = (password) => {
 };
 
 // Função para sanitizar inputs
-export const sanitizeInput = (input) => {
+const sanitizeInput = (input) => {
     if (typeof input !== 'string') return input;
 
     // Remove tags HTML
@@ -71,6 +74,13 @@ export const sanitizeInput = (input) => {
 };
 
 // Função para gerar token CSRF
-export const generateCsrfToken = () => {
+const generateCsrfToken = () => {
     return crypto.randomBytes(32).toString('hex');
-}; 
+};
+
+module.exports = {
+    securityConfig,
+    validatePassword,
+    sanitizeInput,
+    generateCsrfToken
+};

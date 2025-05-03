@@ -2,18 +2,18 @@ const { securityConfig } = require('./src/lib/security');
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+    output: 'standalone',
+    reactStrictMode: true,
     images: {
-        domains: ['firebasestorage.googleapis.com'],
         remotePatterns: [
             {
                 protocol: 'https',
                 hostname: 'firebasestorage.googleapis.com',
                 port: '',
-                pathname: '/**',
+                pathname: '/v0/b/**',
             },
         ],
     },
-    reactStrictMode: true,
     async headers() {
         return [
             {
@@ -33,18 +33,6 @@ const nextConfig = {
             },
         ];
     },
-    // Configurações de CORS
-    async cors(req, res) {
-        res.setHeader('Access-Control-Allow-Credentials', securityConfig.corsOptions.credentials);
-        res.setHeader('Access-Control-Allow-Origin', securityConfig.corsOptions.origin);
-        res.setHeader('Access-Control-Allow-Methods', securityConfig.corsOptions.methods.join(','));
-        res.setHeader('Access-Control-Allow-Headers', securityConfig.corsOptions.allowedHeaders.join(','));
+};
 
-        if (req.method === 'OPTIONS') {
-            res.status(200).end();
-            return;
-        }
-    },
-}
-
-module.exports = nextConfig 
+module.exports = nextConfig;
