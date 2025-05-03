@@ -1,10 +1,10 @@
 "use client";
 import { useState, useEffect } from "react";
-import { auth, firestore } from "../../../lib/firebaseConfig"; // Assumindo que a configuração do Firebase já está pronta
+import { auth, firestore } from "../../../lib/firebaseConfig";
 import { collection, doc, setDoc, getDocs, query, getDoc, deleteDoc } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
-import MobileNavSidebar from "@/components/MB_NavSidebar"; // Menu Mobile
-import SidebarHomepage from "@/components/SidebarHomepage"; // Menu Desktop
+import MobileNavSidebar from "@/components/MB_NavSidebar"; 
+import SidebarHomepage from "@/components/SidebarHomepage"; 
 
 export default function Agenda() {
   const [selectedDate, setSelectedDate] = useState(null); // Data selecionada no calendário

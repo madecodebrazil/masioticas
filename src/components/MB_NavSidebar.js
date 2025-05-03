@@ -106,6 +106,7 @@ export default function MobileNavSidebar({ handleLogout, userPhotoURL, userData,
                         alt="Logo"
                         width={100}
                         height={50}
+                        style={{ width: 'auto', height: 'auto' }}
                     />
                 </Link></div>
 

@@ -132,7 +132,7 @@ const CalendarConsultation = () => {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen">
-        <p> <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#81059e]"></div></p>
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#81059e]"></div>
       </div>
     );
   }
@@ -158,8 +158,8 @@ const CalendarConsultation = () => {
                 <button
                   key={loja}
                   className={`px-4 py-2 rounded-md ${currentLoja === loja
-                      ? "bg-[#9a5fc7] text-white"
-                      : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                    ? "bg-[#9a5fc7] text-white"
+                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
                     }`}
                   onClick={() => handleLojaChange(loja)}
                 >
@@ -302,8 +302,8 @@ const CalendarConsultation = () => {
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm">
                         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${consultation.status === "concluida" ? "bg-green-100 text-green-800" :
-                            consultation.status === "cancelada" ? "bg-red-100 text-red-800" :
-                              "bg-yellow-100 text-yellow-800"
+                          consultation.status === "cancelada" ? "bg-red-100 text-red-800" :
+                            "bg-yellow-100 text-yellow-800"
                           }`}>
                           {consultation.status === "concluida" ? "Concluída" :
                             consultation.status === "cancelada" ? "Cancelada" :

@@ -4,16 +4,14 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../hooks/useAuth';
-import { auth, firestore } from '../../lib/firebaseConfig';
-import { doc, getDoc, collection, getDocs, query, where } from 'firebase/firestore';
-import { onAuthStateChanged } from 'firebase/auth';
+import { firestore } from '../../lib/firebaseConfig';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 import { motion } from 'framer-motion';
 import SidebarHomepage from '../../components/SidebarHomepage';
 import Dashboard from '@/components/Dashboard';
 import CarrouselPromo from '../../components/CarrouselPromo';
 import MobileHeader from '@/components/MB_NavSidebar';
 import BottomMobileNav from '../../components/MB_BottomNav';
-import SimpleSpinner from '@/components/SimpleSpinner';
 
 export default function Home() {
     const { user, userData, loading: authLoading, userPermissions } = useAuth();
@@ -233,15 +231,9 @@ export default function Home() {
             {/* Sidebar fixa para desktop */}
             <aside className="hidden md:block md:w-[300px] lg:w-[350px] bg-[#81059e] text-white p-4 pl-10 shadow-xl rounded-tr-xl rounded-br-lg fixed h-screen overflow-y-auto">
                 <SidebarHomepage
-                    userPhotoURL={userData?.imageUrl || '/images/default-avatar.png'}
-                    userData={{
-                        name: userData?.nome,
-                        email: userData?.email,
-                        cargo: userData?.cargo, // Corrigir para usar cargo ao invés de profession
-                        store: userPermissions?.isAdmin ? 'Todas as lojas' : userPermissions?.lojas[0]
-                    }}
-                    userPermissions={userPermissions}
-                    currentPage="dashboard"
+                    userPhotoURL={userPhotoURL}
+                    userData={userData}
+                    currentPage="agenda"
                 />
             </aside>
 

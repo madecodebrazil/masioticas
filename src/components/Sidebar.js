@@ -21,11 +21,11 @@ import {
 const MenuItem = ({ icon: Icon, label, route, isActive }) => {
   return (
     <li>
-      <Link 
-        href={route} 
+      <Link
+        href={route}
         className={`flex items-center transition-colors duration-200 rounded-lg p-4 text-white relative
-          ${isActive 
-            ? 'bg-purple-700 font-semibold shadow-md' 
+          ${isActive
+            ? 'bg-purple-700 font-semibold shadow-md'
             : 'hover:bg-purple-700/40'}`}
       >
         <Icon className="w-6 h-6 min-w-6" />
@@ -41,14 +41,14 @@ const Sidebar = ({ showSidebar, hideSidebar }) => {
   const [currentPath, setCurrentPath] = useState('');
   // Use hook usePathname do Next.js
   const pathname = usePathname();
-  
+
   // Atualizar o currentPath quando o pathname mudar
   useEffect(() => {
     if (pathname) {
       setCurrentPath(pathname);
     }
   }, [pathname]);
-  
+
   // Efeito para controlar o scroll do body quando o sidebar está aberto no mobile
   useEffect(() => {
     if (showSidebar) {
@@ -58,7 +58,7 @@ const Sidebar = ({ showSidebar, hideSidebar }) => {
       // Reativa o scroll quando o sidebar está fechado
       document.body.classList.remove('overflow-hidden', 'lg:overflow-auto');
     }
-    
+
     // Limpeza ao desmontar o componente
     return () => {
       document.body.classList.remove('overflow-hidden', 'lg:overflow-auto');
@@ -80,13 +80,13 @@ const Sidebar = ({ showSidebar, hideSidebar }) => {
   // Função segura para verificar se a rota atual é ativa
   const checkIsActive = (itemRoute) => {
     if (!currentPath) return false;
-    
+
     if (currentPath === itemRoute) return true;
-    
+
     if (itemRoute !== '/' && itemRoute.length > 1 && currentPath.startsWith(itemRoute)) {
       return true;
     }
-    
+
     return false;
   };
 
@@ -94,13 +94,13 @@ const Sidebar = ({ showSidebar, hideSidebar }) => {
     <>
       {/* Overlay para fechar o menu no mobile */}
       {showSidebar && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/50 lg:hidden z-40 backdrop-blur-sm"
           onClick={hideSidebar}
           aria-hidden="true"
         />
       )}
-      
+
       {/* Sidebar */}
       <aside
         className={`fixed top-0 left-0 h-screen w-72  bg-[#81059e] 
@@ -117,6 +117,7 @@ const Sidebar = ({ showSidebar, hideSidebar }) => {
                 width={120}
                 height={60}
                 className="object-contain hover:brightness-110 transition-all duration-300"
+                style={{ width: 'auto', height: 'auto' }}
               />
             </Link>
 

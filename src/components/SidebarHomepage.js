@@ -65,22 +65,25 @@ export default function SidebarHomepage({ userPhotoURL, userData, userPermission
             return (
                 <>
                     <h3 className="text-white-600 text-lg font-semibold">
-                        {userData?.cargo}
+                        {userData?.cargo || 'Administrador'}
                     </h3>
                     <p className="text-white-400 text-sm">
-                        Administrador - Acesso Total
+                        Acesso Total
                     </p>
                 </>
             );
         }
+
+        // Para usuários normais, mostre as lojas que eles têm acesso
+        const userStores = userPermissions?.lojas?.join(', ') || 'Nenhuma loja';
         return (
             <>
                 <h3 className="text-white-600 text-lg font-normal">
-                    {userData?.cargo}
+                    {userData?.cargo || 'Funcionário'}
                 </h3>
-                <h3>
-                    Loja: {userData?.store}
-                </h3>
+                <p className="text-white-600 text-sm">
+                    Loja: {userStores}
+                </p>
             </>
         );
     };
@@ -124,11 +127,9 @@ export default function SidebarHomepage({ userPhotoURL, userData, userPermission
                     />
                     <div className="text-center mb-6">
                         <h2 className="text-white text-xl font-bold mb-1">
-                            {userData?.name || 'Dev Account'}
+                            {userData?.nome || userData?.name || 'Usuário'}
                         </h2>
-                        <h3 className="text-white-600 text-lg font-semibold">
-                            {renderUserInfo()}
-                        </h3>
+                        {renderUserInfo()}
                     </div>
                 </div>
             </aside>
@@ -142,6 +143,7 @@ export default function SidebarHomepage({ userPhotoURL, userData, userPermission
                         width={120}
                         height={60}
                         className="mb-6 cursor-pointer transition-all duration-300 hover:drop-shadow-[0_0_10px_rgba(255,255,0,0.8)]"
+                        style={{ width: 'auto', height: 'auto' }}
                     />
                 </Link>
 
@@ -174,11 +176,9 @@ export default function SidebarHomepage({ userPhotoURL, userData, userPermission
                     </div>
                     <div className="text-center mb-6">
                         <h2 className="text-white text-xl font-bold mb-1">
-                            {userData?.name || 'Dev Account'}
+                            {userData?.nome || userData?.name || 'Usuário'}
                         </h2>
-                        <h3 className="text-white-600 text-lg font-semibold">
-                        </h3>
-                        {renderUserInfo()} {/* Adicionar esta linha */}
+                        {renderUserInfo()}
                     </div>
                 </div>
 

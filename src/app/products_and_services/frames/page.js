@@ -724,7 +724,7 @@ export default function ListaArmacoes() {
 
           {/* Tabela de armações */}
           {loading ? (
-            <p> <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#81059e]"></div></p>
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#81059e]"></div>
           ) : error ? (
             <p>{error}</p>
           ) : (
@@ -901,9 +901,14 @@ export default function ListaArmacoes() {
                   {selectedArmacao.imagem && (
                     <div className="flex justify-center mb-4">
                       <img
-                        src={selectedArmacao.imagem}
+                        src={selectedArmacao.imagem} // URL do Firebase Storage
                         alt={`Imagem de ${selectedArmacao.marca}`}
                         className="max-h-32 object-contain rounded"
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.src = '/api/placeholder/200/200'; // Fallback para imagem placeholder
+                          console.error('Erro ao carregar imagem:', selectedArmacao.imagem);
+                        }}
                       />
                     </div>
                   )}

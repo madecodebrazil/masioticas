@@ -3,7 +3,7 @@
 import React, { Suspense, useEffect, useState } from "react";
 import Layout from "@/components/Layout";
 import { doc, setDoc, getDocs, getDoc, collection, addDoc, query, where, deleteDoc } from "firebase/firestore";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { firestore } from "../../../../lib/firebaseConfig";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -12,6 +12,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { format, parseISO } from 'date-fns';
 import { useRef } from "react";
 import { ptBR } from 'date-fns/locale';
+import { storage } from "@/lib/firebaseConfig";
 import "react-datepicker/dist/react-datepicker.css";
 import { FiPlus, FiX } from 'react-icons/fi';
 import ProductConfirmModal from '@/components/ProductConfirmModal';
@@ -21,6 +22,7 @@ const SelectWithAddOption = ({ label, options, value, onChange, collectionName, 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [newItemValue, setNewItemValue] = useState("");
   const [showAddInput, setShowAddInput] = useState(false);
+  const [showRemoveOptions, setShowRemoveOptions] = useState(false);
 
   const handleRemoveItem = async (itemToRemove) => {
     try {
@@ -61,6 +63,7 @@ const SelectWithAddOption = ({ label, options, value, onChange, collectionName, 
       }
 
       alert(`${itemToRemove} removido com sucesso!`);
+      setShowRemoveOptions(false);
     } catch (error) {
       console.error(`Erro ao remover ${itemToRemove}:`, error);
       alert(`Erro ao remover ${itemToRemove}`);
@@ -85,7 +88,7 @@ const SelectWithAddOption = ({ label, options, value, onChange, collectionName, 
 
       {!showAddInput ? (
         <div className="relative">
-          <div className="relative">
+          <div className="flex items-center">
             <select
               value={value || ""}
               onChange={(e) => {
@@ -93,6 +96,7 @@ const SelectWithAddOption = ({ label, options, value, onChange, collectionName, 
                   setShowAddInput(true);
                 } else {
                   onChange(e.target.value);
+                  setShowRemoveOptions(false);
                 }
               }}
               className="bg-gray-100 w-full px-4 py-3 border-2 border-[#81059e] rounded-lg text-black focus:outline-none focus:border-[#81059e] focus:ring-1 focus:ring-[#81059e]"
@@ -105,11 +109,24 @@ const SelectWithAddOption = ({ label, options, value, onChange, collectionName, 
               ))}
               {canAddNew && <option value="add_new">+ ADICIONAR NOVO</option>}
             </select>
+
+            {value && (
+              <button
+                type="button"
+                onClick={() => setShowRemoveOptions(!showRemoveOptions)}
+                className="ml-2 bg-gray-100 border-2 border-[#81059e] text-[#81059e] p-2 rounded-lg"
+              >
+                <FiX />
+              </button>
+            )}
           </div>
 
-          {/* Lista de opções com botões de remover */}
-          {value && (
+          {/* Lista de opções com botões de remover - agora controlada por estado separado */}
+          {showRemoveOptions && (
             <div className="absolute top-full left-0 w-full bg-white border border-gray-200 rounded-b-lg shadow-lg z-10 mt-1">
+              <div className="py-2 px-4 bg-gray-50 border-b text-sm font-semibold text-gray-700">
+                Clique no X para remover {label.toLowerCase()}
+              </div>
               {options.map((option) => (
                 <div key={option} className="flex justify-between items-center px-4 py-2 hover:bg-gray-50">
                   <span>{option ? (typeof option === 'object' ? option.nome : option.toUpperCase()) : ""}</span>
@@ -897,24 +914,27 @@ export function FormularioLoja() {
   // Função para subir a imagem no Firebase Storage
   const handleImageUpload = async (imageFile) => {
     try {
-      const storage = getStorage();
-      // Use um caminho mais específico e baseado no timestamp para evitar colisões
+      if (!imageFile || !imageFile.name) {
+        throw new Error('Arquivo inválido');
+      }
+
       const timestamp = new Date().getTime();
       const fileName = `${timestamp}_${imageFile.name.replace(/\s+/g, '_')}`;
       const storageRef = ref(storage, `armacoes/${fileName}`);
 
-      // Upload do arquivo
-      const uploadTask = await uploadBytes(storageRef, imageFile);
-      console.log("Upload concluído:", uploadTask);
+      console.log('Iniciando upload para:', `armacoes/${fileName}`);
 
-      // Obter URL de download
+      const uploadTask = await uploadBytes(storageRef, imageFile);
+      console.log('Upload concluído');
+
       const downloadURL = await getDownloadURL(storageRef);
-      console.log("URL de download obtida:", downloadURL);
+      console.log('URL obtida:', downloadURL);
 
       return downloadURL;
     } catch (error) {
-      console.error("Erro durante o upload da imagem:", error);
-      throw error; // Propagar o erro para tratamento no handleSubmit
+      console.error('Erro detalhado no upload:', error);
+      alert(`Erro ao fazer upload da imagem: ${error.message}`);
+      throw error;
     }
   };
 
@@ -923,34 +943,25 @@ export function FormularioLoja() {
   const [previewUrl, setPreviewUrl] = useState(null);
 
   // Função para enviar os dados para o Firestore
+  // Em add-frame.js
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      // Gerar dados para o QR code
-      const qrData = {
-        id: formData.codigo,
-        nome: formData.titulo,
-        marca: formData.marca,
-        tipo: 'armacao'
-      };
-
-      // Converter para string JSON
-      const qrDataString = JSON.stringify(qrData);
-      setQrCodeData(qrDataString);
-
-      // Upload da imagem se existir
       let imageUrl = null;
+
+      // Upload da imagem para o Firebase Storage
       if (formData.imagem) {
+        console.log('Arquivo para upload:', formData.imagem);
         imageUrl = await handleImageUpload(formData.imagem);
+        console.log('URL da imagem salva no Storage:', imageUrl);
       }
 
       // Preparar dados para salvar
       const productData = {
         ...formData,
-        imagem: imageUrl,
-        qrCode: qrDataString,
+        imagem: imageUrl, // URL do Firebase Storage
         data: new Date().toISOString(),
         loja: selectedLoja || "loja1"
       };
@@ -959,14 +970,16 @@ export function FormularioLoja() {
       const docRef = doc(firestore, `estoque/${productData.loja}/armacoes`, productData.codigo);
       await setDoc(docRef, productData);
 
+      console.log('Produto salvo no Firestore com sucesso');
+
       setShowSuccessPopup(true);
       setTimeout(() => {
         setShowSuccessPopup(false);
         router.push('/products_and_services/frames');
       }, 2000);
     } catch (error) {
-      console.error("Erro ao salvar produto:", error);
-      alert("Erro ao salvar produto. Por favor, tente novamente.");
+      console.error('Erro ao salvar produto:', error);
+      alert(`Erro ao salvar produto: ${error.message}`);
     } finally {
       setIsLoading(false);
     }
@@ -1135,16 +1148,30 @@ export function FormularioLoja() {
                 {/* Fornecedor - Agora sem opção de adicionar */}
                 <div className="space-y-2 relative">
                   <label className="text-lg font-semibold text-[#81059e]">Fornecedor:</label>
-                  <input
-                    type="text"
-                    value={searchFornecedor}
-                    onChange={(e) => {
-                      setSearchFornecedor(e.target.value);
-                      setFormData(prev => ({ ...prev, fornecedor: e.target.value }));
-                    }}
-                    placeholder="Buscar fornecedor"
-                    className="bg-gray-100 w-full px-4 py-3 border-2 border-[#81059e] rounded-lg text-black"
-                  />
+                  <div className="flex items-center">
+                    <input
+                      type="text"
+                      value={searchFornecedor}
+                      onChange={(e) => {
+                        setSearchFornecedor(e.target.value);
+                        setFormData(prev => ({ ...prev, fornecedor: e.target.value }));
+                      }}
+                      placeholder="Buscar fornecedor"
+                      className="bg-gray-100 w-full px-4 py-3 border-2 border-[#81059e] rounded-lg text-black"
+                    />
+                    {formData.fornecedor && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFormData(prev => ({ ...prev, fornecedor: "" }));
+                          setSearchFornecedor("");
+                        }}
+                        className="ml-2 bg-gray-100 border-2 border-[#81059e] text-[#81059e] p-2 rounded-lg"
+                      >
+                        <FiX />
+                      </button>
+                    )}
+                  </div>
 
                   {searchFornecedor && listaFornecedores.length > 0 && (
                     <ul className="absolute z-20 bg-white border border-gray-300 rounded-xl w-full max-h-60 overflow-y-auto shadow-md mt-2">

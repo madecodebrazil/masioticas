@@ -568,15 +568,15 @@ export default function GerenciamentoEstoque() {
                     />
                   </div>
                   <div className="flex justify-center mb-3 flex-grow">
-                    {produto.imagemUrl ? (
+                    {produto.imagem ? (
                       <img
-                        src={produto.imagemUrl}
+                        src={produto.imagem}
                         alt={produto.titulo || 'Produto'}
                         className="h-32 w-32 object-contain cursor-pointer"
                         onClick={() => openDetailModal(produto)}
                         onError={(e) => {
                           e.target.onerror = null;
-                          e.target.src = '/images/placeholder-product.png';
+                          e.target.src = '/api/placeholder/200/200';
                         }}
                       />
                     ) : (
@@ -690,14 +690,14 @@ export default function GerenciamentoEstoque() {
                 </td>
                 <td className="border px-1 py-1 text-center">
                   <div className="w-10 h-10 mx-auto">
-                    {produto.imagemUrl ? (
+                    {produto.imagem ? (
                       <img
-                        src={produto.imagemUrl}
+                        src={produto.imagem}
                         alt={produto.titulo || 'Produto'}
                         className="w-10 h-10 object-contain rounded"
                         onError={(e) => {
                           e.target.onerror = null;
-                          e.target.src = '/images/placeholder-product.png';
+                          e.target.src = '/api/placeholder/40/40';
                         }}
                       />
                     ) : (
@@ -1491,14 +1491,14 @@ export default function GerenciamentoEstoque() {
                     <div>
                       <div className="bg-gray-100 rounded-lg p-4 h-full flex flex-col justify-between">
                         <div className="flex-grow flex items-center justify-center">
-                          {selectedProduto.imagemUrl ? (
+                          {selectedProduto.imagem ? (
                             <img
-                              src={selectedProduto.imagemUrl}
+                              src={selectedProduto.imagem}
                               alt={selectedProduto.titulo || 'Produto'}
                               className="max-w-full max-h-80 object-contain"
                               onError={(e) => {
                                 e.target.onerror = null;
-                                e.target.src = '/images/placeholder-product.png';
+                                e.target.src = '/api/placeholder/400/400';
                               }}
                             />
                           ) : (

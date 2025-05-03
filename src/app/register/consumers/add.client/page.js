@@ -28,7 +28,7 @@ export default function AddClientePage() {
           if (userPermissions.lojas.length > 0 && !selectedLoja) {
             setSelectedLoja(userPermissions.lojas[0]);
           }
-          
+
           setPageReady(true);
         } else {
           // Sem permissão, redireciona para a página inicial
@@ -70,7 +70,7 @@ export default function AddClientePage() {
       <div className="min-h-screen pb-20">
         <div className="w-full max-w-5xl mx-auto rounded-lg">
           <h2 className="text-3xl font-bold text-[#81059e] mb-8 mt-8">+ NOVO CLIENTE</h2>
-          
+
           {/* Seletor de Loja para Admins */}
           {userPermissions?.isAdmin && userPermissions.lojas && userPermissions.lojas.length > 1 && (
             <div className="mb-6">
@@ -99,13 +99,13 @@ export default function AddClientePage() {
               </button>
             </Link>
           </div>
-          
+
           <div className="p-4 bg-gray-50 rounded-lg">
             <h3 className="text-lg font-semibold text-[#81059e] mb-4 flex items-center gap-2">
               <FiUser /> Cadastro de Cliente
             </h3>
-            <ClienteForm 
-              selectedLoja={selectedLoja} 
+            <ClienteForm
+              selectedLoja={selectedLoja}
               onSuccessRedirect={handleSuccessRedirect}
               userId={user.uid}
               userName={userData?.nome || user.displayName || ''}

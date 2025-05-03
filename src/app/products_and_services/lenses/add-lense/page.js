@@ -2,8 +2,8 @@
 import React, { Suspense, useEffect, useState, useRef } from "react";
 import Layout from "@/components/Layout";
 import { doc, setDoc, getDocs, getDoc, collection, addDoc, query, where } from "firebase/firestore";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { firestore } from "../../../../lib/firebaseConfig";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { firestore, storage } from "../../../../lib/firebaseConfig";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
@@ -169,10 +169,10 @@ const ToggleButton = ({ label, isSelected, onToggle }) => (
   <button
     type="button"
     onClick={onToggle}
-    className={`px-4 py-2 rounded-lg border-2 ${isSelected 
+    className={`px-4 py-2 rounded-lg border-2 ${isSelected
       ? "bg-[#81059e] text-white border-[#81059e]"
       : "bg-transparent text-[#81059e] border-[#81059e]"
-    }`}
+      }`}
   >
     {label}
   </button>
@@ -202,13 +202,13 @@ export function FormularioLentes() {
   const [indicies, setIndicies] = useState([]);
   const [materiais, setMateriais] = useState(['Policarbonato', 'Mineral', 'Resina', 'Acrílico', 'CR39']);
   const [tecnologias, setTecnologias] = useState([
-    'Duravision Platinum UV', 'Transitions VII', 'BlueBlock', 'Diamond', 'Blueguard', 'Saphira', 
-    'Esmerald', 'Multi Coating Azul', 'Clarity White', 'Polarizada Verde', 'Polarizada Cinza', 
-    'Polarizada Marrom', 'Duravision Silver UV', 'Clarity Premium', 'Blue Cut', 'Blue Care', 
+    'Duravision Platinum UV', 'Transitions VII', 'BlueBlock', 'Diamond', 'Blueguard', 'Saphira',
+    'Esmerald', 'Multi Coating Azul', 'Clarity White', 'Polarizada Verde', 'Polarizada Cinza',
+    'Polarizada Marrom', 'Duravision Silver UV', 'Clarity Premium', 'Blue Cut', 'Blue Care',
     'Duravision Chrome UV', 'Clarity Plate', 'Multi Coating Verde', 'PhotoFusion X Cinza'
   ]);
   const [tratamentos, setTratamentos] = useState([
-    'Polarizada', 'AR externo', 'Antiestáticos', 'Hidrofóbica', 'Filtro azul', 
+    'Polarizada', 'AR externo', 'Antiestáticos', 'Hidrofóbica', 'Filtro azul',
     'Liporrepelete', 'Antirriscos', 'Proteção UV', 'Fotossensível'
   ]);
   const [unidades, setUnidades] = useState(['Peça', 'Par']);
@@ -228,19 +228,19 @@ export function FormularioLentes() {
     indice: "",
     sku: "",
     marca: "",
-    
+
     // Informações de Loja e Preço
     loja: "",
     preco: "",
     precoPromocional: "",
     estoque: 0,
-    
+
     // Códigos e Fabricante
     codigoBarras: "",
     codigoFabricante: "",
     fabricante: "",
     fornecedor: "",
-    
+
     // Características Técnicas
     design: "",
     material: "",
@@ -253,13 +253,13 @@ export function FormularioLentes() {
     diametroPara: "",
     adicaoDe: "",
     adicaoPara: "",
-    
+
     // Tecnologias e Tratamentos
     tipo: [],
     corredor: [],
     tecnologias: [],
     tratamentos: [],
-    
+
     // Dados fiscais
     NCM: "",
     CEST: "",
@@ -275,7 +275,7 @@ export function FormularioLentes() {
     peso_bruto: "",
     peso_liquido: "",
     csosn: "",
-    
+
     // Valores e outros
     custo: "",
     valor: "",
@@ -314,12 +314,12 @@ export function FormularioLentes() {
   // Gerar produto título
   const generateProductTitle = (familia, indice, tipo) => {
     if (!familia || !indice || !tipo || (Array.isArray(tipo) && tipo.length === 0)) {
-      return ""; 
+      return "";
     }
 
     // Usar o primeiro tipo selecionado para gerar o título
     const tipoTexto = Array.isArray(tipo) ? tipo[0] : tipo;
-    
+
     return `Lente ${familia.trim().toUpperCase()} ${indice} ${tipoTexto}`;
   };
 
@@ -517,7 +517,7 @@ export function FormularioLentes() {
         createdAt: new Date(),
         addedBy: userData?.nome || 'Sistema'
       });
-      
+
       // Atualizar a lista correspondente e o formulário
       switch (collectionName) {
         case "lentes_fabricantes":
@@ -870,7 +870,7 @@ export function FormularioLentes() {
   const handleToggle = (field, value) => {
     setFormData(prevData => {
       const currentValues = Array.isArray(prevData[field]) ? [...prevData[field]] : [];
-      
+
       if (currentValues.includes(value)) {
         // Remove se já estiver selecionado
         return {
@@ -949,7 +949,7 @@ export function FormularioLentes() {
       categoria: "lentes",
       autoNome: true,
     });
-    
+
     setSelectedLojas([]);
     setPreviewUrl(null);
   };
@@ -1448,455 +1448,455 @@ export function FormularioLentes() {
                     value={formData.cilindroPara || ""}
                     onChange={handleChange}
                     className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black" required
-                    />
-                  </div>
-                </div>
-  
-                {/* Diâmetro */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-                  <div>
-                    <label className="text-[#81059e] font-medium">Diâmetro De*:</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      name="diametroDe"
-                      value={formData.diametroDe || ""}
-                      onChange={handleChange}
-                      className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[#81059e] font-medium">Diâmetro Para*:</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      name="diametroPara"
-                      value={formData.diametroPara || ""}
-                      onChange={handleChange}
-                      className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
-                      required
-                    />
-                  </div>
-                </div>
-  
-                {/* Adição */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-                  <div>
-                    <label className="text-[#81059e] font-medium">Adição De:</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      name="adicaoDe"
-                      value={formData.adicaoDe || ""}
-                      onChange={handleChange}
-                      className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
-                    />
-                    <small className="text-gray-500">Em caso de Visão Simples, não preencher.</small>
-                  </div>
-                  <div>
-                    <label className="text-[#81059e] font-medium">Adição Para:</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      name="adicaoPara"
-                      value={formData.adicaoPara || ""}
-                      onChange={handleChange}
-                      className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
-                    />
-                  </div>
+                  />
                 </div>
               </div>
-  
-              {/* Seção Tecnologias e Tratamentos */}
-              <div className="p-4 bg-gray-50 rounded-lg mb-6">
-                <h3 className="text-lg font-semibold text-[#81059e] mb-4">Tecnologias e Tratamentos</h3>
-  
-                {/* Corredor (multiselect) */}
-                <div className="mb-4">
-                  <h3 className="text-lg font-semibold text-[#81059e] mb-2">Corredor*:</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {corredores.map((corredor) => (
-                      <ToggleButton
-                        key={corredor}
-                        label={corredor}
-                        isSelected={Array.isArray(formData.corredor) && formData.corredor.includes(corredor)}
-                        onToggle={() => handleToggle("corredor", corredor)}
-                      />
-                    ))}
-                  </div>
-                  <small className="text-gray-500">Selecione apenas se a lente for multifocal.</small>
-                </div>
-  
-                {/* Tecnologias (multiselect) */}
-                <div className="mb-4">
-                  <h3 className="text-lg font-semibold text-[#81059e] mb-2">Tecnologias*:</h3>
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {tecnologias.map((tecnologia) => (
-                      <ToggleButton
-                        key={tecnologia}
-                        label={tecnologia}
-                        isSelected={Array.isArray(formData.tecnologias) && formData.tecnologias.includes(tecnologia)}
-                        onToggle={() => handleToggle("tecnologias", tecnologia)}
-                      />
-                    ))}
-                  </div>
-                </div>
-  
-                {/* Tratamentos (multiselect) */}
+
+              {/* Diâmetro */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
                 <div>
-                  <h3 className="text-lg font-semibold text-[#81059e] mb-2">Tratamentos*:</h3>
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {tratamentos.map((tratamento) => (
-                      <ToggleButton
-                        key={tratamento}
-                        label={tratamento}
-                        isSelected={Array.isArray(formData.tratamentos) && formData.tratamentos.includes(tratamento)}
-                        onToggle={() => handleToggle("tratamentos", tratamento)}
-                      />
-                    ))}
-                  </div>
-                </div>
-              </div>
-  
-              {/* Seção Valores */}
-              <div className="p-4 bg-gray-50 rounded-lg mb-6">
-                <h3 className="text-lg font-semibold text-[#81059e] mb-4">Valores</h3>
-  
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {/* Custo */}
-                  <div>
-                    <label className="text-[#81059e] font-medium">Custo (R$)</label>
-                    <div className="flex items-center border-2 border-[#81059e] rounded-lg">
-                      <span className="px-2 text-gray-400">R$</span>
-                      <input
-                        type="text"
-                        name="custo"
-                        value={formData.custo}
-                        onChange={handleCustoChange}
-                        placeholder="R$ 0,00"
-                        className="w-full px-2 py-3 text-black rounded-lg"
-                      />
-                    </div>
-                  </div>
-  
-                  {/* Percentual de Lucro */}
-                  <div>
-                    <label className="text-[#81059e] font-medium">Percentual de Lucro (%)</label>
-                    <div className="flex items-center border-2 border-[#81059e] rounded-lg">
-                      <input
-                        type="number"
-                        id="percentual_lucro"
-                        name="percentual_lucro"
-                        value={formData.percentual_lucro}
-                        onChange={handleChange}
-                        placeholder="0,00"
-                        className="w-full px-2 py-3 text-black focus:outline-none focus:border-[#81059e] focus:ring-1 focus:ring-[#81059e] rounded-lg"
-                      />
-                      <span className="px-2 text-gray-400">%</span>
-                    </div>
-                  </div>
-  
-                  {/* Custo Médio */}
-                  <div>
-                    <label className="text-[#81059e] font-medium">Custo Médio (R$)</label>
-                    <input
-                      type="text"
-                      id="custo_medio"
-                      name="custo_medio"
-                      value={formData.custo_medio || ""}
-                      readOnly
-                      className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black bg-gray-100"
-                      placeholder="Calculado automaticamente"
-                    />
-                  </div>
-                </div>
-              </div>
-  
-              {/* Seção Fiscal */}
-              <div className="p-4 bg-gray-50 rounded-lg mb-6">
-                <h3 className="text-lg font-semibold text-[#81059e] mb-4">Informações Fiscais</h3>
-  
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {/* NCM */}
-                  <div>
-                    <label className="text-[#81059e] font-medium">NCM</label>
-                    <select
-                      name="NCM"
-                      value={formData.NCM || ""}
-                      onChange={(e) => setFormData({ ...formData, NCM: e.target.value })}
-                      className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
-                    >
-                      <option value="">Selecione o NCM</option>
-                      {ncm.map((item) => (
-                        <option key={item} value={item}>
-                          {item}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-  
-                  {/* CEST */}
-                  <div>
-                    <label className="text-[#81059e] font-medium">CEST</label>
-                    <input
-                      type="text"
-                      name="CEST"
-                      value={formData.CEST || ""}
-                      onChange={(e) => setFormData({ ...formData, CEST: e.target.value })}
-                      className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
-                    />
-                  </div>
-  
-                  {/* CSOSN */}
-                  <div>
-                    <label className="text-[#81059e] font-medium">CSOSN</label>
-                    <input
-                      type="text"
-                      name="csosn"
-                      value={formData.csosn || ""}
-                      onChange={(e) => setFormData({ ...formData, csosn: e.target.value })}
-                      className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
-                    />
-                  </div>
-                </div>
-  
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-                  {/* CFOP */}
-                  <div>
-                    <label className="text-[#81059e] font-medium">CFOP</label>
-                    <input
-                      type="text"
-                      name="cfop"
-                      value={formData.cfop || ""}
-                      onChange={(e) => setFormData({ ...formData, cfop: e.target.value })}
-                      className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
-                    />
-                  </div>
-  
-                  {/* Origem do Produto */}
-                  <div>
-                    <label className="text-[#81059e] font-medium">Origem do Produto</label>
-                    <input
-                      type="text"
-                      name="origem_produto"
-                      value={formData.origem_produto || ""}
-                      onChange={(e) => setFormData({ ...formData, origem_produto: e.target.value })}
-                      className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
-                    />
-                  </div>
-                </div>
-  
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
-                  {/* Alíquota ICMS */}
-                  <div>
-                    <label className="text-[#81059e] font-medium">Alíquota ICMS (%)</label>
-                    <input
-                      type="text"
-                      name="aliquota_icms"
-                      value={formData.aliquota_icms || ""}
-                      onChange={(e) => setFormData({ ...formData, aliquota_icms: e.target.value })}
-                      className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
-                    />
-                  </div>
-  
-                  {/* Base de Cálculo ICMS */}
-                  <div>
-                    <label className="text-[#81059e] font-medium">Base de Cálculo ICMS</label>
-                    <input
-                      type="text"
-                      name="base_calculo_icms"
-                      value={formData.base_calculo_icms || ""}
-                      onChange={(e) => setFormData({ ...formData, base_calculo_icms: e.target.value })}
-                      className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
-                    />
-                  </div>
-  
-                  {/* CST PIS */}
-                  <div>
-                    <label className="text-[#81059e] font-medium">CST PIS</label>
-                    <input
-                      type="text"
-                      name="cst_pis"
-                      value={formData.cst_pis || ""}
-                      onChange={(e) => setFormData({ ...formData, cst_pis: e.target.value })}
-                      className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
-                    />
-                  </div>
-                </div>
-  
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
-                  {/* CST COFINS */}
-                  <div>
-                    <label className="text-[#81059e] font-medium">CST COFINS</label>
-                    <input
-                      type="text"
-                      name="cst_cofins"
-                      value={formData.cst_cofins || ""}
-                      onChange={(e) => setFormData({ ...formData, cst_cofins: e.target.value })}
-                      className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
-                    />
-                  </div>
-  
-                  {/* Alíquota IPI */}
-                  <div>
-                    <label className="text-[#81059e] font-medium">Alíquota IPI (%)</label>
-                    <input
-                      type="text"
-                      name="aliquota_ipi"
-                      value={formData.aliquota_ipi || ""}
-                      onChange={(e) => setFormData({ ...formData, aliquota_ipi: e.target.value })}
-                      className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
-                    />
-                  </div>
-  
-                  {/* CST IPI */}
-                  <div>
-                    <label className="text-[#81059e] font-medium">CST IPI</label>
-                    <input
-                      type="text"
-                      name="cst_ipi"
-                      value={formData.cst_ipi || ""}
-                      onChange={(e) => setFormData({ ...formData, cst_ipi: e.target.value })}
-                      className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
-                    />
-                  </div>
-                </div>
-  
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
-                  {/* Base de Cálculo IPI */}
-                  <div>
-                    <label className="text-[#81059e] font-medium">Base de Cálculo IPI</label>
-                    <input
-                      type="text"
-                      name="base_calculo_ipi"
-                      value={formData.base_calculo_ipi || ""}
-                      onChange={(e) => setFormData({ ...formData, base_calculo_ipi: e.target.value })}
-                      className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
-                    />
-                  </div>
-  
-                  {/* Peso Bruto */}
-                  <div>
-                    <label className="text-[#81059e] font-medium">Peso Bruto</label>
-                    <input
-                      type="text"
-                      name="peso_bruto"
-                      value={formData.peso_bruto || ""}
-                      onChange={(e) => setFormData({ ...formData, peso_bruto: e.target.value })}
-                      className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
-                    />
-                  </div>
-  
-                  {/* Peso Líquido */}
-                  <div>
-                    <label className="text-[#81059e] font-medium">Peso Líquido</label>
-                    <input
-                      type="text"
-                      name="peso_liquido"
-                      value={formData.peso_liquido || ""}
-                      onChange={(e) => setFormData({ ...formData, peso_liquido: e.target.value })}
-                      className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
-                    />
-                  </div>
-                </div>
-              </div>
-  
-              {/* Seção Imagem */}
-              <div className="p-4 bg-gray-50 rounded-lg mb-6">
-                <h3 className="text-lg font-semibold text-[#81059e] mb-4">Imagem do Produto</h3>
-  
-                <div className="flex flex-col">
+                  <label className="text-[#81059e] font-medium">Diâmetro De*:</label>
                   <input
-                    type="file"
-                    name="imagem"
-                    accept="image/*"
-                    ref={imageInputRef}
-                    onChange={(e) => {
-                      const file = e.target.files[0];
-                      if (file) {
-                        setFormData(prev => ({ ...prev, imagem: file }));
-                        setPreviewUrl(URL.createObjectURL(file));
-                      }
-                    }}
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black bg-gray-100"
+                    type="number"
+                    step="0.01"
+                    name="diametroDe"
+                    value={formData.diametroDe || ""}
+                    onChange={handleChange}
+                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
                     required
                   />
-  
-                  {/* Pré-visualização da imagem */}
-                  {previewUrl && (
-                    <div className="mt-4 relative inline-block">
-                      <p className="text-sm text-gray-600 mb-2">Pré-visualização:</p>
-                      <img
-                        src={previewUrl}
-                        alt="Pré-visualização"
-                        className="max-w-xs h-auto object-contain border border-gray-300 rounded-md"
-                      />
-  
-                      {/* Botão de fechar (X) */}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setPreviewUrl(null);
-                          setFormData(prev => ({ ...prev, imagem: null }));
-                          if (imageInputRef.current) {
-                            imageInputRef.current.value = null;
-                          }
-                        }}
-                        className="absolute top-0 right-0 bg-white border border-gray-300 rounded-full p-1 shadow hover:bg-red-100"
-                        title="Remover imagem"
-                      >
-                        <FiX className="text-red-600 text-lg" />
-                      </button>
-                    </div>
-                  )}
+                </div>
+                <div>
+                  <label className="text-[#81059e] font-medium">Diâmetro Para*:</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    name="diametroPara"
+                    value={formData.diametroPara || ""}
+                    onChange={handleChange}
+                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    required
+                  />
                 </div>
               </div>
-  
-              {/* Botões de ação */}
-              <div className="flex justify-center gap-4 mt-8">
-                <button
-                  type="submit"
-                  className="bg-[#81059e] p-3 px-6 rounded-sm text-white flex items-center gap-2"
-                  disabled={isLoading || !formData.imagem}
-                >
-                  {isLoading ? 'PROCESSANDO...' : 'CONFIRMAR'}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleClearSelection}
-                  className="border-2 border-[#81059e] p-3 px-6 rounded-sm text-[#81059e] flex items-center gap-2"
-                  disabled={isLoading}
-                >
-                  CANCELAR
-                </button>
+
+              {/* Adição */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                <div>
+                  <label className="text-[#81059e] font-medium">Adição De:</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    name="adicaoDe"
+                    value={formData.adicaoDe || ""}
+                    onChange={handleChange}
+                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                  />
+                  <small className="text-gray-500">Em caso de Visão Simples, não preencher.</small>
+                </div>
+                <div>
+                  <label className="text-[#81059e] font-medium">Adição Para:</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    name="adicaoPara"
+                    value={formData.adicaoPara || ""}
+                    onChange={handleChange}
+                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                  />
+                </div>
               </div>
-            </form>
-          </div>
-  
-          {showSuccessPopup && (
-            <div className="fixed bottom-4 right-4 bg-green-500 text-white p-4 rounded-lg shadow-lg">
-              <p>Produto enviado com sucesso!</p>
             </div>
-          )}
-  
-          {showConfirmModal && (
-            <ProductConfirmModal
-              isOpen={showConfirmModal}
-              onClose={() => setShowConfirmModal(false)}
-              productData={productToConfirm}
-              setIsLoading={setIsLoading}
-            />
-          )}
-        </Layout>
-      </div>
-    );
-  }
-  
-  export default function Page() {
-    return (
-      <Suspense fallback={<div> <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#81059e]"></div></div>}>
-        <FormularioLentes />
-      </Suspense>
-    );
-  }
+
+            {/* Seção Tecnologias e Tratamentos */}
+            <div className="p-4 bg-gray-50 rounded-lg mb-6">
+              <h3 className="text-lg font-semibold text-[#81059e] mb-4">Tecnologias e Tratamentos</h3>
+
+              {/* Corredor (multiselect) */}
+              <div className="mb-4">
+                <h3 className="text-lg font-semibold text-[#81059e] mb-2">Corredor*:</h3>
+                <div className="flex flex-wrap gap-2">
+                  {corredores.map((corredor) => (
+                    <ToggleButton
+                      key={corredor}
+                      label={corredor}
+                      isSelected={Array.isArray(formData.corredor) && formData.corredor.includes(corredor)}
+                      onToggle={() => handleToggle("corredor", corredor)}
+                    />
+                  ))}
+                </div>
+                <small className="text-gray-500">Selecione apenas se a lente for multifocal.</small>
+              </div>
+
+              {/* Tecnologias (multiselect) */}
+              <div className="mb-4">
+                <h3 className="text-lg font-semibold text-[#81059e] mb-2">Tecnologias*:</h3>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {tecnologias.map((tecnologia) => (
+                    <ToggleButton
+                      key={tecnologia}
+                      label={tecnologia}
+                      isSelected={Array.isArray(formData.tecnologias) && formData.tecnologias.includes(tecnologia)}
+                      onToggle={() => handleToggle("tecnologias", tecnologia)}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* Tratamentos (multiselect) */}
+              <div>
+                <h3 className="text-lg font-semibold text-[#81059e] mb-2">Tratamentos*:</h3>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {tratamentos.map((tratamento) => (
+                    <ToggleButton
+                      key={tratamento}
+                      label={tratamento}
+                      isSelected={Array.isArray(formData.tratamentos) && formData.tratamentos.includes(tratamento)}
+                      onToggle={() => handleToggle("tratamentos", tratamento)}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Seção Valores */}
+            <div className="p-4 bg-gray-50 rounded-lg mb-6">
+              <h3 className="text-lg font-semibold text-[#81059e] mb-4">Valores</h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* Custo */}
+                <div>
+                  <label className="text-[#81059e] font-medium">Custo (R$)</label>
+                  <div className="flex items-center border-2 border-[#81059e] rounded-lg">
+                    <span className="px-2 text-gray-400">R$</span>
+                    <input
+                      type="text"
+                      name="custo"
+                      value={formData.custo}
+                      onChange={handleCustoChange}
+                      placeholder="R$ 0,00"
+                      className="w-full px-2 py-3 text-black rounded-lg"
+                    />
+                  </div>
+                </div>
+
+                {/* Percentual de Lucro */}
+                <div>
+                  <label className="text-[#81059e] font-medium">Percentual de Lucro (%)</label>
+                  <div className="flex items-center border-2 border-[#81059e] rounded-lg">
+                    <input
+                      type="number"
+                      id="percentual_lucro"
+                      name="percentual_lucro"
+                      value={formData.percentual_lucro}
+                      onChange={handleChange}
+                      placeholder="0,00"
+                      className="w-full px-2 py-3 text-black focus:outline-none focus:border-[#81059e] focus:ring-1 focus:ring-[#81059e] rounded-lg"
+                    />
+                    <span className="px-2 text-gray-400">%</span>
+                  </div>
+                </div>
+
+                {/* Custo Médio */}
+                <div>
+                  <label className="text-[#81059e] font-medium">Custo Médio (R$)</label>
+                  <input
+                    type="text"
+                    id="custo_medio"
+                    name="custo_medio"
+                    value={formData.custo_medio || ""}
+                    readOnly
+                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black bg-gray-100"
+                    placeholder="Calculado automaticamente"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Seção Fiscal */}
+            <div className="p-4 bg-gray-50 rounded-lg mb-6">
+              <h3 className="text-lg font-semibold text-[#81059e] mb-4">Informações Fiscais</h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* NCM */}
+                <div>
+                  <label className="text-[#81059e] font-medium">NCM</label>
+                  <select
+                    name="NCM"
+                    value={formData.NCM || ""}
+                    onChange={(e) => setFormData({ ...formData, NCM: e.target.value })}
+                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                  >
+                    <option value="">Selecione o NCM</option>
+                    {ncm.map((item) => (
+                      <option key={item} value={item}>
+                        {item}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* CEST */}
+                <div>
+                  <label className="text-[#81059e] font-medium">CEST</label>
+                  <input
+                    type="text"
+                    name="CEST"
+                    value={formData.CEST || ""}
+                    onChange={(e) => setFormData({ ...formData, CEST: e.target.value })}
+                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                  />
+                </div>
+
+                {/* CSOSN */}
+                <div>
+                  <label className="text-[#81059e] font-medium">CSOSN</label>
+                  <input
+                    type="text"
+                    name="csosn"
+                    value={formData.csosn || ""}
+                    onChange={(e) => setFormData({ ...formData, csosn: e.target.value })}
+                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                {/* CFOP */}
+                <div>
+                  <label className="text-[#81059e] font-medium">CFOP</label>
+                  <input
+                    type="text"
+                    name="cfop"
+                    value={formData.cfop || ""}
+                    onChange={(e) => setFormData({ ...formData, cfop: e.target.value })}
+                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                  />
+                </div>
+
+                {/* Origem do Produto */}
+                <div>
+                  <label className="text-[#81059e] font-medium">Origem do Produto</label>
+                  <input
+                    type="text"
+                    name="origem_produto"
+                    value={formData.origem_produto || ""}
+                    onChange={(e) => setFormData({ ...formData, origem_produto: e.target.value })}
+                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
+                {/* Alíquota ICMS */}
+                <div>
+                  <label className="text-[#81059e] font-medium">Alíquota ICMS (%)</label>
+                  <input
+                    type="text"
+                    name="aliquota_icms"
+                    value={formData.aliquota_icms || ""}
+                    onChange={(e) => setFormData({ ...formData, aliquota_icms: e.target.value })}
+                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                  />
+                </div>
+
+                {/* Base de Cálculo ICMS */}
+                <div>
+                  <label className="text-[#81059e] font-medium">Base de Cálculo ICMS</label>
+                  <input
+                    type="text"
+                    name="base_calculo_icms"
+                    value={formData.base_calculo_icms || ""}
+                    onChange={(e) => setFormData({ ...formData, base_calculo_icms: e.target.value })}
+                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                  />
+                </div>
+
+                {/* CST PIS */}
+                <div>
+                  <label className="text-[#81059e] font-medium">CST PIS</label>
+                  <input
+                    type="text"
+                    name="cst_pis"
+                    value={formData.cst_pis || ""}
+                    onChange={(e) => setFormData({ ...formData, cst_pis: e.target.value })}
+                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
+                {/* CST COFINS */}
+                <div>
+                  <label className="text-[#81059e] font-medium">CST COFINS</label>
+                  <input
+                    type="text"
+                    name="cst_cofins"
+                    value={formData.cst_cofins || ""}
+                    onChange={(e) => setFormData({ ...formData, cst_cofins: e.target.value })}
+                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                  />
+                </div>
+
+                {/* Alíquota IPI */}
+                <div>
+                  <label className="text-[#81059e] font-medium">Alíquota IPI (%)</label>
+                  <input
+                    type="text"
+                    name="aliquota_ipi"
+                    value={formData.aliquota_ipi || ""}
+                    onChange={(e) => setFormData({ ...formData, aliquota_ipi: e.target.value })}
+                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                  />
+                </div>
+
+                {/* CST IPI */}
+                <div>
+                  <label className="text-[#81059e] font-medium">CST IPI</label>
+                  <input
+                    type="text"
+                    name="cst_ipi"
+                    value={formData.cst_ipi || ""}
+                    onChange={(e) => setFormData({ ...formData, cst_ipi: e.target.value })}
+                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
+                {/* Base de Cálculo IPI */}
+                <div>
+                  <label className="text-[#81059e] font-medium">Base de Cálculo IPI</label>
+                  <input
+                    type="text"
+                    name="base_calculo_ipi"
+                    value={formData.base_calculo_ipi || ""}
+                    onChange={(e) => setFormData({ ...formData, base_calculo_ipi: e.target.value })}
+                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                  />
+                </div>
+
+                {/* Peso Bruto */}
+                <div>
+                  <label className="text-[#81059e] font-medium">Peso Bruto</label>
+                  <input
+                    type="text"
+                    name="peso_bruto"
+                    value={formData.peso_bruto || ""}
+                    onChange={(e) => setFormData({ ...formData, peso_bruto: e.target.value })}
+                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                  />
+                </div>
+
+                {/* Peso Líquido */}
+                <div>
+                  <label className="text-[#81059e] font-medium">Peso Líquido</label>
+                  <input
+                    type="text"
+                    name="peso_liquido"
+                    value={formData.peso_liquido || ""}
+                    onChange={(e) => setFormData({ ...formData, peso_liquido: e.target.value })}
+                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Seção Imagem */}
+            <div className="p-4 bg-gray-50 rounded-lg mb-6">
+              <h3 className="text-lg font-semibold text-[#81059e] mb-4">Imagem do Produto</h3>
+
+              <div className="flex flex-col">
+                <input
+                  type="file"
+                  name="imagem"
+                  accept="image/*"
+                  ref={imageInputRef}
+                  onChange={(e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                      setFormData(prev => ({ ...prev, imagem: file }));
+                      setPreviewUrl(URL.createObjectURL(file));
+                    }
+                  }}
+                  className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black bg-gray-100"
+                  required
+                />
+
+                {/* Pré-visualização da imagem */}
+                {previewUrl && (
+                  <div className="mt-4 relative inline-block">
+                    <p className="text-sm text-gray-600 mb-2">Pré-visualização:</p>
+                    <img
+                      src={previewUrl}
+                      alt="Pré-visualização"
+                      className="max-w-xs h-auto object-contain border border-gray-300 rounded-md"
+                    />
+
+                    {/* Botão de fechar (X) */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPreviewUrl(null);
+                        setFormData(prev => ({ ...prev, imagem: null }));
+                        if (imageInputRef.current) {
+                          imageInputRef.current.value = null;
+                        }
+                      }}
+                      className="absolute top-0 right-0 bg-white border border-gray-300 rounded-full p-1 shadow hover:bg-red-100"
+                      title="Remover imagem"
+                    >
+                      <FiX className="text-red-600 text-lg" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Botões de ação */}
+            <div className="flex justify-center gap-4 mt-8">
+              <button
+                type="submit"
+                className="bg-[#81059e] p-3 px-6 rounded-sm text-white flex items-center gap-2"
+                disabled={isLoading || !formData.imagem}
+              >
+                {isLoading ? 'PROCESSANDO...' : 'CONFIRMAR'}
+              </button>
+              <button
+                type="button"
+                onClick={handleClearSelection}
+                className="border-2 border-[#81059e] p-3 px-6 rounded-sm text-[#81059e] flex items-center gap-2"
+                disabled={isLoading}
+              >
+                CANCELAR
+              </button>
+            </div>
+          </form>
+        </div>
+
+        {showSuccessPopup && (
+          <div className="fixed bottom-4 right-4 bg-green-500 text-white p-4 rounded-lg shadow-lg">
+            <p>Produto enviado com sucesso!</p>
+          </div>
+        )}
+
+        {showConfirmModal && (
+          <ProductConfirmModal
+            isOpen={showConfirmModal}
+            onClose={() => setShowConfirmModal(false)}
+            productData={productToConfirm}
+            setIsLoading={setIsLoading}
+          />
+        )}
+      </Layout>
+    </div>
+  );
+}
+
+export default function Page() {
+  return (
+    <Suspense fallback={<div> <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#81059e]"></div></div>}>
+      <FormularioLentes />
+    </Suspense>
+  );
+}
