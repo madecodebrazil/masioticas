@@ -15,10 +15,108 @@ import {
   faX,
   faCheck
 } from '@fortawesome/free-solid-svg-icons';
-import { collection, getDocs, doc, setDoc, deleteDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, deleteDoc, getDoc } from 'firebase/firestore';
 import { useAuth } from '@/hooks/useAuth';
 import { firestore } from '../../../../lib/firebaseConfig';
 import jsPDF from 'jspdf';
+
+// Add FilterModal component before the main component
+const FilterModal = ({ 
+  isOpen, 
+  onClose, 
+  yearFilter, 
+  setYearFilter, 
+  monthFilter, 
+  setMonthFilter, 
+  dayFilter, 
+  setDayFilter, 
+  availableYears, 
+  months, 
+  availableDays 
+}) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-40 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-md animate-fadeIn">
+        <div className="p-4 border-b flex justify-between items-center">
+          <h3 className="text-lg font-semibold text-[#81059e]">Filtros</h3>
+          <button 
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-700 transition-colors"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        
+        <div className="p-5 space-y-4">
+          {/* Filtro de ano */}
+          <div>
+            <label className="block text-sm text-gray-700 mb-1 font-medium">Ano</label>
+            <select
+              value={yearFilter}
+              onChange={(e) => setYearFilter(e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded-md text-gray-800 bg-white focus:border-[#81059e] focus:ring focus:ring-purple-200 transition-colors"
+            >
+              {availableYears.map(year => (
+                <option key={year} value={year}>{year}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Filtro de mês */}
+          <div>
+            <label className="block text-sm text-gray-700 mb-1 font-medium">Mês</label>
+            <select
+              value={monthFilter}
+              onChange={(e) => setMonthFilter(e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded-md text-gray-800 bg-white focus:border-[#81059e] focus:ring focus:ring-purple-200 transition-colors"
+            >
+              {months.map(month => (
+                <option key={month} value={month}>{month}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Filtro de dia */}
+          <div>
+            <label className="block text-sm text-gray-700 mb-1 font-medium">Dia</label>
+            <select
+              value={dayFilter}
+              onChange={(e) => setDayFilter(e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded-md text-gray-800 bg-white focus:border-[#81059e] focus:ring focus:ring-purple-200 transition-colors"
+            >
+              {availableDays.map(day => (
+                <option key={day} value={day}>{day}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+        
+        <div className="p-4 bg-gray-50 border-t flex justify-between rounded-b-lg">
+          <button
+            onClick={() => {
+              setYearFilter('Todos');
+              setMonthFilter('Todos');
+              setDayFilter('Todos');
+            }}
+            className="text-[#81059e] hover:text-[#690480] px-4 py-2 rounded-md transition-colors"
+          >
+            Limpar Filtros
+          </button>
+          <button
+            onClick={onClose}
+            className="bg-[#81059e] hover:bg-[#690480] text-white px-5 py-2 rounded-md transition-colors"
+          >
+            Aplicar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export default function ListaRecebimentos() {
   const { userPermissions, userData } = useAuth();
@@ -50,6 +148,10 @@ export default function ListaRecebimentos() {
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [viewCompletedPayments, setViewCompletedPayments] = useState(false);
   const [completedPayments, setCompletedPayments] = useState([]);
+  const [taxaJurosPadrao, setTaxaJurosPadrao] = useState(0);
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
+  const [isSettleMultipleModalOpen, setIsSettleMultipleModalOpen] = useState(false);
+  const [formaRecebimentoMultiplo, setFormaRecebimentoMultiplo] = useState('');
 
   useEffect(() => {
     const fetchContas = async () => {
@@ -714,6 +816,193 @@ export default function ListaRecebimentos() {
     );
   };
 
+  useEffect(() => {
+    const fetchTaxaJurosPadrao = async () => {
+      try {
+        const configDoc = await getDoc(doc(firestore, 'configuracoes', 'financeiro'));
+        if (configDoc.exists()) {
+          const taxa = configDoc.data().taxaJurosPadrao || 0;
+          setTaxaJurosPadrao(taxa);
+        }
+      } catch (error) {
+        console.error("Erro ao buscar taxa de juros padrão:", error);
+      }
+    };
+
+    fetchTaxaJurosPadrao();
+  }, []);
+
+  // Função para calcular juros
+  const calcularJuros = (conta) => {
+    if (conta.dispensarJuros || !taxaJurosPadrao) return 0;
+    
+    const dataCobranca = conta.dataCobranca?.seconds
+      ? new Date(conta.dataCobranca.seconds * 1000)
+      : new Date(conta.dataCobranca);
+    
+    const hoje = new Date();
+    const diasAtraso = Math.max(0, Math.floor((hoje - dataCobranca) / (1000 * 60 * 60 * 24)));
+    
+    const taxaDiaria = taxaJurosPadrao / 30; // Taxa mensal dividida por 30 dias
+    const juros = conta.valor * (taxaDiaria / 100) * diasAtraso;
+    
+    return juros;
+  };
+
+  // Modificar a função que renderiza as contas para incluir os juros calculados
+  const renderContas = () => {
+    return currentContas.map((conta) => {
+      const jurosCalculados = calcularJuros(conta);
+      const valorTotal = conta.valor + jurosCalculados;
+
+      return (
+        <tr
+          key={conta.id}
+          className="text-black text-left hover:bg-gray-100 cursor-pointer"
+        >
+          <td className="border px-2 py-2 text-center">
+            <input
+              type="checkbox"
+              checked={selectedForDeletion.includes(conta.id)}
+              onChange={(e) => toggleDeletion(e, conta.id)}
+              className="h-4 w-4 cursor-pointer"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </td>
+          <td className="border px-3 py-2 whitespace-nowrap" onClick={() => openModal(conta)}>
+            {conta.numeroDocumento || 'N/A'}
+          </td>
+          <td className="border px-4 py-2 max-w-[300px] truncate" onClick={() => openModal(conta)}>
+            {typeof conta.cliente === 'object' ? conta.cliente.nome || 'N/A' : conta.cliente || 'N/A'}
+          </td>
+          <td className="border px-3 py-2 whitespace-nowrap" onClick={() => openModal(conta)}>
+            R$ {parseFloat(conta.valor || 0).toFixed(2)}
+          </td>
+          <td className="border px-3 py-2 whitespace-nowrap" onClick={() => openModal(conta)}>
+            {formatFirestoreDate(conta.dataRegistro)}
+          </td>
+          <td className={`border px-3 py-2 whitespace-nowrap ${getStatusColor(conta.dataCobranca)}`} onClick={() => openModal(conta)}>
+            {formatFirestoreDate(conta.dataCobranca)}
+          </td>
+          <td className="border px-3 py-2 whitespace-nowrap" onClick={() => openModal(conta)}>
+            R$ {parseFloat(jurosCalculados || 0).toFixed(2)}
+          </td>
+          <td className="border px-3 py-2 whitespace-nowrap" onClick={() => openModal(conta)}>
+            R$ {parseFloat(valorTotal || 0).toFixed(2)}
+          </td>
+        </tr>
+      );
+    });
+  };
+
+  // Add this new function after handleSettlePayment
+  const handleSettleMultiplePayments = async () => {
+    if (!formaRecebimentoMultiplo) {
+      alert('Por favor, selecione a forma de recebimento.');
+      return;
+    }
+
+    if (selectedForDeletion.length === 0) {
+      alert('Por favor, selecione pelo menos uma conta para quitar.');
+      return;
+    }
+
+    // Add confirmation alert
+    if (!confirm(`Deseja realmente quitar ${selectedForDeletion.length} conta(s) selecionada(s)?`)) {
+      return;
+    }
+
+    try {
+      const contasToSettle = contas.filter(conta => selectedForDeletion.includes(conta.id));
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (const conta of contasToSettle) {
+        try {
+          // Preparar dados da conta concluída
+          const completedAccountData = {
+            ...conta,
+            dataPagamento: new Date(),
+            formaPagamento: formaRecebimentoMultiplo,
+            statusPagamento: 'Concluído'
+          };
+
+          // Adicionar à coleção de contas concluídas
+          const completedAccountRef = doc(
+            collection(firestore, `lojas/${conta.loja}/financeiro/contas_receber_concluidas/items`)
+          );
+          await setDoc(completedAccountRef, completedAccountData);
+
+          // Preparar descrição personalizada
+          const descricao = `Recebimento da conta ${conta.numeroDocumento || conta.id} via ${formaRecebimentoMultiplo}`;
+
+          // Preparar dados para o cashflow
+          const cashflowData = {
+            nome: conta.cliente || 'Cliente não especificado',
+            formaPagamento: formaRecebimentoMultiplo,
+            data: new Date(),
+            valorFinal: parseFloat(conta.valor || 0),
+            descricao: descricao,
+            type: 'receita'
+          };
+
+          // Adicionar ao 'cashflow'
+          await setDoc(doc(collection(firestore, 'cashflow')), cashflowData);
+
+          // Preparar dados para o caixa do dia
+          const loja = conta.loja || 'loja1';
+          const dataAtual = new Date();
+          const dataFormatada = dataAtual.toLocaleDateString('pt-BR').replace(/\//g, '-');
+
+          const caixaRef = collection(
+            firestore,
+            `${loja}/finances/caixas/${dataFormatada}/transactions`
+          );
+
+          const caixaData = {
+            nome: conta.cliente || 'Cliente não especificado',
+            valorFinal: parseFloat(conta.valor || 0),
+            data: dataAtual,
+            descricao: descricao,
+            type: 'receita',
+            formaPagamento: formaRecebimentoMultiplo,
+          };
+
+          // Adicionar ao caixa do dia
+          await setDoc(doc(caixaRef), caixaData);
+
+          // Remover a conta da coleção 'contas_receber/items'
+          const contaRef = doc(firestore, `lojas/${conta.loja}/financeiro/contas_receber/items`, conta.id);
+          await deleteDoc(contaRef);
+
+          successCount++;
+        } catch (error) {
+          console.error(`Erro ao quitar conta ${conta.id}:`, error);
+          errorCount++;
+        }
+      }
+
+      // Atualizar o estado local
+      setContas((prevContas) => prevContas.filter((conta) => !selectedForDeletion.includes(conta.id)));
+      setFilteredContas((prevContas) => prevContas.filter((conta) => !selectedForDeletion.includes(conta.id)));
+      setTotalContas(prevState => prevState - successCount);
+      setSelectedForDeletion([]);
+      setIsSettleMultipleModalOpen(false);
+      setFormaRecebimentoMultiplo('');
+
+      // Mostrar mensagem de resultado
+      if (successCount > 0) {
+        alert(`${successCount} conta(s) quitada(s) com sucesso!${errorCount > 0 ? `\n${errorCount} conta(s) com erro.` : ''}`);
+      } else {
+        alert('Nenhuma conta foi quitada. Por favor, tente novamente.');
+      }
+
+    } catch (error) {
+      console.error('Erro ao quitar múltiplas contas:', error);
+      alert('Erro ao quitar as contas selecionadas.');
+    }
+  };
+
   return (
     <Layout>
       <div className="min-h-screen p-0 md:p-2 mb-20">
@@ -852,9 +1141,8 @@ export default function ListaRecebimentos() {
             {/* Dropdown de filtros de data */}
             <div className="relative">
               <button
-                data-filter-toggle="true"
-                onClick={() => setShowFilterDropdown(!showFilterDropdown)}
-                className="p-2 h-10 border-2 border-gray-200 rounded-lg bg-white flex items-center gap-1 text-[#81059e]"
+                onClick={() => setIsFilterModalOpen(true)}
+                className="p-2 h-10 border-2 border-gray-200 rounded-lg bg-white flex items-center gap-1 text-[#81059e] hover:border-[#81059e] transition-colors"
               >
                 <FontAwesomeIcon icon={faFilter} className="h-4 w-4" />
                 <span className="hidden sm:inline">Filtrar</span>
@@ -864,80 +1152,6 @@ export default function ListaRecebimentos() {
                   </span>
                 )}
               </button>
-
-              {showFilterDropdown && (
-                <div
-                  id="filter-dropdown"
-                  className="fixed z-30 inset-x-4 top-24 sm:absolute sm:inset-x-auto sm:top-full sm:right-0 sm:mt-1 bg-white shadow-lg rounded-lg border p-4 w-auto sm:w-64 max-w-[calc(100vw-32px)] max-h-[80vh] overflow-y-auto"
-                >
-                  <div className="flex justify-between items-center mb-2">
-                    <h3 className="text-sm font-semibold text-gray-700">Filtros de Data</h3>
-                    <button
-                      onClick={() => {
-                        setYearFilter('Todos');
-                        setMonthFilter('Todos');
-                        setDayFilter('Todos');
-                      }}
-                      className="text-xs text-[#81059e] hover:underline"
-                    >
-                      Limpar Filtros
-                    </button>
-                  </div>
-
-                  <div className="space-y-3">
-                    {/* Filtro de ano */}
-                    <div>
-                      <label className="block text-xs text-gray-600 mb-1">Ano</label>
-                      <select
-                        value={yearFilter}
-                        onChange={(e) => setYearFilter(e.target.value)}
-                        className="p-2 h-9 w-full border border-gray-200 rounded-lg text-gray-800 text-sm"
-                      >
-                        {availableYears.map(year => (
-                          <option key={year} value={year}>{year}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {/* Filtro de mês */}
-                    <div>
-                      <label className="block text-xs text-gray-600 mb-1">Mês</label>
-                      <select
-                        value={monthFilter}
-                        onChange={(e) => setMonthFilter(e.target.value)}
-                        className="p-2 h-9 w-full border border-gray-200 rounded-lg text-gray-800 text-sm"
-                      >
-                        {months.map(month => (
-                          <option key={month} value={month}>{month}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {/* Filtro de dia */}
-                    <div>
-                      <label className="block text-xs text-gray-600 mb-1">Dia</label>
-                      <select
-                        value={dayFilter}
-                        onChange={(e) => setDayFilter(e.target.value)}
-                        className="p-2 h-9 w-full border border-gray-200 rounded-lg text-gray-800 text-sm"
-                      >
-                        {availableDays.map(day => (
-                          <option key={day} value={day}>{day}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div className="pt-2">
-                      <button
-                        onClick={() => setShowFilterDropdown(false)}
-                        className="w-full bg-[#81059e] text-white rounded-lg p-2 text-sm hover:bg-[#690480]"
-                      >
-                        Fechar
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
 
             {/* Botões de ação */}
@@ -972,6 +1186,20 @@ export default function ListaRecebimentos() {
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                 </svg>
+              </button>
+
+              {/* Add this after the filter button in the buttons section */}
+              <button
+                onClick={() => setIsSettleMultipleModalOpen(true)}
+                disabled={selectedForDeletion.length === 0}
+                className={`${
+                  selectedForDeletion.length === 0 
+                    ? 'bg-green-300' 
+                    : 'bg-green-500 hover:bg-green-600'
+                } text-white h-10 px-4 rounded-md flex items-center justify-center transition-colors`}
+              >
+                <FontAwesomeIcon icon={faCheck} className="h-5 w-5 mr-2" />
+                <span className="hidden sm:inline">Quitar Selecionadas</span>
               </button>
 
             </div>
@@ -1023,44 +1251,7 @@ export default function ListaRecebimentos() {
                           </tr>
                         </thead>
                         <tbody>
-                          {completedPayments.slice(indexOfFirstItem, indexOfLastItem).map((pagamento) => (
-                            <tr
-                              key={pagamento.id}
-                              className="text-black text-left hover:bg-gray-100 cursor-pointer"
-                              onClick={() => openModal(pagamento)}
-                            >
-                              <td className="border px-2 py-2 text-center">
-                                <input
-                                  type="checkbox"
-                                  checked={selectedForDeletion.includes(pagamento.id)}
-                                  onChange={(e) => toggleDeletion(e, pagamento.id)}
-                                  className="h-4 w-4 cursor-pointer"
-                                  onClick={(e) => e.stopPropagation()}
-                                />
-                              </td>
-                              <td className="border px-3 py-2 whitespace-nowrap">
-                                {pagamento.numeroDocumento || 'N/A'}
-                              </td>
-                              <td className="border px-4 py-2 max-w-[300px] truncate">
-                                {pagamento.cliente || 'N/A'}
-                              </td>
-                              <td className="border px-3 py-2 whitespace-nowrap">
-                                R$ {parseFloat(pagamento.valor || 0).toFixed(2)}
-                              </td>
-                              <td className="border px-3 py-2 whitespace-nowrap">
-                                {formatFirestoreDate(pagamento.dataCobranca)}
-                              </td>
-                              <td className="border px-3 py-2 whitespace-nowrap font-medium text-green-700">
-                                {formatFirestoreDate(pagamento.dataPagamento)}
-                              </td>
-                              <td className="border px-3 py-2 whitespace-nowrap">
-                                {pagamento.formaPagamento || 'N/A'}
-                              </td>
-                              <td className="border px-3 py-2 whitespace-nowrap">
-                                {pagamento.loja || 'N/A'}
-                              </td>
-                            </tr>
-                          ))}
+                          {renderContas()}
                         </tbody>
                       </table>
                     </div>
@@ -1152,52 +1343,16 @@ export default function ListaRecebimentos() {
                             <th className="px-3 py-2 cursor-pointer whitespace-nowrap" onClick={() => handleSort('dataCobranca')}>
                               Cobrança {renderSortArrow('dataCobranca')}
                             </th>
-                            <th className="px-3 py-2 cursor-pointer whitespace-nowrap" onClick={() => handleSort('valorPago')}>
-                              Total Pago {renderSortArrow('valorPago')}
+                            <th className="px-3 py-2 cursor-pointer whitespace-nowrap">
+                              Juros
                             </th>
-                            <th className="px-3 py-2 cursor-pointer" onClick={() => handleSort('juros')}>
-                              Juros {renderSortArrow('juros')}
+                            <th className="px-3 py-2 cursor-pointer whitespace-nowrap">
+                              Total
                             </th>
                           </tr>
                         </thead>
                         <tbody>
-                          {currentContas.map((conta) => (
-                            <tr
-                              key={conta.id}
-                              className="text-black text-left hover:bg-gray-100 cursor-pointer"
-                            >
-                              <td className="border px-2 py-2 text-center">
-                                <input
-                                  type="checkbox"
-                                  checked={selectedForDeletion.includes(conta.id)}
-                                  onChange={(e) => toggleDeletion(e, conta.id)}
-                                  className="h-4 w-4 cursor-pointer"
-                                  onClick={(e) => e.stopPropagation()}
-                                />
-                              </td>
-                              <td className="border px-3 py-2 whitespace-nowrap" onClick={() => openModal(conta)}>
-                                {conta.numeroDocumento || 'N/A'}
-                              </td>
-                              <td className="border px-4 py-2 max-w-[300px] truncate" onClick={() => openModal(conta)}>
-                                {typeof conta.cliente === 'object' ? conta.cliente.nome || 'N/A' : conta.cliente || 'N/A'}
-                              </td>
-                              <td className="border px-3 py-2 whitespace-nowrap" onClick={() => openModal(conta)}>
-                                R$ {parseFloat(conta.valor || 0).toFixed(2)}
-                              </td>
-                              <td className="border px-3 py-2 whitespace-nowrap" onClick={() => openModal(conta)}>
-                                {formatFirestoreDate(conta.dataRegistro)}
-                              </td>
-                              <td className={`border px-3 py-2 whitespace-nowrap ${getStatusColor(conta.dataCobranca)}`} onClick={() => openModal(conta)}>
-                                {formatFirestoreDate(conta.dataCobranca)}
-                              </td>
-                              <td className="border px-3 py-2 whitespace-nowrap" onClick={() => openModal(conta)}>
-                                R$ {parseFloat(conta.valorPago || 0).toFixed(2)}
-                              </td>
-                              <td className="border px-3 py-2 whitespace-nowrap" onClick={() => openModal(conta)}>
-                                R$ {parseFloat(conta.juros || 0).toFixed(2)}
-                              </td>
-                            </tr>
-                          ))}
+                          {renderContas()}
                         </tbody>
                       </table>
                     </div>
@@ -1496,6 +1651,79 @@ export default function ListaRecebimentos() {
           </div>
         )
       }
+
+      {/* Add the FilterModal component */}
+      <FilterModal 
+        isOpen={isFilterModalOpen}
+        onClose={() => setIsFilterModalOpen(false)}
+        yearFilter={yearFilter}
+        setYearFilter={setYearFilter}
+        monthFilter={monthFilter}
+        setMonthFilter={setMonthFilter}
+        dayFilter={dayFilter}
+        setDayFilter={setDayFilter}
+        availableYears={availableYears}
+        months={months}
+        availableDays={availableDays}
+      />
+
+      {/* Add this modal before the closing Layout tag */}
+      {isSettleMultipleModalOpen && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold text-[#81059e]">
+                Quitar {selectedForDeletion.length} Conta(s)
+              </h3>
+              <button
+                onClick={() => setIsSettleMultipleModalOpen(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <FontAwesomeIcon icon={faX} className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Forma de Recebimento
+              </label>
+              <select
+                value={formaRecebimentoMultiplo}
+                onChange={(e) => setFormaRecebimentoMultiplo(e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded-md text-gray-800 bg-white focus:border-[#81059e] focus:ring focus:ring-purple-200"
+              >
+                <option value="">Selecione</option>
+                <option value="Dinheiro">Dinheiro</option>
+                <option value="Cartão de Crédito">Cartão de Crédito</option>
+                <option value="Cartão de Débito">Cartão de Débito</option>
+                <option value="Pix">Pix</option>
+                <option value="Cheque">Cheque</option>
+                <option value="Boleto">Boleto</option>
+              </select>
+            </div>
+
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setIsSettleMultipleModalOpen(false)}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSettleMultiplePayments}
+                disabled={!formaRecebimentoMultiplo}
+                className={`${
+                  !formaRecebimentoMultiplo
+                    ? 'bg-green-300'
+                    : 'bg-green-500 hover:bg-green-600'
+                } text-white px-4 py-2 rounded-md transition-colors`}
+              >
+                Confirmar Quitação
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </Layout >
   );
 }

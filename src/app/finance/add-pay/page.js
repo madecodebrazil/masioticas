@@ -2,16 +2,20 @@
 
 import React, { useEffect, useState } from 'react';
 import Layout from '@/components/Layout';
-import { collection, getDocs, addDoc, getDoc, Timestamp, doc, setDoc } from 'firebase/firestore';
+import { collection, getDocs, addDoc, getDoc, Timestamp, doc, setDoc, deleteDoc } from 'firebase/firestore';
 import { firestore } from '../../../lib/firebaseConfig';
 import { useAuth } from '@/hooks/useAuth';
 import Link from 'next/link';
 import ConfirmationModal from '../../../components/ConfirmationModalPay.js';
-import { FiCalendar, FiDollarSign, FiTag, FiFileText, FiUser, FiCreditCard, FiMapPin, FiLayers, FiTrendingUp, FiHome } from 'react-icons/fi';
+import { FiCalendar, FiDollarSign, FiTag, FiFileText, FiUser, FiCreditCard, FiMapPin, FiLayers, FiTrendingUp, FiHome, FiPlus, FiX, FiTrash2 } from 'react-icons/fi';
 
 export default function ContasPagar() {
   const { userPermissions, userData } = useAuth();
   const [selectedLoja, setSelectedLoja] = useState(null);
+  const [caixasDisponiveis, setCaixasDisponiveis] = useState([]);
+  const [categoriasDespesa, setCategoriasDespesa] = useState([]);
+  const [showAddCategoriaInput, setShowAddCategoriaInput] = useState(false);
+  const [newCategoria, setNewCategoria] = useState("");
 
   // Estado do formulário com todos os campos necessários para contas a pagar
   const [formData, setFormData] = useState({
@@ -463,6 +467,74 @@ export default function ContasPagar() {
     }));
   };
 
+  // Função para buscar os caixas disponíveis
+  const fetchCaixas = async () => {
+    if (!selectedLoja) return;
+    
+    try {
+      const caixasRef = collection(firestore, `lojas/${selectedLoja}/financeiro/controle_caixa/caixas`);
+      const caixasSnapshot = await getDocs(caixasRef);
+      
+      const caixas = [];
+      caixasSnapshot.forEach(doc => {
+        caixas.push({
+          id: doc.id,
+          ...doc.data()
+        });
+      });
+      
+      setCaixasDisponiveis(caixas);
+    } catch (error) {
+      console.error("Erro ao buscar caixas:", error);
+    }
+  };
+
+  // Função para buscar categorias de despesa
+  const fetchCategoriasDespesa = async () => {
+    try {
+      const loja = selectedLoja || "loja1";
+      const path = `lojas/${loja}/financeiro/configuracoes/categorias_despesa`;
+      const snapshot = await getDocs(collection(firestore, path));
+      const list = snapshot.docs.map(doc => doc.data().name || doc.id);
+      setCategoriasDespesa(list);
+    } catch (error) {
+      console.error("Erro ao buscar categorias de despesa:", error);
+    }
+  };
+
+  // Função para adicionar nova categoria de despesa
+  const addNewCategoriaDespesa = async (value) => {
+    if (!selectedLoja) {
+      alert("Selecione uma loja antes de adicionar novas categorias!");
+      return;
+    }
+
+    try {
+      const path = `lojas/${selectedLoja}/financeiro/configuracoes/categorias_despesa`;
+      const itemRef = doc(firestore, path, value.toLowerCase().replace(/\s+/g, '_'));
+
+      await setDoc(itemRef, {
+        name: value,
+        createdAt: new Date(),
+        addedBy: userData?.nome || 'Sistema'
+      });
+
+      setCategoriasDespesa([...categoriasDespesa, value]);
+      alert(`Categoria ${value} adicionada com sucesso!`);
+    } catch (error) {
+      console.error(`Erro ao adicionar categoria ${value}:`, error);
+      alert(`Erro ao adicionar categoria ${value}`);
+    }
+  };
+
+  // Chamar a função quando a loja for alterada
+  useEffect(() => {
+    if (selectedLoja) {
+      fetchCaixas();
+      fetchCategoriasDespesa();
+    }
+  }, [selectedLoja]);
+
   return (
     <Layout>
       <div className="min-h-screen">
@@ -733,31 +805,111 @@ export default function ContasPagar() {
                     onChange={handleInputChange}
                     className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
                   >
-                    <option value="ENTRADA">CAIXA DA LOJA 1</option>
-                    <option value="SAÍDA">BOLETO FÁCIL</option>
-                    <option value="TRANSFERÊNCIA">BANCO CAIXA ECONÔMICA</option>
+                    <option value="">Selecione um caixa</option>
+                    {caixasDisponiveis.map(caixa => (
+                      <option key={caixa.id} value={caixa.id}>
+                        {caixa.nome || caixa.id}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
                 <div>
                   <label className="text-[#81059e] font-medium">Categoria da Despesa</label>
-                  <select
-                    name="categoriaDespesa"
-                    value={formData.categoriaDespesa}
-                    onChange={handleInputChange}
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
-                  >
-                    <option value="">Selecione</option>
-                    <option value="PUBLICIDADE/PROPAGANDA">PUBLICIDADE/PROPAGANDA</option>
-                    <option value="ALUGUEL">ALUGUEL</option>
-                    <option value="FORNECEDORES">FORNECEDORES</option>
-                    <option value="SALÁRIOS">SALÁRIOS</option>
-                    <option value="IMPOSTOS">IMPOSTOS</option>
-                    <option value="MANUTENÇÃO">MANUTENÇÃO</option>
-                    <option value="MANUTENÇÃO">TELEFONIA</option>
-
-                    <option value="OUTROS">OUTROS</option>
-                  </select>
+                  <div className="relative flex">
+                    <select
+                      name="categoriaDespesa"
+                      value={formData.categoriaDespesa}
+                      onChange={(e) => {
+                        if (e.target.value === "add_new") {
+                          setShowAddCategoriaInput(true);
+                        } else {
+                          setFormData(prev => ({ ...prev, categoriaDespesa: e.target.value }));
+                        }
+                      }}
+                      className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    >
+                      <option value="">Selecione</option>
+                      {categoriasDespesa.map((categoria) => (
+                        <option key={categoria} value={categoria}>
+                          {categoria.toUpperCase()}
+                        </option>
+                      ))}
+                      <option value="add_new">+ ADICIONAR NOVA CATEGORIA</option>
+                    </select>
+                    
+                    {formData.categoriaDespesa && (
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (confirm(`Deseja remover a categoria "${formData.categoriaDespesa}"?`)) {
+                            try {
+                              const path = `lojas/${selectedLoja}/financeiro/configuracoes/categorias_despesa`;
+                              const docId = formData.categoriaDespesa.toLowerCase().replace(/\s+/g, '_');
+                              const docRef = doc(firestore, path, docId);
+                              
+                              await deleteDoc(docRef);
+                              
+                              // Atualizar a lista de categorias
+                              setCategoriasDespesa(categoriasDespesa.filter(
+                                cat => cat !== formData.categoriaDespesa
+                              ));
+                              
+                              // Limpar a seleção atual
+                              setFormData(prev => ({ ...prev, categoriaDespesa: '' }));
+                              
+                              alert(`Categoria ${formData.categoriaDespesa} removida com sucesso!`);
+                            } catch (error) {
+                              console.error("Erro ao remover categoria:", error);
+                              alert(`Erro ao remover categoria: ${error.message}`);
+                            }
+                          }
+                        }}
+                        className="ml-2 bg-red-50 border-2 border-red-400 text-red-600 p-2 rounded-lg flex items-center justify-center"
+                        title="Remover categoria"
+                      >
+                        <FiTrash2 />
+                      </button>
+                    )}
+                    
+                    {showAddCategoriaInput && (
+                      <div className="absolute z-10 top-full left-0 w-full mt-1 bg-white border-2 border-[#81059e] p-3 rounded-lg shadow-lg">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={newCategoria}
+                            onChange={(e) => setNewCategoria(e.target.value)}
+                            className="border-2 border-[#81059e] p-2 rounded-lg w-full"
+                            placeholder="Digite a nova categoria"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (newCategoria.trim()) {
+                                addNewCategoriaDespesa(newCategoria);
+                                setFormData(prev => ({ ...prev, categoriaDespesa: newCategoria }));
+                                setNewCategoria("");
+                                setShowAddCategoriaInput(false);
+                              }
+                            }}
+                            className="bg-[#81059e] text-white p-2 rounded-lg"
+                          >
+                            <FiPlus />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setNewCategoria("");
+                              setShowAddCategoriaInput(false);
+                            }}
+                            className="border-2 border-[#81059e] text-[#81059e] p-2 rounded-lg"
+                          >
+                            <FiX />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

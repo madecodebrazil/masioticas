@@ -39,6 +39,9 @@ const ConfigurationsModal = ({ isOpen, onClose }) => {
       imageUrl: '',
       nome: '',
       cargo: ''
+    },
+    financeiro: {
+      taxaJurosPadrao: 0
     }
   });
   const [selectedFile, setSelectedFile] = useState(null);
@@ -132,6 +135,14 @@ const ConfigurationsModal = ({ isOpen, onClose }) => {
           [name]: value
         }
       }));
+    } else if (abaAtiva === 'financeiro') {
+      setConfig(prev => ({
+        ...prev,
+        financeiro: {
+          ...prev.financeiro,
+          [name]: value
+        }
+      }));
     }
   };
 
@@ -202,6 +213,42 @@ const ConfigurationsModal = ({ isOpen, onClose }) => {
       setIsLoading(false);
       alert(`Erro ao salvar imagem: ${error.message}`);
     }
+  };
+
+  // Função para formatar o valor do desconto
+  const handleTaxaJurosChange = (e) => {
+    const valor = e.target.value.replace(/\D/g, '');
+    if (valor === '') {
+      setConfig(prev => ({
+        ...prev,
+        financeiro: {
+          ...prev.financeiro,
+          taxaJurosPadrao: 0
+        }
+      }));
+      return;
+    }
+
+    // Formata como percentual (mantém o valor em centavos para consistência)
+    const valorFormatado = Number(valor) / 100;
+    setConfig(prev => ({
+      ...prev,
+      financeiro: {
+        ...prev.financeiro,
+        taxaJurosPadrao: valorFormatado
+      }
+    }));
+  };
+
+  // Função para formatar o valor exibido
+  const formatTaxaJurosValue = () => {
+    if (!config.financeiro?.taxaJurosPadrao) return '';
+
+    // Para percentual, formata apenas o número com duas casas decimais
+    return config.financeiro.taxaJurosPadrao.toLocaleString('pt-BR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
   };
 
   // Definição das abas
@@ -353,6 +400,18 @@ const ConfigurationsModal = ({ isOpen, onClose }) => {
           <div className="p-4 bg-gray-50 rounded-lg">
             <h4 className="font-medium text-[#81059e] mb-3">Configurações Financeiras</h4>
             <div className="space-y-4">
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">Taxa de Juros Padrão (%)</label>
+                <input
+                  type="text"
+                  name="taxaJurosPadrao"
+                  value={formatTaxaJurosValue()}
+                  onChange={handleTaxaJurosChange}
+                  className="border border-gray-300 p-2 rounded w-full"
+                  placeholder="0.00"
+                />
+                <p className="text-xs text-gray-500 mt-1">Taxa de juros aplicada automaticamente em contas a receber vencidas</p>
+              </div>
               <div>
                 <label className="block text-sm text-gray-600 mb-1">Formas de Pagamento</label>
                 <div className="space-y-2">

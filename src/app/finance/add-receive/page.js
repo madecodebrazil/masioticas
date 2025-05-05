@@ -2,7 +2,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { firestore } from "../../../lib/firebaseConfig";
-import { collection, getDocs, addDoc, getDoc, Timestamp, doc, setDoc, query, where } from "firebase/firestore";
+import { collection, getDocs, addDoc, getDoc, Timestamp, doc, setDoc, query, where, deleteDoc } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import InputMask from "react-input-mask";
@@ -10,12 +10,16 @@ import "react-datepicker/dist/react-datepicker.css";
 import Layout from "../../../components/Layout";
 import ConfirmationModal from '../../../components/ConfirmationModal.js';
 import Link from 'next/link';
-import { FiCalendar, FiDollarSign, FiTag, FiFileText, FiUser, FiCreditCard, FiMapPin, FiLayers, FiTrendingUp, FiHome } from 'react-icons/fi';
+import { FiCalendar, FiDollarSign, FiTag, FiFileText, FiUser, FiCreditCard, FiMapPin, FiLayers, FiTrendingUp, FiHome, FiPlus, FiX, FiTrash2 } from 'react-icons/fi';
 
 export default function AddAccountPage() {
   const { userPermissions, userData } = useAuth();
   const [selectedLoja, setSelectedLoja] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [caixasDisponiveis, setCaixasDisponiveis] = useState([]);
+  const [categoriasReceita, setCategoriasReceita] = useState([]);
+  const [showAddCategoriaInput, setShowAddCategoriaInput] = useState(false);
+  const [newCategoria, setNewCategoria] = useState("");
   const [formData, setFormData] = useState({
     cliente: "",
     cpf: "",
@@ -39,6 +43,7 @@ export default function AddAccountPage() {
   const [numeroParcelas, setNumeroParcelas] = useState("1");
   const [taxaJuros, setTaxaJuros] = useState("0,00");
   const [isLoading, setIsLoading] = useState(false);
+  const [taxaJurosPadrao, setTaxaJurosPadrao] = useState(0);
 
   const router = useRouter();
 
@@ -55,6 +60,76 @@ export default function AddAccountPage() {
       }
     }
   }, [userPermissions]);
+
+  // Buscar taxa de juros padrão do sistema
+  useEffect(() => {
+    const fetchTaxaJurosPadrao = async () => {
+      try {
+        // Primeiro tenta buscar da coleção configuracoes/financeiro
+        const configDoc = await getDoc(doc(firestore, 'configuracoes', 'financeiro'));
+        
+        if (configDoc.exists()) {
+          const taxa = configDoc.data().taxaJurosPadrao || 0;
+          console.log('Taxa de juros encontrada:', taxa); // Debug log
+          setTaxaJurosPadrao(taxa);
+          // Formatar a taxa para exibição com duas casas decimais
+          const taxaFormatada = taxa.toLocaleString('pt-BR', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+          });
+          console.log('Taxa formatada:', taxaFormatada); // Debug log
+          setTaxaJuros(taxaFormatada);
+          setFormData(prev => ({ ...prev, taxaJuros: taxa }));
+        } else {
+          console.log('Documento de configuração não encontrado'); // Debug log
+          // Se não encontrar, tenta buscar da coleção configuracoes/horarios
+          const horariosDoc = await getDoc(doc(firestore, 'configuracoes', 'horarios'));
+          if (horariosDoc.exists()) {
+            const taxa = horariosDoc.data().taxaJurosPadrao || 0;
+            console.log('Taxa de juros encontrada em horarios:', taxa); // Debug log
+            setTaxaJurosPadrao(taxa);
+            const taxaFormatada = taxa.toLocaleString('pt-BR', {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2
+            });
+            setTaxaJuros(taxaFormatada);
+            setFormData(prev => ({ ...prev, taxaJuros: taxa }));
+          }
+        }
+      } catch (error) {
+        console.error("Erro ao buscar taxa de juros padrão:", error);
+      }
+    };
+
+    fetchTaxaJurosPadrao();
+  }, []);
+
+  // Função para calcular juros
+  const calcularJuros = (valor, diasAtraso) => {
+    if (formData.dispensarJuros || !taxaJurosPadrao) return 0;
+    
+    const taxaDiaria = taxaJurosPadrao / 30; // Taxa mensal dividida por 30 dias
+    const juros = valor * (taxaDiaria / 100) * diasAtraso;
+    return juros;
+  };
+
+  // Atualizar juros quando a data de cobrança mudar
+  useEffect(() => {
+    if (formData.dataCobranca && formData.valor) {
+      const dataCobranca = new Date(formData.dataCobranca);
+      const hoje = new Date();
+      const diasAtraso = Math.max(0, Math.floor((hoje - dataCobranca) / (1000 * 60 * 60 * 24)));
+      
+      const valorNumerico = parseFloat(
+        formData.valor
+          .replace(/[^\d,]/g, '')
+          .replace(',', '.')
+      );
+
+      const juros = calcularJuros(valorNumerico, diasAtraso);
+      setFormData(prev => ({ ...prev, juros }));
+    }
+  }, [formData.dataCobranca, formData.valor, formData.dispensarJuros]);
 
   // Função para buscar clientes/devedores
   const fetchConsumers = async () => {
@@ -130,6 +205,12 @@ export default function AddAccountPage() {
     if (name === 'numeroDocumento') {
       const numericValue = value.replace(/\D/g, '');
       setFormData(prev => ({ ...prev, [name]: numericValue }));
+    } else if (name === 'dispensarJuros') {
+      setFormData(prev => ({
+        ...prev,
+        [name]: checked,
+        juros: checked ? 0 : prev.juros // Zera os juros se marcado
+      }));
     } else {
       setFormData(prev => ({
         ...prev,
@@ -294,6 +375,74 @@ export default function AddAccountPage() {
 
     return lojaNames[lojaId] || lojaId;
   };
+
+  // Função para buscar os caixas disponíveis
+  const fetchCaixas = async () => {
+    if (!selectedLoja) return;
+    
+    try {
+      const caixasRef = collection(firestore, `lojas/${selectedLoja}/financeiro/controle_caixa/caixas`);
+      const caixasSnapshot = await getDocs(caixasRef);
+      
+      const caixas = [];
+      caixasSnapshot.forEach(doc => {
+        caixas.push({
+          id: doc.id,
+          ...doc.data()
+        });
+      });
+      
+      setCaixasDisponiveis(caixas);
+    } catch (error) {
+      console.error("Erro ao buscar caixas:", error);
+    }
+  };
+
+  // Função para buscar categorias de receita
+  const fetchCategoriasReceita = async () => {
+    try {
+      const loja = selectedLoja || "loja1";
+      const path = `lojas/${loja}/financeiro/configuracoes/categorias_receita`;
+      const snapshot = await getDocs(collection(firestore, path));
+      const list = snapshot.docs.map(doc => doc.data().name || doc.id);
+      setCategoriasReceita(list);
+    } catch (error) {
+      console.error("Erro ao buscar categorias de receita:", error);
+    }
+  };
+
+  // Função para adicionar nova categoria de receita
+  const addNewCategoriaReceita = async (value) => {
+    if (!selectedLoja) {
+      alert("Selecione uma loja antes de adicionar novas categorias!");
+      return;
+    }
+
+    try {
+      const path = `lojas/${selectedLoja}/financeiro/configuracoes/categorias_receita`;
+      const itemRef = doc(firestore, path, value.toLowerCase().replace(/\s+/g, '_'));
+
+      await setDoc(itemRef, {
+        name: value,
+        createdAt: new Date(),
+        addedBy: userData?.nome || 'Sistema'
+      });
+
+      setCategoriasReceita([...categoriasReceita, value]);
+      alert(`Categoria ${value} adicionada com sucesso!`);
+    } catch (error) {
+      console.error(`Erro ao adicionar categoria ${value}:`, error);
+      alert(`Erro ao adicionar categoria ${value}`);
+    }
+  };
+
+  // Chamar a função quando a loja for alterada
+  useEffect(() => {
+    if (selectedLoja) {
+      fetchCaixas();
+      fetchCategoriasReceita();
+    }
+  }, [selectedLoja]);
 
   return (
     <Layout>
@@ -499,17 +648,13 @@ export default function AddAccountPage() {
                 </div>
                 <div>
                   <label className="text-[#81059e] font-medium">Taxa de Juros (%)</label>
-                  <InputMask
-                    mask="99,99%"
-                    maskChar={null}
-                    value={taxaJuros.endsWith('%') ? taxaJuros : `${taxaJuros}%`}
-                    onChange={(e) => {
-                      let value = e.target.value.replace(/[^\d,]/g, '');
-                      setTaxaJuros(value);
-                      setFormData(prev => ({ ...prev, taxaJuros: value }));
-                    }}
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                  <input
+                    type="text"
+                    value={taxaJuros}
+                    readOnly
+                    className="border-2 border-[#81059e] p-3 rounded-lg w-full bg-gray-100 text-black"
                   />
+                  <p className="text-xs text-gray-500 mt-1">Taxa de juros padrão do sistema: {taxaJuros}%</p>
                 </div>
                 <div>
                   <label className="text-[#81059e] font-medium">Local de Recebimento</label>
@@ -551,27 +696,111 @@ export default function AddAccountPage() {
                     onChange={handleInputChange}
                     className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
                   >
-                    <option value="">Selecione</option>
-                    <option value="ENTRADA">CAIXA DA LOJA 1</option>
-                    <option value="SAÍDA">BOLETO FÁCIL</option>
-                    <option value="TRANSFERÊNCIA">BANCO CAIXA ECONÔMICA</option>
+                    <option value="">Selecione um caixa</option>
+                    {caixasDisponiveis.map(caixa => (
+                      <option key={caixa.id} value={caixa.id}>
+                        {caixa.nome || caixa.id}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
                 <div>
                   <label className="text-[#81059e] font-medium">Categoria de Receita</label>
-                  <select
-                    name="categoriaReceita"
-                    value={formData.categoriaReceita}
-                    onChange={handleInputChange}
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
-                  >
-                    <option value="">Selecione</option>
-                    <option value="VENDAS">VENDAS</option>
-                    <option value="SERVIÇOS">SERVIÇOS</option>
-                    <option value="COMISSÕES">COMISSÕES</option>
-                    <option value="OUTROS">OUTROS</option>
-                  </select>
+                  <div className="relative flex">
+                    <select
+                      name="categoriaReceita"
+                      value={formData.categoriaReceita}
+                      onChange={(e) => {
+                        if (e.target.value === "add_new") {
+                          setShowAddCategoriaInput(true);
+                        } else {
+                          setFormData(prev => ({ ...prev, categoriaReceita: e.target.value }));
+                        }
+                      }}
+                      className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    >
+                      <option value="">Selecione</option>
+                      {categoriasReceita.map((categoria) => (
+                        <option key={categoria} value={categoria}>
+                          {categoria.toUpperCase()}
+                        </option>
+                      ))}
+                      <option value="add_new">+ ADICIONAR NOVA CATEGORIA</option>
+                    </select>
+                    
+                    {formData.categoriaReceita && (
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (confirm(`Deseja remover a categoria "${formData.categoriaReceita}"?`)) {
+                            try {
+                              const path = `lojas/${selectedLoja}/financeiro/configuracoes/categorias_receita`;
+                              const docId = formData.categoriaReceita.toLowerCase().replace(/\s+/g, '_');
+                              const docRef = doc(firestore, path, docId);
+                              
+                              await deleteDoc(docRef);
+                              
+                              // Atualizar a lista de categorias
+                              setCategoriasReceita(categoriasReceita.filter(
+                                cat => cat !== formData.categoriaReceita
+                              ));
+                              
+                              // Limpar a seleção atual
+                              setFormData(prev => ({ ...prev, categoriaReceita: '' }));
+                              
+                              alert(`Categoria ${formData.categoriaReceita} removida com sucesso!`);
+                            } catch (error) {
+                              console.error("Erro ao remover categoria:", error);
+                              alert(`Erro ao remover categoria: ${error.message}`);
+                            }
+                          }
+                        }}
+                        className="ml-2 bg-red-50 border-2 border-red-400 text-red-600 p-2 rounded-lg flex items-center justify-center"
+                        title="Remover categoria"
+                      >
+                        <FiTrash2 />
+                      </button>
+                    )}
+                    
+                    {showAddCategoriaInput && (
+                      <div className="absolute z-10 top-full left-0 w-full mt-1 bg-white border-2 border-[#81059e] p-3 rounded-lg shadow-lg">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={newCategoria}
+                            onChange={(e) => setNewCategoria(e.target.value)}
+                            className="border-2 border-[#81059e] p-2 rounded-lg w-full"
+                            placeholder="Digite a nova categoria"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (newCategoria.trim()) {
+                                addNewCategoriaReceita(newCategoria);
+                                setFormData(prev => ({ ...prev, categoriaReceita: newCategoria }));
+                                setNewCategoria("");
+                                setShowAddCategoriaInput(false);
+                              }
+                            }}
+                            className="bg-[#81059e] text-white p-2 rounded-lg"
+                          >
+                            <FiPlus />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setNewCategoria("");
+                              setShowAddCategoriaInput(false);
+                            }}
+                            className="border-2 border-[#81059e] text-[#81059e] p-2 rounded-lg"
+                          >
+                            <FiX />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
