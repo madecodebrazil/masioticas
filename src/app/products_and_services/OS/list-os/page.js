@@ -619,7 +619,7 @@ export default function ListaOS() {
         <div className="w-full max-w-5xl mx-auto rounded-lg">
           <div className="mb-4">
             <h2 className="text-3xl font-bold text-[#81059e] mb-2 mt-8">
-              ORDENS DE SERVIÇO
+              PEDIDOS
             </h2>
           </div>
 

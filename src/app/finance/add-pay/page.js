@@ -543,14 +543,14 @@ export default function ContasPagar() {
 
           {/* Seletor de Loja para Admins */}
           {userPermissions?.isAdmin && (
-            <div className="mb-6">
+            <div className="mb-2">
               <label className="text-[#81059e] font-medium flex items-center gap-2">
                 <FiHome /> Selecionar Loja
               </label>
               <select
                 value={selectedLoja || ''}
                 onChange={(e) => setSelectedLoja(e.target.value)}
-                className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black mt-1"
+                className="border-2 border-[#81059e] p-3 rounded-sm mt-1 w-34 text-black mt-1"
               >
                 <option value="">Selecione uma loja</option>
                 {userPermissions.lojas.map((loja) => (
@@ -577,7 +577,7 @@ export default function ContasPagar() {
 
           <form onSubmit={handleSubmit} className="mt-8 mb-20">
             {/* Seção Credor */}
-            <div className="p-4 bg-gray-50 rounded-lg mb-6 h-64">
+            <div className="p-4 bg-gray-50 rounded-sm mb-6 h-64">
               <h3 className="text-lg font-semibold text-[#81059e] mb-4 flex items-center gap-2">
                 <FiUser /> Informações do Credor
               </h3>
@@ -593,19 +593,19 @@ export default function ContasPagar() {
                       setFormData(prev => ({ ...prev, credor: e.target.value }));
                     }}
                     placeholder="Digite o nome do credor"
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    className="border-2 mb-2 mt-1 border-[#81059e] p-3 rounded-sm w-full text-black"
                     required
                   />
                   {searchTerm && (
                     <>
                       {isLoading ? (
-                        <div className="mt-2 p-3 text-sm text-gray-600">
+                        <div className="mt-4 p-3 text-sm text-gray-600">
                           <span className="inline-block animate-pulse">Buscando credores...</span>
                         </div>
                       ) : (
                         <>
                           {credores.length > 0 ? (
-                            <ul className="bg-white border-2 border-[#81059e] rounded-lg w-full max-h-[104px] overflow-y-auto shadow-lg custom-scroll">
+                            <ul className="bg-white border-2 border-[#81059e] rounded-sm w-full max-h-[104px] overflow-y-auto shadow-lg custom-scroll">
                               {credores.map((credor) => (
                                 <li
                                   key={credor.id}
@@ -625,7 +625,7 @@ export default function ContasPagar() {
                             </ul>
                           ) : (
                             searchTerm && credores.length === 0 && !formData.documentoCredor && (
-                              <div className="mt-2 p-3 text-sm text-red-500  rounded border border-red-100">
+                              <div className="mt-2 p-3 text-sm text-gray-500">
                                 Não encontrado. Tente outro termo de busca.
                               </div>
                             )
@@ -637,22 +637,19 @@ export default function ContasPagar() {
                 </div>
                 <div>
                   <label className="text-[#81059e] font-medium">CPF ou CNPJ do Credor</label>
-                  <input
-                    type="text"
-                    value={formData.documentoCredor}
-                    readOnly
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full bg-gray-100 text-black"
+                  <input type="text" value={formData.documentoCredor} readOnly
+                    className="border-2 border-[#81059e] p-3 mt-1 rounded-sm w-full bg-gray-50 text-black"
                   />
                 </div>
               </div>
             </div>
 
             {/* Seção Documento */}
-            <div className="p-4 bg-gray-50 rounded-lg mb-6">
+            <div className="p-4 bg-gray-50 rounded-sm mb-6">
               <h3 className="text-lg font-semibold text-[#81059e] mb-4 flex items-center gap-2">
                 <FiFileText /> Informações do Documento
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-4">
                 <div>
                   <label className="text-[#81059e] font-medium">Nº do Documento</label>
                   <input
@@ -660,7 +657,7 @@ export default function ContasPagar() {
                     name="documento"
                     value={formData.documento}
                     onChange={handleDocumentoChange}
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    className="border-2 border-[#81059e] p-3 rounded-sm mt-1 w-full text-black"
                   />
                 </div>
                 <div>
@@ -670,7 +667,7 @@ export default function ContasPagar() {
                     name="origem"
                     value={formData.origem}
                     onChange={handleInputChange}
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    className="border-2 border-[#81059e] p-3 rounded-sm mt-1 w-full text-black"
                   />
                 </div>
                 <div>
@@ -679,7 +676,7 @@ export default function ContasPagar() {
                     name="tipoCobranca"
                     value={formData.tipoCobranca}
                     onChange={handleInputChange}
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    className="border-2 border-[#81059e] p-3 rounded-sm mt-1 w-full text-black"
                   >
                     <option value="">Selecione</option>
                     <option value="boleto">Boleto</option>
@@ -693,7 +690,7 @@ export default function ContasPagar() {
             </div>
 
             {/* Seção Pagamento */}
-            <div className="p-4 bg-gray-50 rounded-lg mb-6">
+            <div className="p-4 bg-gray-50 rounded-sm mb-6">
               <h3 className="text-lg font-semibold text-[#81059e] mb-4 flex items-center gap-2">
                 <FiDollarSign /> Informações de Pagamento
               </h3>
@@ -706,7 +703,7 @@ export default function ContasPagar() {
                     value={formData.valor}
                     onChange={handleValorChange}
                     placeholder="R$ 0,00"
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    className="border-2 border-[#81059e] p-3 rounded-sm mt-1 w-full text-black"
                     required
                   />
                 </div>
@@ -721,7 +718,7 @@ export default function ContasPagar() {
                       setNumeroParcelas(e.target.value);
                       atualizarParcelas('1', e.target.value);  // Aqui estamos definindo a parcela atual como '1'
                     }}
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    className="border-2 border-[#81059e] p-3 rounded-sm mt-1 w-full text-black"
                   >
                     <option value="1">1</option>
                     <option value="2">2</option>
@@ -757,7 +754,7 @@ export default function ContasPagar() {
                         dataEntrada: selectedDate,
                       }));
                     }}
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
                   />
                 </div>
                 <div>
@@ -775,7 +772,7 @@ export default function ContasPagar() {
                         dataVencimento: selectedDate,
                       }));
                     }}
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    className="border-2 border-[#81059e] p-3 rounded-sm mt-1 w-full text-black"
                   />
                 </div>
                 <div>
@@ -785,7 +782,7 @@ export default function ContasPagar() {
                     name="localPagamento"
                     value={formData.localPagamento}
                     onChange={handleInputChange}
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    className="border-2 border-[#81059e] p-3 rounded-sm mt-1 w-full text-black"
                   />
                 </div>
               </div>
@@ -796,14 +793,14 @@ export default function ContasPagar() {
               <h3 className="text-lg font-semibold text-[#81059e] mb-4 flex items-center gap-2">
                 <FiTrendingUp /> Informações Contábeis
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
                 <div>
                   <label className="text-[#81059e] font-medium">Lançamento no Caixa</label>
                   <select
                     name="lancamentoNoCaixa"
                     value={formData.lancamentoNoCaixa}
                     onChange={handleInputChange}
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    className="border-2 border-[#81059e] p-3 rounded-sm mt-1 w-full text-black"
                   >
                     <option value="">Selecione um caixa</option>
                     {caixasDisponiveis.map(caixa => (
@@ -827,7 +824,7 @@ export default function ContasPagar() {
                           setFormData(prev => ({ ...prev, categoriaDespesa: e.target.value }));
                         }
                       }}
-                      className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                      className="border-2 border-[#81059e] p-3 rounded-sm mt-1 w-full text-black"
                     >
                       <option value="">Selecione</option>
                       {categoriasDespesa.map((categoria) => (
@@ -915,7 +912,7 @@ export default function ContasPagar() {
             </div>
 
             {/* Seção Observações */}
-            <div className="p-4 bg-gray-50 rounded-lg mb-6">
+            <div className="p-4 bg-gray-50 rounded-sm mb-6">
               <h3 className="text-lg font-semibold text-[#81059e] mb-4 flex items-center gap-2">
                 <FiFileText /> Observações
               </h3>
@@ -924,7 +921,7 @@ export default function ContasPagar() {
                   name="observacoes"
                   value={formData.observacoes}
                   onChange={handleInputChange}
-                  className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black min-h-[120px]"
+                  className="border-2 border-[#81059e] p-3 rounded-sm mt-1 w-full text-black min-h-[120px]"
                   placeholder="Adicione observações relevantes..."
                 ></textarea>
               </div>
@@ -935,14 +932,14 @@ export default function ContasPagar() {
               <button
                 type="button"
                 onClick={handleClear}
-                className="inline-flex justify-center py-3 px-4 border-2 border-[#81059e] shadow-sm text-sm font-medium rounded-sm text-[#81059e] bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#81059e]"
+                className="inline-flex justify-center py-3 px-4 border-2 border-[#81059e] shadow-sm text-sm font-semibold rounded-sm text-[#81059e] bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#81059e]"
                 disabled={isLoading}
               >
                 CANCELAR
               </button>
               <button
                 type="submit"
-                className="bg-[#81059e] p-3 px-6 rounded-sm text-white flex items-center gap-2"
+                className="bg-[#81059e] p-3 px-6 rounded-sm text-white font-semibold flex items-center gap-2"
                 disabled={isLoading}
               >
                 {isLoading ? 'PROCESSANDO...' : 'SALVAR'}

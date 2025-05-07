@@ -571,27 +571,27 @@ export default function ListaContas() {
           <div className="mb-6">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
               {/* Card - Contas a Pagar */}
-              <div className="border-2 rounded-lg p-4 border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+              <div className="border-2 rounded-sm p-3 border-gray-200 shadow-sm hover:shadow-md transition-shadow">
                 <div className="flex items-center justify-between mb-3">
                   <FontAwesomeIcon
                     icon={faFileInvoice}
-                    className="h-8 w-8 text-[#81059e] bg-purple-300 p-2 rounded-2xl"
+                    className="h-8 w-8 text-[#81059e] bg-purple-300 p-2 rounded-sm"
                   />
-                  <span className="text-lg font-medium text-gray-700 flex-grow ml-3">Contas a Pagar</span>
+                  <span className="text-lg font-semibold text-gray-700 flex-grow ml-3">Contas a Pagar</span>
                 </div>
-                <p className="text-2xl font-semibold text-center mt-2">{totalContas}</p>
+                <p className="text-2xl text-center mt-2">{totalContas}</p>
               </div>
 
               {/* Card - Valor Total */}
-              <div className="border-2 rounded-lg p-4 border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+              <div className="border-2 rounded-sm p-3 border-gray-200 shadow-sm hover:shadow-md transition-shadow">
                 <div className="flex items-center justify-between mb-3">
                   <FontAwesomeIcon
                     icon={faDollarSign}
-                    className="h-8 w-8 text-[#81059e] bg-purple-300 p-2 rounded-2xl"
+                    className="h-8 w-8 text-[#81059e] bg-purple-300 p-2 rounded-sm"
                   />
-                  <span className="text-lg font-medium text-gray-700 flex-grow ml-3">Valor Total</span>
+                  <span className="text-lg font-semibold text-gray-700 flex-grow ml-3">Valor Total</span>
                 </div>
-                <p className="text-2xl font-semibold text-center mt-2">
+                <p className="text-2xl text-center mt-2">
                   R$ {contas.reduce((total, conta) => total + parseFloat(conta.valor || 0), 0).toFixed(2)}
                 </p>
               </div>

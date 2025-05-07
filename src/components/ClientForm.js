@@ -53,7 +53,19 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
         'Outro'
     ]);
 
-    // Função para buscar endereço pelo CEP
+    // Adicionar função de debounce
+    const debounce = (func, wait) => {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    };
+
     const fetchAddressByCep = async (cep) => {
         // Limpa o CEP de qualquer caractere não numérico
         const cleanCep = cep.replace(/\D/g, '');
@@ -62,11 +74,13 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
         if (!cleanCep || cleanCep.length !== 8) return;
 
         setFetchingCep(true);
+        setError(''); // Limpa erros anteriores
+
         try {
-            const response = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
+            const response = await fetch('/api/cep?cep=' + cleanCep);
             const data = await response.json();
 
-            if (response.ok && !data.erro) {
+            if (response.ok && !data.error) {
                 setFormData(prev => ({
                     ...prev,
                     endereco: {
@@ -84,20 +98,16 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
             }
         } catch (error) {
             console.error('Erro ao buscar CEP:', error);
-            setError('Erro ao buscar CEP. Tente novamente mais tarde.');
+            setError(`Erro ao buscar CEP: ${error.message || 'Tente novamente mais tarde.'}`);
         } finally {
             setFetchingCep(false);
         }
     };
 
-    // Observar mudanças no CEP para buscar endereço automaticamente
-    useEffect(() => {
-        const cep = formData.endereco.cep;
-        if (cep && cep.replace(/\D/g, '').length === 8) {
-            fetchAddressByCep(cep);
-        }
-    }, [formData.endereco.cep]);
+    // Criar versão com debounce da função fetchAddressByCep
+    const debouncedFetchCep = debounce(fetchAddressByCep, 500);
 
+    // Atualizar handleChange
     const handleChange = (e) => {
         const { name, value, files } = e.target;
 
@@ -107,6 +117,7 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
         } else if (name.includes('.')) {
             // Tratamento para campos aninhados como endereco.cep
             const [parent, child] = name.split('.');
+
             setFormData((prevData) => ({
                 ...prevData,
                 [parent]: {
@@ -114,6 +125,14 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
                     [child]: value
                 }
             }));
+
+            // Se for o CEP sendo alterado
+            if (parent === 'endereco' && child === 'cep') {
+                const cleanCep = value.replace(/\D/g, '');
+                if (cleanCep.length === 8) {
+                    debouncedFetchCep(value);
+                }
+            }
         } else {
             setFormData((prevData) => ({ ...prevData, [name]: value }));
         }

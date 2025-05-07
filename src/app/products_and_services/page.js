@@ -9,17 +9,16 @@ import { getDocs, collection } from 'firebase/firestore';
 
 import Layout from '@/components/Layout';
 import { motion } from 'framer-motion';
-import { useAuth } from '@/hooks/useAuth'; // Importando o hook useAuth
+import { useAuth } from '@/hooks/useAuth';
 
 export default function ProductsPage() {
-    const { user, userData, loading, userPermissions } = useAuth(); // Usando o hook useAuth
+    const { user, userData, loading, userPermissions } = useAuth();
     const router = useRouter();
     const [totalArmacoes, setTotalArmacoes] = useState(0);
     const [totalLentes, setTotalLentes] = useState(0);
     const [totalOculosDeSol, setTotalOculosDeSol] = useState(0);
-    const [lojaAtual, setLojaAtual] = useState('loja1'); // Estado para controlar a loja atual
-
-    // Função para buscar totais de produtos com base na loja atual
+    const [lojaAtual, setLojaAtual] = useState('loja1');
+    
     const fetchProductTotals = async () => {
         try {
             if (userPermissions && userPermissions.lojas.length > 0) {
@@ -112,7 +111,7 @@ export default function ProductsPage() {
         { icon: '/images/products_and_services/OS.png', label: 'OS', route: '/products_and_services/OS' },
         { icon: '/images/products_and_services/reparo.png', label: 'Reparos', route: '/products_and_services/repair/list-repairs' },
         { icon: '/images/products_and_services/malote.png', label: 'Malotes', route: '/products_and_services/pouch/list-pouches' },
-        { icon: '/images/products_and_services/pedido.png', label: 'Pedidos', route: '/products_and_services/orders/list-orders' },
+        { icon: '/images/products_and_services/pedido.png', label: 'Pedidos', route: '/products_and_services/OS/list-os' },
         { icon: '/images/products_and_services/distribuidor.png', label: 'Distribuidores', route: '/products_and_services/distribuidor' },
         { icon: '/images/products_and_services/prestador.png', label: 'Prestadores', route: '/products_and_services/service_provider' },
         { icon: '/images/products_and_services/laboratorio.png', label: 'Laboratórios', route: '/products_and_services/laboratory' },
