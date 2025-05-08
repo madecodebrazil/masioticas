@@ -116,8 +116,7 @@ const Sidebar = ({ showSidebar, hideSidebar }) => {
                 alt="Logo Masi"
                 width={120}
                 height={60}
-                className="object-contain hover:brightness-110 transition-all duration-300"
-                style={{ width: 'auto', height: 'auto' }}
+                className="object-contain hover:brightness-110 transition-all duration-300 max-w-[120px] max-h-[60px]"
               />
             </Link>
 

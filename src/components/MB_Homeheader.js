@@ -87,8 +87,7 @@ export default function MobileNavSidebar({ userPhotoURL, userData }) {
                             alt="Logo masi"
                             width={80}
                             height={80}
-                            className="p-2 object-contain transition-all duration-300 hover:drop-shadow-[0_0_10px_rgba(255,255,0,0.8)]"
-                            style={{ width: 'auto', height: 'auto' }}
+                            className="p-2 object-contain transition-all duration-300 hover:drop-shadow-[0_0_10px_rgba(255,255,0,0.8)] max-w-[80px] max-h-[80px]"
                         />
                     </Link>
                 </div>

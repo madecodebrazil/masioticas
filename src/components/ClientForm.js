@@ -1,10 +1,10 @@
 // components/ClientForm.js
 import { useState, useEffect } from 'react';
-import { getDoc, setDoc, doc, serverTimestamp, collection, addDoc, getDocs, query, where, updateDoc } from 'firebase/firestore';
+import { getDoc, setDoc, doc, serverTimestamp, collection, addDoc, getDocs, query, where, updateDoc, limit } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { firestore } from '@/lib/firebaseConfig';
 import InputMask from 'react-input-mask';
-import { FiUser, FiMail, FiPhone, FiCalendar, FiMapPin, FiHash, FiHome, FiImage, FiFileText, FiCamera, FiCheckCircle, FiX, FiFile } from 'react-icons/fi';
+import { FiUser, FiMail, FiPhone, FiCalendar, FiMapPin, FiHash, FiHome, FiImage, FiFileText, FiCamera, FiCheckCircle, FiX, FiFile, FiSearch } from 'react-icons/fi';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUsers } from "@fortawesome/free-solid-svg-icons";
 
@@ -40,8 +40,10 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
     const [error, setError] = useState('');
     const [fetchingCep, setFetchingCep] = useState(false);
     const [isTitular, setIsTitular] = useState(true);
-    const [titulares, setTitulares] = useState([]);
     const [selectedTitular, setSelectedTitular] = useState('');
+    const [searchQuery, setSearchQuery] = useState('');
+    const [searchResults, setSearchResults] = useState([]);
+    const [isSearching, setIsSearching] = useState(false);
     const [parentescoOptions] = useState([
         'Cônjuge',
         'Filho(a)',
@@ -66,43 +68,47 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
         };
     };
 
-    const fetchAddressByCep = async (cep) => {
-        // Limpa o CEP de qualquer caractere não numérico
-        const cleanCep = cep.replace(/\D/g, '');
+   // Versão corrigida da função fetchAddressByCep
 
-        // Valida se tem 8 dígitos
-        if (!cleanCep || cleanCep.length !== 8) return;
+const fetchAddressByCep = async (cep) => {
+    // Limpa o CEP de qualquer caractere não numérico
+    const cleanCep = cep.replace(/\D/g, '');
 
-        setFetchingCep(true);
-        setError(''); // Limpa erros anteriores
+    // Valida se tem 8 dígitos
+    if (!cleanCep || cleanCep.length !== 8) return;
 
-        try {
-            const response = await fetch('/api/cep?cep=' + cleanCep);
-            const data = await response.json();
+    setFetchingCep(true);
+    setError(''); // Limpa erros anteriores
 
-            if (response.ok && !data.error) {
-                setFormData(prev => ({
-                    ...prev,
-                    endereco: {
-                        ...prev.endereco,
-                        cep: cep, // Mantém o formato com máscara
-                        logradouro: data.logradouro || '',
-                        bairro: data.bairro || '',
-                        cidade: data.localidade || '',
-                        estado: data.uf || ''
-                    }
-                }));
-            } else {
-                console.error('CEP não encontrado ou inválido');
-                setError('CEP não encontrado. Verifique se o número está correto.');
-            }
-        } catch (error) {
-            console.error('Erro ao buscar CEP:', error);
-            setError(`Erro ao buscar CEP: ${error.message || 'Tente novamente mais tarde.'}`);
-        } finally {
-            setFetchingCep(false);
+    try {
+        // Usando diretamente a API pública ViaCEP em vez da API interna
+        const response = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
+        const data = await response.json();
+
+        // Verificação se o CEP existe na base de dados da ViaCEP
+        if (!data.erro) {
+            setFormData(prev => ({
+                ...prev,
+                endereco: {
+                    ...prev.endereco,
+                    cep: cep, // Mantém o formato com máscara
+                    logradouro: data.logradouro || '',
+                    bairro: data.bairro || '',
+                    cidade: data.localidade || '',
+                    estado: data.uf || ''
+                }
+            }));
+        } else {
+            console.error('CEP não encontrado ou inválido');
+            setError('CEP não encontrado. Verifique se o número está correto.');
         }
-    };
+    } catch (error) {
+        console.error('Erro ao buscar CEP:', error);
+        setError(`Erro ao buscar CEP: ${error.message || 'Tente novamente mais tarde.'}`);
+    } finally {
+        setFetchingCep(false);
+    }
+};
 
     // Criar versão com debounce da função fetchAddressByCep
     const debouncedFetchCep = debounce(fetchAddressByCep, 500);
@@ -199,32 +205,78 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
         input.click();
     };
 
-    // Buscar titulares disponíveis
-    useEffect(() => {
-        const fetchTitulares = async () => {
-            try {
-                const usersCollection = collection(firestore, 'lojas/clientes/users');
-                const querySnapshot = await getDocs(
-                    query(usersCollection, where('dependentesDe', '==', null))
-                );
-
-                const titularesData = [];
-                querySnapshot.forEach((doc) => {
-                    titularesData.push({
+    // Função para buscar titulares
+    const searchTitulares = async (searchText) => {
+        if (!searchText || searchText.length < 3) {
+            setSearchResults([]);
+            return;
+        }
+        
+        setIsSearching(true);
+        try {
+            const usersCollection = collection(firestore, 'lojas/clientes/users');
+            
+            // Buscar por nome que começa com o texto da busca
+            const queryByName = query(usersCollection, 
+                where('dependentesDe', '==', null),
+                where('nome', '>=', searchText),
+                where('nome', '<=', searchText + '\uf8ff'),
+                limit(10)
+            );
+            
+            // Buscar por CPF que começa com o texto da busca
+            const queryByCpf = query(usersCollection,
+                where('dependentesDe', '==', null),
+                where('cpf', '>=', searchText),
+                where('cpf', '<=', searchText + '\uf8ff'),
+                limit(10)
+            );
+            
+            const [nameSnapshot, cpfSnapshot] = await Promise.all([
+                getDocs(queryByName),
+                getDocs(queryByCpf)
+            ]);
+            
+            // Juntar resultados e remover duplicatas
+            const results = [];
+            const addedIds = new Set();
+            
+            nameSnapshot.forEach((doc) => {
+                addedIds.add(doc.id);
+                results.push({
+                    id: doc.id,
+                    nome: doc.data().nome,
+                    cpf: doc.data().cpf
+                });
+            });
+            
+            cpfSnapshot.forEach((doc) => {
+                if (!addedIds.has(doc.id)) {
+                    results.push({
                         id: doc.id,
                         nome: doc.data().nome,
                         cpf: doc.data().cpf
                     });
-                });
+                }
+            });
+            
+            setSearchResults(results);
+        } catch (error) {
+            console.error('Erro ao buscar titulares:', error);
+        } finally {
+            setIsSearching(false);
+        }
+    };
 
-                setTitulares(titularesData);
-            } catch (error) {
-                console.error('Erro ao buscar titulares:', error);
-            }
-        };
+    // Versão com debounce da função de busca
+    const debouncedSearch = debounce(searchTitulares, 300);
 
-        fetchTitulares();
-    }, []);
+    // Função para selecionar um titular dos resultados da busca
+    const handleSelectTitular = (titular) => {
+        setSelectedTitular(titular.id);
+        setSearchQuery(titular.nome);
+        setSearchResults([]); // Limpa os resultados após selecionar
+    };
 
     const uploadImage = async (cpf) => {
         if (!selectedFile) return null;
@@ -323,6 +375,12 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
         // Validação do email (se fornecido)
         if (formData.email && !validarEmail(formData.email)) {
             setError('Email inválido. Verifique o formato.');
+            return false;
+        }
+
+        // Se for dependente, verificar se um titular foi selecionado
+        if (!isTitular && !selectedTitular) {
+            setError('Selecione um cliente titular.');
             return false;
         }
 
@@ -426,8 +484,11 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
                 setImagePreview(null);
                 setDocumentoFile(null);
                 setComprovanteFile(null);
+                setDocumentoPreview(null);
+                setComprovantePreview(null);
                 setIsTitular(true);
                 setSelectedTitular('');
+                setSearchQuery('');
 
                 setTimeout(() => {
                     setShowSuccessPopup(false);
@@ -584,7 +645,7 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
 
                 <div>
                     {/* Seção de Tipo de Cadastro */}
-                    <div className="mt-6 bg-purple-50 p-4 rounded-lg border-2 border-purple-100">
+                    <div className="mt-6 p-4 rounded-lg h-80">
                         <h3 className="text-lg font-medium text-[#81059e] flex items-center gap-1 mb-4">
                             <FontAwesomeIcon icon={faUsers} className="h-5 w-5" /> Tipo de Cadastro
                         </h3>
@@ -619,21 +680,70 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
                             <div className="space-y-4">
                                 <div className="space-y-2">
                                     <label className="block text-[#81059e] font-medium">
-                                        Selecione o Titular
+                                        Buscar Cliente Titular
                                     </label>
-                                    <select
-                                        value={selectedTitular}
-                                        onChange={(e) => setSelectedTitular(e.target.value)}
-                                        className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
-                                        required={!isTitular}
-                                    >
-                                        <option value="">Selecione o cliente titular</option>
-                                        {titulares.map((titular) => (
-                                            <option key={titular.id} value={titular.id}>
-                                                {titular.nome} - CPF: {titular.cpf}
-                                            </option>
-                                        ))}
-                                    </select>
+                                    <div className="relative">
+                                        <div className="flex items-center border-2 border-[#81059e] rounded-lg">
+                                            <span className="pl-3 text-[#81059e]">
+                                                <FiSearch size={16} />
+                                            </span>
+                                            <input
+                                                type="text"
+                                                value={searchQuery}
+                                                onChange={(e) => {
+                                                    setSearchQuery(e.target.value);
+                                                    debouncedSearch(e.target.value);
+                                                }}
+                                                placeholder="Digite nome ou CPF do titular"
+                                                className="p-3 w-full text-black outline-none"
+                                                required={!isTitular}
+                                            />
+                                            {isSearching && (
+                                                <div className="pr-3">
+                                                    <div className="animate-spin h-4 w-4 border-2 border-[#81059e] rounded-full border-t-transparent"></div>
+                                                </div>
+                                            )}
+                                        </div>
+                                        
+                                        {/* Resultados da busca */}
+                                        {searchResults.length > 0 && (
+                                            <div className="absolute z-10 w-full mt-1 bg-white shadow-lg rounded-lg border border-[#81059e] max-h-60 overflow-y-auto">
+                                                {searchResults.map((titular) => (
+                                                    <div 
+                                                        key={titular.id} 
+                                                        className="p-3 hover:bg-purple-100 cursor-pointer border-b border-gray-200 last:border-b-0"
+                                                        onClick={() => handleSelectTitular(titular)}
+                                                    >
+                                                        <div className="font-medium">{titular.nome}</div>
+                                                        <div className="text-sm text-gray-600">CPF: {titular.cpf}</div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                        
+                                        {searchQuery && searchQuery.length >= 3 && searchResults.length === 0 && !isSearching && (
+                                            <div className="absolute z-10 w-full mt-1 bg-white shadow-lg rounded-lg border border-[#81059e] p-3">
+                                                <p className="text-gray-500">Nenhum cliente titular encontrado</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                    
+                                    {/* Mostrar o titular selecionado */}
+                                    {selectedTitular && (
+                                        <div className="mt-2 p-2 bg-purple-100 rounded-lg flex items-center justify-between">
+                                            <span>Titular selecionado</span>
+                                            <button 
+                                                type="button"
+                                                onClick={() => {
+                                                    setSelectedTitular('');
+                                                    setSearchQuery('');
+                                                }}
+                                                className="text-red-500 hover:text-red-700"
+                                            >
+                                                <FiX size={16} />
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div className="space-y-2">
@@ -657,16 +767,6 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
                                 </div>
                             </div>
                         )}
-
-                        {/* Explicação */}
-                        <div className="mt-4 text-sm text-gray-600 bg-white p-3 rounded-lg border border-gray-200">
-                            <p className="font-semibold mb-1">Informações:</p>
-                            <ul className="list-disc pl-5 space-y-1">
-                                <li>Cliente <span className="font-medium">Titular</span> é o cliente principal.</li>
-                                <li><span className="font-medium">Dependentes</span> são clientes vinculados a um titular (cônjuge, filhos, etc).</li>
-                                <li>Ao cadastrar dependentes, você poderá visualizar todos os membros da família facilmente.</li>
-                            </ul>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -1019,7 +1119,7 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
                 >
                     {loading ? (
                         <>
-                            <div className="border-2 border-[#81059e] p-3 px-6 rounded-sm text-[#81059e] flex items-center gap-2"></div>
+                            <div className="animate-spin mr-2 h-4 w-4 border-2 border-white rounded-full border-t-transparent"></div>
                             SALVANDO...
                         </>
                     ) : 'SALVAR'}

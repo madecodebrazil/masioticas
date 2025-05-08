@@ -941,129 +941,127 @@ export default function ListaContas() {
           {/* Modal para detalhes da conta */}
           {isModalOpen && selectedConta && (
             <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-              <div className="bg-white rounded-lg shadow-lg w-full max-w-md flex flex-col h-3/5 overflow-y-auto p-4">
+              <div className="bg-white rounded-lg shadow-lg w-full max-w-md flex flex-col h-3/5 overflow-hidden">
                 <div className="bg-[#81059e] text-white p-4 flex justify-between items-center">
-                  <h3 className="text-xl font-bold text-white mb-4">
+                  <h3 className="text-xl font-bold">
                     Detalhes da Conta a Pagar
                   </h3>
+                  <FontAwesomeIcon
+                    icon={require('@fortawesome/free-solid-svg-icons').faX}
+                    className="h-5 w-5 text-white cursor-pointer hover:text-gray-200"
+                    onClick={closeModal}
+                  />
                 </div>
-                <p>
-                  <strong>Código:</strong> {selectedConta.documento || 'N/A'}
-                </p>
-                <p>
-                  <strong>Credor:</strong> {selectedConta.credor || 'N/A'}
-                </p>
-                <p>
-                  <strong>Valor:</strong> R${' '}
-                  {parseFloat(selectedConta.valor || 0).toFixed(2)}
-                </p>
-                <p>
-                  <strong>Data de Entrada:</strong> {formatFirestoreDate(selectedConta.dataEntrada)}
-                </p>
-                <p>
-                  <strong>Data de Vencimento:</strong>{' '}
-                  {formatFirestoreDate(selectedConta.dataVencimento)}
-                </p>
-                <p>
-                  <strong>Loja:</strong> {selectedConta.loja || 'Não especificada'}
-                </p>
-                {selectedConta.origem && (
+                <div className="space-y-3 p-4 overflow-y-auto flex-grow">
                   <p>
-                    <strong>Origem:</strong> {selectedConta.origem}
+                    <strong>Código:</strong> {selectedConta.documento || 'N/A'}
                   </p>
-                )}
-                {selectedConta.parcela && (
                   <p>
-                    <strong>Parcela:</strong> {selectedConta.parcela}
+                    <strong>Credor:</strong> {selectedConta.credor || 'N/A'}
                   </p>
-                )}
-                {selectedConta.categoriaDespesa && (
                   <p>
-                    <strong>Categoria da Despesa:</strong> {selectedConta.categoriaDespesa}
+                    <strong>Valor:</strong> R$ {parseFloat(selectedConta.valor || 0).toFixed(2)}
                   </p>
-                )}
-                {selectedConta.localPagamento && (
                   <p>
-                    <strong>Local de Pagamento:</strong> {selectedConta.localPagamento}
+                    <strong>Data de Entrada:</strong> {formatFirestoreDate(selectedConta.dataEntrada)}
                   </p>
-                )}
-                {selectedConta.contaBancaria && (
                   <p>
-                    <strong>Conta Bancária:</strong> {selectedConta.contaBancaria}
+                    <strong>Data de Vencimento:</strong> {formatFirestoreDate(selectedConta.dataVencimento)}
                   </p>
-                )}
-                {selectedConta.taxaJuros && (
                   <p>
-                    <strong>Taxa de Juros:</strong> {selectedConta.taxaJuros}%
+                    <strong>Loja:</strong> {selectedConta.loja || 'Não especificada'}
                   </p>
-                )}
-                {selectedConta.observacoes && (
-                  <p>
-                    <strong>Observações:</strong> {selectedConta.observacoes}
-                  </p>
-                )}
+                  {selectedConta.origem && (
+                    <p>
+                      <strong>Origem:</strong> {selectedConta.origem}
+                    </p>
+                  )}
+                  {selectedConta.parcela && (
+                    <p>
+                      <strong>Parcela:</strong> {selectedConta.parcela}
+                    </p>
+                  )}
+                  {selectedConta.categoriaDespesa && (
+                    <p>
+                      <strong>Categoria da Despesa:</strong> {selectedConta.categoriaDespesa}
+                    </p>
+                  )}
+                  {selectedConta.localPagamento && (
+                    <p>
+                      <strong>Local de Pagamento:</strong> {selectedConta.localPagamento}
+                    </p>
+                  )}
+                  {selectedConta.contaBancaria && (
+                    <p>
+                      <strong>Conta Bancária:</strong> {selectedConta.contaBancaria}
+                    </p>
+                  )}
+                  {selectedConta.taxaJuros && (
+                    <p>
+                      <strong>Taxa de Juros:</strong> {selectedConta.taxaJuros}%
+                    </p>
+                  )}
+                  {selectedConta.observacoes && (
+                    <p>
+                      <strong>Observações:</strong> {selectedConta.observacoes}
+                    </p>
+                  )}
 
-                {/* Seção para registrar o pagamento */}
-                <div className="mt-6">
-                  <label className="block text-[#81059e] mb-2">
-                    Forma de Pagamento
-                  </label>
-                  <select
-                    value={formaPagamento}
-                    onChange={(e) => setFormaPagamento(e.target.value)}
-                    className="w-full p-2 border border-gray-300 rounded-md text-black"
-                  >
-                    <option value="">Selecione</option>
-                    <option value="Dinheiro">Dinheiro</option>
-                    <option value="Cartão de Crédito">Cartão de Crédito</option>
-                    <option value="Cartão de Débito">Cartão de Débito</option>
-                    <option value="Pix">Pix</option>
-                    <option value="Cheque">Cheque</option>
-                    <option value="Boleto">Boleto</option>
-                    <option value="TED">TED</option>
-                  </select>
+                  {/* Seção para registrar o pagamento */}
+                  <div className="mt-6">
+                    <label className="block text-black font-bold mb-2">
+                      Forma de Pagamento
+                    </label>
+                    <select
+                      value={formaPagamento}
+                      onChange={(e) => setFormaPagamento(e.target.value)}
+                      className="w-full p-2 border border-gray-300 rounded-md text-black"
+                    >
+                      <option value="">Selecione</option>
+                      <option value="Dinheiro">Dinheiro</option>
+                      <option value="Cartão de Crédito">Cartão de Crédito</option>
+                      <option value="Cartão de Débito">Cartão de Débito</option>
+                      <option value="Pix">Pix</option>
+                      <option value="Cheque">Cheque</option>
+                      <option value="Boleto">Boleto</option>
+                      <option value="TED">TED</option>
+                    </select>
+                  </div>
+
+                  {settleMessage && (
+                    <p className="text-green-600 mt-4">{settleMessage}</p>
+                  )}
+
+                  <div className="flex justify-around mt-6">
+                    <button
+                      onClick={generatePDF}
+                      className="bg-[#81059e] text-white px-4 py-2 rounded-md flex items-center"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                      </svg>
+                      Ver PDF
+                    </button>
+                    <button
+                      onClick={handlePrint}
+                      className="bg-[#81059e] text-white px-4 py-2 rounded-md flex items-center"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                      </svg>
+                      Imprimir
+                    </button>
+                  </div>
+
+                  <div className="flex justify-center mt-4">
+                    <button
+                      onClick={handleSettlePayment}
+                      className="bg-green-600 text-white px-4 py-2 rounded-md"
+                    >
+                      Quitar Pagamento
+                    </button>
+                  </div>
                 </div>
-
-                {settleMessage && (
-                  <p className="text-green-600 mt-4">{settleMessage}</p>
-                )}
-
-                <div className="flex justify-around mt-6">
-                  <button
-                    onClick={generatePDF}
-                    className="bg-[#81059e] text-white px-4 py-2 rounded-md flex items-center"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                    </svg>
-                    Ver PDF
-                  </button>
-                  <button
-                    onClick={handlePrint}
-                    className="bg-[#81059e] text-white px-4 py-2 rounded-md flex items-center"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-                    </svg>
-                    Imprimir
-                  </button>
-                </div>
-
-                <div className="flex justify-center mt-4">
-                  <button
-                    onClick={handleSettlePayment}
-                    className="bg-green-600 text-white px-4 py-2 rounded-md"
-                  >
-                    Quitar Pagamento
-                  </button>
-                </div>
-
-                <button
-                  onClick={closeModal}
-                  className="absolute top-2 right-2 text-gray-600 hover:text-gray-800"
-                >
-                  &times;
-                </button>
               </div>
             </div>
           )}

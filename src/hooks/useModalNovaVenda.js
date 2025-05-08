@@ -46,6 +46,7 @@ const useModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
     const [dataVenda, setDataVenda] = useState(new Date());
     const [showPixModal, setShowPixModal] = useState(false);
     const [pixQRCode, setPixQRCode] = useState('');
+    const [tipoTransacao, setTipoTransacao] = useState('venda');
 
     const [osStatus, setOsStatus] = useState({
         tipo: 'completa',
@@ -225,6 +226,59 @@ const useModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
                 await addDoc(osRef, dadosOSLimpos);
             }
         }
+
+        // Determinar a coleção correta com base no tipo de transação
+        const colecao = tipoTransacao === 'venda'
+            ? `lojas/${selectedLoja}/vendas`
+            : `lojas/${selectedLoja}/orcamentos`;
+
+        // Criar objeto com dados da transação
+        const dadosTransacao = {
+            data_criacao: new Date(),
+            cliente: selectedClient ? {
+                id: selectedClient.id,
+                nome: selectedClient.nome,
+                cpf: selectedClient.cpf || '',
+                telefone: selectedClient.telefone || ''
+            } : null,
+            itens: cartItems.map(item => ({
+                id: item.id,
+                nome: item.nome || item.titulo,
+                quantidade: item.quantity,
+                valor_unitario: item.valor,
+                valor_total: item.valor * item.quantity,
+                categoria: item.categoria
+            })),
+            subtotal: calculateSubtotal(),
+            desconto: calculateDiscount(),
+            desconto_tipo: discountType,
+            valor_total: calculateTotal(),
+            observacoes: observation,
+            vendedor: vendedor,
+            status: tipoTransacao === 'venda' ? statusVendaFinal : 'aguardando_aprovacao',
+            metodos_pagamento: tipoTransacao === 'venda' ? paymentMethods : []
+        };
+
+        // Registrar no Firebase
+        const transacaoRef = collection(firestore, colecao);
+        const docRef = await addDoc(transacaoRef, dadosTransacao);
+
+        // Gerar IDs
+        const idGerado = docRef.id;
+
+        // Atualizar estados locais
+        setLocalSaleId(idGerado);
+        if (tipoTransacao === 'venda') {
+            const osIdGenerated = Math.floor(Math.random() * 1000000).toString();
+            setLocalOsId(osIdGenerated);
+            setStatusVendaFinal('paga');
+        } else {
+            // Configurações específicas para orçamento
+            setLocalOsId('');
+            setStatusVendaFinal('orcamento');
+        }
+
+        setLocalSuccess(true);
     };
 
     // Função para selecionar cliente
@@ -235,6 +289,8 @@ const useModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
 
     return {
         // Estados
+        tipoTransacao,
+        setTipoTransacao,
         searchTerm,
         clients,
         filteredClients,

@@ -67,7 +67,7 @@ export default function AddAccountPage() {
       try {
         // Primeiro tenta buscar da coleção configuracoes/financeiro
         const configDoc = await getDoc(doc(firestore, 'configuracoes', 'financeiro'));
-        
+
         if (configDoc.exists()) {
           const taxa = configDoc.data().taxaJurosPadrao || 0;
           console.log('Taxa de juros encontrada:', taxa); // Debug log
@@ -107,7 +107,7 @@ export default function AddAccountPage() {
   // Função para calcular juros
   const calcularJuros = (valor, diasAtraso) => {
     if (formData.dispensarJuros || !taxaJurosPadrao) return 0;
-    
+
     const taxaDiaria = taxaJurosPadrao / 30; // Taxa mensal dividida por 30 dias
     const juros = valor * (taxaDiaria / 100) * diasAtraso;
     return juros;
@@ -119,7 +119,7 @@ export default function AddAccountPage() {
       const dataCobranca = new Date(formData.dataCobranca);
       const hoje = new Date();
       const diasAtraso = Math.max(0, Math.floor((hoje - dataCobranca) / (1000 * 60 * 60 * 24)));
-      
+
       const valorNumerico = parseFloat(
         formData.valor
           .replace(/[^\d,]/g, '')
@@ -379,11 +379,11 @@ export default function AddAccountPage() {
   // Função para buscar os caixas disponíveis
   const fetchCaixas = async () => {
     if (!selectedLoja) return;
-    
+
     try {
       const caixasRef = collection(firestore, `lojas/${selectedLoja}/financeiro/controle_caixa/caixas`);
       const caixasSnapshot = await getDocs(caixasRef);
-      
+
       const caixas = [];
       caixasSnapshot.forEach(doc => {
         caixas.push({
@@ -391,7 +391,7 @@ export default function AddAccountPage() {
           ...doc.data()
         });
       });
-      
+
       setCaixasDisponiveis(caixas);
     } catch (error) {
       console.error("Erro ao buscar caixas:", error);
@@ -447,7 +447,7 @@ export default function AddAccountPage() {
   return (
     <Layout>
       <div className="min-h-screen">
-        <div className="w-full max-w-5xl mx-auto rounded-lg">
+        <div className="w-full max-w-5xl mx-auto rounded-sm">
           <h2 className="text-3xl font-bold text-[#81059e] mb-8 mt-8">CONTAS A RECEBER</h2>
 
           {/* Seletor de Loja para Admins */}
@@ -459,7 +459,7 @@ export default function AddAccountPage() {
               <select
                 value={selectedLoja || ''}
                 onChange={(e) => setSelectedLoja(e.target.value)}
-                className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black mt-1"
+                className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black mt-1"
               >
                 <option value="">Selecione uma loja</option>
                 {userPermissions.lojas.map((loja) => (
@@ -487,7 +487,7 @@ export default function AddAccountPage() {
 
           <form onSubmit={handleSubmit} className="mt-8 mb-20">
             {/* Seção Cliente */}
-            <div className="p-4 bg-gray-50 rounded-lg mb-6 h-64">
+            <div className="p-4 bg-gray-50 rounded-sm mb-6 h-64">
               <h3 className="text-lg font-semibold text-[#81059e] mb-4 flex items-center gap-2">
                 <FiUser /> Informações do Cliente
               </h3>
@@ -502,12 +502,12 @@ export default function AddAccountPage() {
                       setFormData(prev => ({ ...prev, cliente: e.target.value }));
                     }}
                     placeholder="Digite o nome do cliente"
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
                     required
                   />
                   {searchTerm && consumers.length > 0 && (
                     <div className="absolute w-full z-10">
-                      <ul className="bg-white border-2 border-[#81059e] rounded-lg w-full max-h-[104px] overflow-y-auto shadow-lg custom-scroll">
+                      <ul className="bg-white border-2 border-[#81059e] rounded-sm w-full max-h-[104px] overflow-y-auto shadow-lg custom-scroll">
                         {consumers.map((consumer) => (
                           <li
                             key={consumer.id}
@@ -530,14 +530,14 @@ export default function AddAccountPage() {
                     type="text"
                     value={formData.cpf ? formatCPF(formData.cpf) : ''}
                     readOnly
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full bg-gray-100 text-black"
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full bg-gray-100 text-black"
                   />
                 </div>
               </div>
             </div>
 
             {/* Seção Documento */}
-            <div className="p-4 bg-gray-50 rounded-lg mb-6">
+            <div className="p-4 bg-gray-50 rounded-sm mb-6">
               <h3 className="text-lg font-semibold text-[#81059e] mb-4 flex items-center gap-2">
                 <FiFileText /> Informações do Documento
               </h3>
@@ -549,7 +549,7 @@ export default function AddAccountPage() {
                     name="numeroDocumento"
                     value={formData.numeroDocumento}
                     onChange={handleInputChange}
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
                   />
                 </div>
                 <div>
@@ -559,7 +559,7 @@ export default function AddAccountPage() {
                     name="origem"
                     value={formData.origem}
                     onChange={handleInputChange}
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
                   />
                 </div>
                 <div>
@@ -568,7 +568,7 @@ export default function AddAccountPage() {
                     name="tipoCobranca"
                     value={formData.tipoCobranca}
                     onChange={handleInputChange}
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
                   >
                     <option value="">Selecione</option>
                     <option value="boleto">Boleto</option>
@@ -582,7 +582,7 @@ export default function AddAccountPage() {
             </div>
 
             {/* Seção Recebimento */}
-            <div className=" p-4 bg-gray-50 rounded-lg mb-6">
+            <div className=" p-4 bg-gray-50 rounded-sm mb-6">
               <h3 className="text-lg font-semibold text-[#81059e] mb-4 flex items-center gap-2">
                 <FiDollarSign /> Informações de Recebimento
               </h3>
@@ -595,7 +595,7 @@ export default function AddAccountPage() {
                     value={formData.valor}
                     onChange={handleValorChange}
                     placeholder="R$ 0,00"
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
                     required
                   />
                 </div>
@@ -610,7 +610,7 @@ export default function AddAccountPage() {
                       setNumeroParcelas(e.target.value);
                       setFormData(prev => ({ ...prev, totalParcelas: e.target.value }));
                     }}
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
                   >
                     <option value="1">1</option>
                     <option value="2">2</option>
@@ -643,7 +643,7 @@ export default function AddAccountPage() {
                         dataCobranca: selectedDate,
                       }));
                     }}
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
                   />
                 </div>
                 <div>
@@ -652,7 +652,7 @@ export default function AddAccountPage() {
                     type="text"
                     value={taxaJuros}
                     readOnly
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full bg-gray-100 text-black"
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full bg-gray-100 text-black"
                   />
                   <p className="text-xs text-gray-500 mt-1">Taxa de juros padrão do sistema: {taxaJuros}%</p>
                 </div>
@@ -663,7 +663,7 @@ export default function AddAccountPage() {
                     name="localCobranca"
                     value={formData.localCobranca}
                     onChange={handleInputChange}
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
                   />
                 </div>
                 <div className="flex items-center">
@@ -683,7 +683,7 @@ export default function AddAccountPage() {
             </div>
 
             {/* Seção Contabilidade */}
-            <div className="p-4 bg-gray-50 rounded-lg mb-6">
+            <div className="p-4 bg-gray-50 rounded-sm mb-6">
               <h3 className="text-lg font-semibold text-[#81059e] mb-4 flex items-center gap-2">
                 <FiTrendingUp /> Informações Contábeis
               </h3>
@@ -694,7 +694,7 @@ export default function AddAccountPage() {
                     name="contaLancamentoCaixa"
                     value={formData.contaLancamentoCaixa}
                     onChange={handleInputChange}
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
                   >
                     <option value="">Selecione um caixa</option>
                     {caixasDisponiveis.map(caixa => (
@@ -718,7 +718,7 @@ export default function AddAccountPage() {
                           setFormData(prev => ({ ...prev, categoriaReceita: e.target.value }));
                         }
                       }}
-                      className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                      className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
                     >
                       <option value="">Selecione</option>
                       {categoriasReceita.map((categoria) => (
@@ -728,7 +728,7 @@ export default function AddAccountPage() {
                       ))}
                       <option value="add_new">+ ADICIONAR NOVA CATEGORIA</option>
                     </select>
-                    
+
                     {formData.categoriaReceita && (
                       <button
                         type="button"
@@ -738,17 +738,17 @@ export default function AddAccountPage() {
                               const path = `lojas/${selectedLoja}/financeiro/configuracoes/categorias_receita`;
                               const docId = formData.categoriaReceita.toLowerCase().replace(/\s+/g, '_');
                               const docRef = doc(firestore, path, docId);
-                              
+
                               await deleteDoc(docRef);
-                              
+
                               // Atualizar a lista de categorias
                               setCategoriasReceita(categoriasReceita.filter(
                                 cat => cat !== formData.categoriaReceita
                               ));
-                              
+
                               // Limpar a seleção atual
                               setFormData(prev => ({ ...prev, categoriaReceita: '' }));
-                              
+
                               alert(`Categoria ${formData.categoriaReceita} removida com sucesso!`);
                             } catch (error) {
                               console.error("Erro ao remover categoria:", error);
@@ -756,21 +756,21 @@ export default function AddAccountPage() {
                             }
                           }
                         }}
-                        className="ml-2 bg-red-50 border-2 border-red-400 text-red-600 p-2 rounded-lg flex items-center justify-center"
+                        className="ml-2 bg-red-50 border-2 border-red-400 text-red-600 p-2 rounded-sm flex items-center justify-center"
                         title="Remover categoria"
                       >
                         <FiTrash2 />
                       </button>
                     )}
-                    
+
                     {showAddCategoriaInput && (
-                      <div className="absolute z-10 top-full left-0 w-full mt-1 bg-white border-2 border-[#81059e] p-3 rounded-lg shadow-lg">
+                      <div className="absolute z-10 top-full left-0 w-full mt-1 bg-white border-2 border-[#81059e] p-3 rounded-sm shadow-lg">
                         <div className="flex items-center gap-2">
                           <input
                             type="text"
                             value={newCategoria}
                             onChange={(e) => setNewCategoria(e.target.value)}
-                            className="border-2 border-[#81059e] p-2 rounded-lg w-full"
+                            className="border-2 border-[#81059e] p-2 rounded-sm w-full"
                             placeholder="Digite a nova categoria"
                           />
                           <button
@@ -783,7 +783,7 @@ export default function AddAccountPage() {
                                 setShowAddCategoriaInput(false);
                               }
                             }}
-                            className="bg-[#81059e] text-white p-2 rounded-lg"
+                            className="bg-[#81059e] text-white p-2 rounded-sm"
                           >
                             <FiPlus />
                           </button>
@@ -793,7 +793,7 @@ export default function AddAccountPage() {
                               setNewCategoria("");
                               setShowAddCategoriaInput(false);
                             }}
-                            className="border-2 border-[#81059e] text-[#81059e] p-2 rounded-lg"
+                            className="border-2 border-[#81059e] text-[#81059e] p-2 rounded-sm"
                           >
                             <FiX />
                           </button>
@@ -806,7 +806,7 @@ export default function AddAccountPage() {
             </div>
 
             {/* Seção Observações */}
-            <div className="p-4 bg-gray-50 rounded-lg mb-6">
+            <div className="p-4 bg-gray-50 rounded-sm mb-6">
               <h3 className="text-lg font-semibold text-[#81059e] mb-4 flex items-center gap-2">
                 <FiFileText /> Observações
               </h3>
@@ -815,7 +815,7 @@ export default function AddAccountPage() {
                   name="observacoes"
                   value={formData.observacoes}
                   onChange={handleInputChange}
-                  className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black min-h-[120px]"
+                  className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black min-h-[120px]"
                   placeholder="Adicione observações relevantes..."
                 ></textarea>
               </div>
@@ -823,7 +823,7 @@ export default function AddAccountPage() {
 
             {/* Botões de ação */}
             <div className="flex justify-center gap-6 mt-8">
-              
+
               <button
                 type="button"
                 onClick={handleClear}

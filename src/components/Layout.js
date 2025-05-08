@@ -101,7 +101,7 @@ const Layout = ({ children }) => {
 
                     <div className="flex-1 relative">
                         <main className={`
-                                lg:absolute lg:inset-0 lg:overflow-auto lg:bg-white lg:rounded-[25px] 
+                                lg:absolute lg:inset-0 lg:overflow-auto lg:bg-white lg:rounded-sm
                                 lg:p-6 lg:m-10 lg:ml-14 lg:mt-20 overflow-y-auto custom-scroll
                                 p-4 bg-white min-h-screen pb-10
                             `}>

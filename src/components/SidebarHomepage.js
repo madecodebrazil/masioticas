@@ -149,8 +149,7 @@ export default function SidebarHomepage({ userPhotoURL, userData, userPermission
                         alt="Logo Masi Eyewear"
                         width={120}
                         height={60}
-                        className="mb-6 cursor-pointer transition-all duration-300 hover:drop-shadow-[0_0_10px_rgba(255,255,0,0.8)]"
-                        style={{ width: 'auto', height: 'auto' }}
+                        className="mb-6 cursor-pointer transition-all duration-300 hover:drop-shadow-[0_0_10px_rgba(255,255,0,0.8)] max-w-[120px] max-h-[60px] object-contain"
                     />
                 </Link>
 

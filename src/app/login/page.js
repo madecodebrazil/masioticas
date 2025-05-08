@@ -97,7 +97,7 @@ export default function Login() {
             {!isMobile && (
                 <div className="w-1/2 h-full relative flex justify-start items-start z-10">
                     <div className='flex items-start'>
-                        <img src="/images/masioticaslogo.png " alt="Logo" className="h-52" />
+                        <img src="/images/masioticaslogo.png" alt="Logo" className="max-h-20 w-auto" />
                     </div>
                 </div>
             )}
@@ -170,7 +170,7 @@ export default function Login() {
                 {/* Div para o mobile em cima do formulário */}
                 {isMobile && (
                     <div className="absolute top-0 w-full h-[110px] flex justify-center items-center z-20">
-                        <img src="/images/masioticaslogo.png " alt="Logo" className="logo h-52 pt-4" />
+                        <img src="/images/masioticaslogo.png" alt="Logo" className="logo max-h-20 w-auto pt-4" />
                     </div>
                 )}
             </div>

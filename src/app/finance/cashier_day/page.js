@@ -9,8 +9,6 @@ import CaixasModal from '@/components/CaixasModal';
 import { useCaixas } from '@/hooks/useCaixas';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faX } from '@fortawesome/free-solid-svg-icons';
-import DatePicker from 'react-datepicker';
-import "react-datepicker/dist/react-datepicker.css";
 import { FiCalendar, FiDollarSign, FiArrowUp, FiArrowDown, FiPrinter, FiRefreshCw, FiHome, FiFilter, FiTrash2, FiCodepen, FiEdit, FiEdit2, FiEdit3 } from 'react-icons/fi';
 
 export default function ControleCaixa() {
@@ -560,7 +558,7 @@ export default function ControleCaixa() {
               <select
                 value={selectedLoja || ''}
                 onChange={(e) => setSelectedLoja(e.target.value)}
-                className="border-2 border-[#81059e] p-2 rounded-lg w-full md:w-1/3 text-black"
+                className="border-2 border-[#81059e] p-2 rounded-sm w-full md:w-1/3 text-black"
               >
                 <option value="">Selecione uma loja</option>
                 {userPermissions.lojas.map((loja) => (
@@ -620,30 +618,30 @@ export default function ControleCaixa() {
           {/* Barra de filtros (compacta) */}
           <div className="flex flex-wrap gap-2 mb-4">
             <div className="flex flex-grow flex-wrap md:flex-nowrap gap-2">
-              <div className="flex items-center space-x-1 h-10 border rounded-lg px-2 bg-white flex-grow md:flex-grow-0">
+              <div className="flex items-center space-x-1 h-10 border-2 rounded-sm px-2 bg-white flex-grow md:flex-grow-0">
                 <FiCalendar className="text-[#81059e]" />
-                <DatePicker
-                  selected={dataInicio}
-                  onChange={setDataInicio}
-                  dateFormat="dd/MM/yyyy"
-                  className="border-0 p-1 w-24 text-black text-sm"
+                <input
+                  type="date"
+                  value={dataInicio instanceof Date ? dataInicio.toISOString().substring(0, 10) : dataInicio}
+                  onChange={e => setDataInicio(new Date(e.target.value))}
+                  className="border-0 p-1 w-32 text-black text-sm bg-transparent"
                 />
               </div>
 
-              <div className="flex items-center space-x-1 h-10 border rounded-lg px-2 bg-white flex-grow md:flex-grow-0">
+              <div className="flex items-center space-x-1 h-10 border-2 rounded-sm px-2 bg-white flex-grow md:flex-grow-0">
                 <FiCalendar className="text-[#81059e]" />
-                <DatePicker
-                  selected={dataFim}
-                  onChange={setDataFim}
-                  dateFormat="dd/MM/yyyy"
-                  className="border-0 p-1 w-24 text-black text-sm"
+                <input
+                  type="date"
+                  value={dataFim instanceof Date ? dataFim.toISOString().substring(0, 10) : dataFim}
+                  onChange={e => setDataFim(new Date(e.target.value))}
+                  className="border-0 p-1 w-32 text-black text-sm bg-transparent"
                 />
               </div>
 
               <select
                 value={filtroTipo}
                 onChange={(e) => setFiltroTipo(e.target.value)}
-                className="h-10 border rounded-lg px-2 text-black text-sm bg-white"
+                className="h-10 border-2 rounded-sm px-2 text-black text-sm bg-white"
               >
                 <option value="todos">Todos</option>
                 <option value="entrada">Entradas</option>
@@ -914,11 +912,13 @@ export default function ControleCaixa() {
                 {/* Data */}
                 <div className="mb-3">
                   <label className="block text-[#81059e] font-medium mb-1">Data</label>
-                  <DatePicker
-                    selected={formData.data}
-                    onChange={handleDataChange}
-                    dateFormat="dd/MM/yyyy"
+                  <input
+                    type="date"
+                    name="data"
+                    value={formData.data instanceof Date ? formData.data.toISOString().substring(0, 10) : formData.data}
+                    onChange={e => handleDataChange(new Date(e.target.value))}
                     className="w-full border-2 border-[#81059e] rounded-sm p-2 text-black"
+                    required
                   />
                 </div>
 
@@ -1122,14 +1122,15 @@ export default function ControleCaixa() {
                 {/* Data */}
                 <div>
                   <label className="block text-[#81059e] font-medium">Data:</label>
-                  <DatePicker
-                    selected={editingMovimentacao.data}
-                    onChange={(date) => setEditingMovimentacao({
+                  <input
+                    type="date"
+                    value={editingMovimentacao.data instanceof Date ? editingMovimentacao.data.toISOString().substring(0, 10) : editingMovimentacao.data}
+                    onChange={e => setEditingMovimentacao({
                       ...editingMovimentacao,
-                      data: date
+                      data: new Date(e.target.value)
                     })}
-                    dateFormat="dd/MM/yyyy"
                     className="w-full p-2 border-2 border-[#81059e] rounded-sm"
+                    required
                   />
                 </div>
 

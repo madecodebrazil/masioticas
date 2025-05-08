@@ -6,7 +6,6 @@ import Image from "next/image";
 import Layout from "@/components/Layout";
 import { motion } from "framer-motion";
 import ModalNovaVenda from "@/components/ModalNovaVenda";
-import ModalNovoOrcamento from "@/components/ModalNovoOrcamento";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function SalesPage() {
@@ -64,11 +63,6 @@ export default function SalesPage() {
       icon: "/images/financeiro/vendas.png",
       label: "Nova Venda",
       action: handleOpenVendaModal
-    },
-    {
-      icon: "/images/financeiro/receber.png",
-      label: "Novo orçamento",
-      action: handleOpenOrcamentoModal
     },
     {
       icon: "/images/financeiro/receber.png",
