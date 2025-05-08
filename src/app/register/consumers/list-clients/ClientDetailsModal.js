@@ -35,44 +35,47 @@ const ClientDetailsModal = ({ client, onClose }) => {
     const [dependentesImageUrls, setDependentesImageUrls] = useState({});
 
     // Função para buscar dados do titular e dependentes
-    const fetchFamilyData = async (client) => {
-        try {
-            // Resetar dados anteriores
-            setTitularData(null);
-            setDependentesData([]);
-
-            // Se for dependente, buscar dados do titular
-            if (client.dependentesDe) {
-                const titularRef = doc(firestore, 'lojas/clientes/users', client.dependentesDe);
-                const titularDoc = await getDoc(titularRef);
-
-                if (titularDoc.exists()) {
-                    setTitularData({
-                        id: titularDoc.id,
-                        ...titularDoc.data()
-                    });
-                }
-            }
-            // Se for titular com dependentes, buscar dependentes
-            else if (client.temDependentes) {
-                const dependentesRef = collection(firestore, 'lojas/clientes/users');
-                const q = query(dependentesRef, where('dependentesDe', '==', client.id));
-                const querySnapshot = await getDocs(q);
-
-                const dependentes = [];
-                querySnapshot.forEach((doc) => {
-                    dependentes.push({
-                        id: doc.id,
-                        ...doc.data()
-                    });
-                });
-
-                setDependentesData(dependentes);
-            }
-        } catch (error) {
-            console.error('Erro ao buscar dados familiares:', error);
+    // Função para buscar dados do titular e dependentes
+const fetchFamilyData = async (client) => {
+    try {
+      // Resetar dados anteriores
+      setTitularData(null);
+      setDependentesData([]);
+  
+      // Se for dependente, buscar dados do titular
+      if (client.dependentesDe) {
+        // Caminho corrigido para a coleção de clientes
+        const titularRef = doc(firestore, 'lojas/clientes/users', client.dependentesDe);
+        const titularDoc = await getDoc(titularRef);
+  
+        if (titularDoc.exists()) {
+          setTitularData({
+            id: titularDoc.id,
+            ...titularDoc.data()
+          });
         }
-    };
+      }
+      // Se for titular com dependentes, buscar dependentes
+      else if (client.temDependentes) {
+        // Caminho corrigido para a coleção de clientes
+        const dependentesRef = collection(firestore, 'lojas/clientes/users');
+        const q = query(dependentesRef, where('dependentesDe', '==', client.id));
+        const querySnapshot = await getDocs(q);
+  
+        const dependentes = [];
+        querySnapshot.forEach((doc) => {
+          dependentes.push({
+            id: doc.id,
+            ...doc.data()
+          });
+        });
+  
+        setDependentesData(dependentes);
+      }
+    } catch (error) {
+      console.error('Erro ao buscar dados familiares:', error);
+    }
+  };
 
     // Função para obter URL da imagem
     const getImageUrl = async (cpf) => {

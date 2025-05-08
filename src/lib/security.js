@@ -20,15 +20,24 @@ const securityConfig = {
         max: 100, // limite de 100 requisições por IP
     },
 
-    'Content-Security-Policy': [
-        "default-src 'self';",
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval';",
-        "style-src 'self' 'unsafe-inline' fonts.googleapis.com;",
-        "font-src 'self' fonts.gstatic.com data:;",
-        "img-src 'self' data: blob: https: http: *;",  // Alterado para permitir todas as fontes de imagens
-        "connect-src 'self' https://identitytoolkit.googleapis.com https://firebasestorage.googleapis.com https://firestore.googleapis.com https://*.googleapis.com https://firebase.googleapis.com https://*.firebaseio.com https://viacep.com.br;",
-        "frame-src 'self';",
-    ].join(' '),
+    // Headers de segurança para Next.js
+    securityHeaders: {
+        'X-DNS-Prefetch-Control': 'on',
+        'Strict-Transport-Security': 'max-age=63072000; includeSubDomains; preload',
+        'X-XSS-Protection': '1; mode=block',
+        'X-Frame-Options': 'DENY',
+        'X-Content-Type-Options': 'nosniff',
+        'Referrer-Policy': 'origin-when-cross-origin',
+        'Content-Security-Policy': [
+            "default-src 'self';",
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval';",
+            "style-src 'self' 'unsafe-inline' fonts.googleapis.com;",
+            "font-src 'self' fonts.gstatic.com data:;",
+            "img-src 'self' data: blob: https: http: *;",  // Permite todas as fontes de imagens
+            "connect-src 'self' https://identitytoolkit.googleapis.com https://firebasestorage.googleapis.com https://firestore.googleapis.com https://*.googleapis.com https://firebase.googleapis.com https://*.firebaseio.com https://viacep.com.br;",
+            "frame-src 'self';"
+        ].join(' ')
+    }
 };
 
 // Função para validar senha

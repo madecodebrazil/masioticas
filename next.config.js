@@ -15,6 +15,26 @@ const nextConfig = {
         ],
     },
     async headers() {
+        // Verificar se securityConfig e securityHeaders existem antes de usar Object.entries
+        if (!securityConfig || !securityConfig.securityHeaders) {
+            console.warn('Aviso: securityConfig ou securityHeaders está indefinido.');
+            return [
+                {
+                    source: '/:path*',
+                    headers: [
+                        {
+                            key: 'X-Frame-Options',
+                            value: 'DENY',
+                        },
+                        {
+                            key: 'X-Content-Type-Options',
+                            value: 'nosniff',
+                        }
+                    ],
+                },
+            ];
+        }
+        
         return [
             {
                 source: '/:path*',

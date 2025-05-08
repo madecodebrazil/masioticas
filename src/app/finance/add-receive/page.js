@@ -8,9 +8,9 @@ import { useAuth } from "@/hooks/useAuth";
 import InputMask from "react-input-mask";
 import "react-datepicker/dist/react-datepicker.css";
 import Layout from "../../../components/Layout";
-import ConfirmationModal from '../../../components/ConfirmationModal.js';
+import ConfirmationModal from '../components/ConfirmationModal.js';
 import Link from 'next/link';
-import { FiCalendar, FiDollarSign, FiTag, FiFileText, FiUser, FiCreditCard, FiMapPin, FiLayers, FiTrendingUp, FiHome, FiPlus, FiX, FiTrash2 } from 'react-icons/fi';
+import { FiCalendar, FiDollarSign, FiTag, FiFileText, FiUser, FiCreditCard, FiMapPin, FiLayers, FiTrendingUp, FiHome, FiPlus, FiX, FiTrash2, FiSearch } from 'react-icons/fi';
 
 export default function AddAccountPage() {
   const { userPermissions, userData } = useAuth();
@@ -493,35 +493,58 @@ export default function AddAccountPage() {
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="relative">
-                  <label className="text-[#81059e] font-medium">Nome do Cliente</label>
-                  <input
-                    type="text"
-                    value={searchTerm}
-                    onChange={(e) => {
-                      setSearchTerm(e.target.value);
-                      setFormData(prev => ({ ...prev, cliente: e.target.value }));
-                    }}
-                    placeholder="Digite o nome do cliente"
-                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
-                    required
-                  />
+                  <div className="flex items-center border-2 border-[#81059e] rounded-lg">
+                    <span className="pl-3 text-[#81059e]">
+                      <FiSearch size={16} />
+                    </span>
+                    <input
+                      type="text"
+                      value={searchTerm}
+                      onChange={(e) => {
+                        setSearchTerm(e.target.value);
+                        setFormData(prev => ({ ...prev, cliente: e.target.value }));
+                      }}
+                      placeholder="Digite nome ou CPF do cliente"
+                      className="p-3 w-full text-black outline-none"
+                      required
+                    />
+                    {isLoading && searchTerm && (
+                      <div className="pr-3">
+                        <div className="animate-spin h-4 w-4 border-2 border-[#81059e] rounded-full border-t-transparent"></div>
+                      </div>
+                    )}
+                  </div>
                   {searchTerm && consumers.length > 0 && (
                     <div className="absolute w-full z-10">
                       <ul className="bg-white border-2 border-[#81059e] rounded-sm w-full max-h-[104px] overflow-y-auto shadow-lg custom-scroll">
                         {consumers.map((consumer) => (
                           <li
                             key={consumer.id}
-                            onClick={() => handleClienteSelect(consumer)}
+                            onClick={() => {
+                              setFormData(prev => ({
+                                ...prev,
+                                cliente: consumer.nome,
+                                cpf: consumer.cpf
+                              }));
+                              setSearchTerm(consumer.nome);
+                              setConsumers([]);
+                            }}
                             className="p-2 hover:bg-purple-50 cursor-pointer text-black border-b last:border-b-0 h-[52px] flex items-center"
                           >
-                            {consumer.nome} (CPF: {formatCPF(consumer.cpf)})
+                            {consumer.nome} {consumer.cpf && (
+                              <span className="ml-2 text-xs text-gray-500">(CPF: {formatCPF(consumer.cpf)})</span>
+                            )}
                           </li>
                         ))}
                       </ul>
                     </div>
                   )}
-                  {isLoading && searchTerm && (
-                    <p className="text-sm text-gray-500 mt-1">Buscando clientes...</p>
+                  {searchTerm && consumers.length === 0 && !isLoading && (
+                    <div className="absolute w-full z-10">
+                      <div className="bg-white border-2 border-[#81059e] rounded-sm w-full p-2 text-gray-500">
+                        Nenhum cliente encontrado
+                      </div>
+                    </div>
                   )}
                 </div>
                 <div>

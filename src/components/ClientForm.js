@@ -40,10 +40,6 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
     const [error, setError] = useState('');
     const [fetchingCep, setFetchingCep] = useState(false);
     const [isTitular, setIsTitular] = useState(true);
-    const [selectedTitular, setSelectedTitular] = useState('');
-    const [searchQuery, setSearchQuery] = useState('');
-    const [searchResults, setSearchResults] = useState([]);
-    const [isSearching, setIsSearching] = useState(false);
     const [parentescoOptions] = useState([
         'Cônjuge',
         'Filho(a)',
@@ -55,7 +51,87 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
         'Outro'
     ]);
 
-    const [searchTitulares] = useState(null);
+    // Novas variáveis para busca de cliente (baseado no add-receive)
+    const [searchTerm, setSearchTerm] = useState('');
+    const [consumers, setConsumers] = useState([]);
+    const [isSearching, setIsSearching] = useState(false);
+    const [selectedTitular, setSelectedTitular] = useState('');
+
+    // Função para buscar clientes - baseado no add-receive
+    const fetchConsumers = async () => {
+        if (searchTerm.trim() === "" || !selectedLoja) {
+            setConsumers([]);
+            return;
+        }
+
+        setIsSearching(true);
+        try {
+            // O caminho deve ser o mesmo utilizado no ClientForm
+            const clientesRef = collection(firestore, 'lojas/clientes/users');
+            const querySnapshot = await getDocs(
+                query(clientesRef,
+                    where('nome', '>=', searchTerm),
+                    where('nome', '<=', searchTerm + '\uf8ff')
+                )
+            );
+
+            // Se não encontrar por nome, tenta por CPF
+            let clientesData = querySnapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
+
+            // Se não encontrou por nome, tente por CPF
+            if (clientesData.length === 0 && searchTerm.replace(/\D/g, '').length > 0) {
+                const cpfQuerySnapshot = await getDocs(
+                    query(clientesRef, where('cpf', '==', searchTerm.replace(/\D/g, '')))
+                );
+
+                clientesData = cpfQuerySnapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+            }
+
+            setConsumers(clientesData);
+        } catch (error) {
+            console.error("Erro ao buscar clientes:", error);
+
+            // Plano B: Tentar buscar na coleção 'clientes' global se existir
+            try {
+                const clientesGlobalRef = collection(firestore, 'clientes');
+                const globalQuerySnapshot = await getDocs(
+                    query(clientesGlobalRef,
+                        where('nome', '>=', searchTerm),
+                        where('nome', '<=', searchTerm + '\uf8ff')
+                    )
+                );
+
+                const clientesData = globalQuerySnapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+
+                setConsumers(clientesData);
+            } catch (fallbackError) {
+                console.error("Erro ao buscar no plano B:", fallbackError);
+                setConsumers([]);
+            }
+        } finally {
+            setIsSearching(false);
+        }
+    };
+
+    // Função para formatar CPF: 00000000000 -> 000.000.000-00
+    const formatCPF = (cpf) => {
+        if (!cpf) return '';
+
+        // Remove caracteres não numéricos
+        cpf = cpf.replace(/\D/g, '');
+
+        // Aplica a máscara
+        return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+    };
 
     // Adicionar função de debounce
     const debounce = (func, wait) => {
@@ -70,8 +146,21 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
         };
     };
 
-    // Versão corrigida da função fetchAddressByCep
+    // Versão com debounce da função de busca
+    const debouncedSearch = debounce(() => {
+        fetchConsumers();
+    }, 300);
 
+    // Efeito para buscar clientes quando o termo de busca mudar
+    useEffect(() => {
+        if (searchTerm.length >= 3) {
+            debouncedSearch();
+        } else {
+            setConsumers([]);
+        }
+    }, [searchTerm, selectedLoja]);
+
+    // Versão corrigida da função fetchAddressByCep
     const fetchAddressByCep = async (cep) => {
         // Limpa o CEP de qualquer caractere não numérico
         const cleanCep = cep.replace(/\D/g, '');
@@ -207,36 +296,16 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
         input.click();
     };
 
-    // Função para buscar titulares
-    {/* Resultados da busca com console.log para depuração */ }
-    { console.log("searchResults:", searchResults) }
-    {
-        searchResults.length > 0 && (
-            <div className="absolute z-50 left-0 right-0 bg-white shadow-lg border-2 border-[#81059e] rounded-lg mt-1 max-h-64 overflow-y-auto">
-                {searchResults.map((titular) => (
-                    <div
-                        key={titular.id}
-                        className="p-3 hover:bg-purple-100 cursor-pointer border-b border-gray-200 last:border-b-0"
-                        onClick={() => handleSelectTitular(titular)}
-                    >
-                        <div className="font-medium">{titular.nome}</div>
-                        <div className="text-sm text-gray-600">
-                            {titular.cpf ? `CPF: ${titular.cpf}` : ''}
-                        </div>
-                    </div>
-                ))}
-            </div>
-        )
-    }
-
-    // Versão com debounce da função de busca
-    const debouncedSearch = debounce(searchTitulares, 300);
-
-    // Função para selecionar um titular dos resultados da busca
-    const handleSelectTitular = (titular) => {
-        setSelectedTitular(titular.id);
-        setSearchQuery(titular.nome);
-        setSearchResults([]); // Limpa os resultados após selecionar
+    // Função para selecionar um cliente dos resultados da busca
+    const handleSelectCliente = (cliente) => {
+        setSelectedTitular(cliente.id);
+        setSearchTerm(cliente.nome);
+        setFormData(prev => ({
+            ...prev,
+            dependentesDe: cliente.id,
+            parentesco: prev.parentesco
+        }));
+        setConsumers([]); // Limpa os resultados após selecionar
     };
 
     const uploadImage = async (cpf) => {
@@ -449,7 +518,7 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
                 setComprovantePreview(null);
                 setIsTitular(true);
                 setSelectedTitular('');
-                setSearchQuery('');
+                setSearchTerm('');
 
                 setTimeout(() => {
                     setShowSuccessPopup(false);
@@ -558,11 +627,8 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
                                         </span>
                                         <input
                                             type="text"
-                                            value={searchQuery}
-                                            onChange={(e) => {
-                                                setSearchQuery(e.target.value);
-                                                debouncedSearch(e.target.value);
-                                            }}
+                                            value={searchTerm}
+                                            onChange={(e) => setSearchTerm(e.target.value)}
                                             placeholder="Digite nome ou CPF do titular"
                                             className="p-3 w-full text-black outline-none"
                                             required={!isTitular}
@@ -575,30 +641,29 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
                                     </div>
 
                                     {/* Resultados da busca */}
-                                    {searchResults.length > 0 && (
-                                        <div className="absolute z-40 w-full bg-white shadow-lg rounded-lg border-2 border-[#81059e] mt-1 max-h-64 overflow-y-auto">
-                                            {searchResults.map((titular) => (
+                                    {!isTitular && consumers.length > 0 && (
+                                        <div className="absolute z-50 w-full bg-white shadow-lg border-2 border-[#81059e] rounded-lg mt-1 max-h-64 overflow-y-auto">
+                                            {consumers.map((cliente) => (
                                                 <div
-                                                    key={titular.id}
+                                                    key={cliente.id}
                                                     className="p-3 hover:bg-purple-100 cursor-pointer border-b border-gray-200 last:border-b-0"
-                                                    onClick={() => handleSelectTitular(titular)}
+                                                    onClick={() => handleSelectCliente(cliente)}
                                                 >
-                                                    <div className="font-medium">{titular.nome}</div>
+                                                    <div className="font-medium">{cliente.nome}</div>
                                                     <div className="text-sm text-gray-600">
-                                                        {titular.cpf ? `CPF: ${titular.cpf}` : ''}
+                                                        {cliente.cpf ? `CPF: ${formatCPF(cliente.cpf)}` : ''}
                                                     </div>
                                                 </div>
                                             ))}
                                         </div>
                                     )}
 
-                                    {searchQuery && searchQuery.length >= 3 && searchResults.length === 0 && !isSearching && (
+                                    {searchTerm && searchTerm.length >= 3 && consumers.length === 0 && !isSearching && (
                                         <div className="absolute z-40 w-full mt-1 bg-white shadow-lg rounded-lg border-2 border-[#81059e] p-3">
                                             <p className="text-gray-500">Nenhum cliente titular encontrado</p>
                                         </div>
                                     )}
                                 </div>
-
 
                                 {/* Mostrar o titular selecionado */}
                                 {selectedTitular && (
@@ -608,7 +673,11 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
                                             type="button"
                                             onClick={() => {
                                                 setSelectedTitular('');
-                                                setSearchQuery('');
+                                                setSearchTerm('');
+                                                setFormData(prev => ({
+                                                    ...prev,
+                                                    dependentesDe: null
+                                                }));
                                             }}
                                             className="text-red-500 hover:text-red-700"
                                         >

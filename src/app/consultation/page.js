@@ -31,6 +31,7 @@ export default function ProductsPage() {
   const productsItems = [
     { icon: '/images/consultas/prancheta.png', label: 'Consultas', route: 'consultation/medical-consultation' },
     { icon: '/images/consultas/agenda.png', label: 'Agenda', route: 'consultation/agenda' },
+    { icon: '/images/consultas/agenda.png', label: 'Receitas', route: 'consultation/receitas' },
     { icon: '/images/cadastro/Heart.Monitor.png', label: 'Pacientes', route: '/consultation/medical-consultation/list-consultation' },
     { icon: '/images/cadastro/Ophthalmology.png', label: 'Oftalmologista', route: '/consultation/ophthalmologist' },
     { icon: '/images/cadastro/Glasses.png', label: 'Optometrista', route: '/consultation/optometrist' },
