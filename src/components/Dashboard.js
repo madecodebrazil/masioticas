@@ -39,7 +39,7 @@ export default function Dashboard() {
       {/* Header Section */}
       <div className='bg-gradient-to-b from-[#81059e]/90 to-[#81059e]/70 rounded-none md:rounded-xl shadow-lg p-6'>
       <div className="flex items-center justify-between">
-        <h1 className="p-2 text-3xl pb-4 font-semibold text-white">Seus Insights</h1>
+        <h1 className="p-2 text-3xl pb-4 font-semibold text-white">Seusp</h1>
         <div className="text-sm text-gray-100">
           {new Date().toLocaleDateString('pt-BR', { 
             weekday: 'long', 

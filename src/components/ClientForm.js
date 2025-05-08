@@ -55,6 +55,8 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
         'Outro'
     ]);
 
+    const [searchTitulares] = useState(null);
+
     // Adicionar função de debounce
     const debounce = (func, wait) => {
         let timeout;
@@ -68,47 +70,47 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
         };
     };
 
-   // Versão corrigida da função fetchAddressByCep
+    // Versão corrigida da função fetchAddressByCep
 
-const fetchAddressByCep = async (cep) => {
-    // Limpa o CEP de qualquer caractere não numérico
-    const cleanCep = cep.replace(/\D/g, '');
+    const fetchAddressByCep = async (cep) => {
+        // Limpa o CEP de qualquer caractere não numérico
+        const cleanCep = cep.replace(/\D/g, '');
 
-    // Valida se tem 8 dígitos
-    if (!cleanCep || cleanCep.length !== 8) return;
+        // Valida se tem 8 dígitos
+        if (!cleanCep || cleanCep.length !== 8) return;
 
-    setFetchingCep(true);
-    setError(''); // Limpa erros anteriores
+        setFetchingCep(true);
+        setError(''); // Limpa erros anteriores
 
-    try {
-        // Usando diretamente a API pública ViaCEP em vez da API interna
-        const response = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
-        const data = await response.json();
+        try {
+            // Usando diretamente a API pública ViaCEP em vez da API interna
+            const response = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
+            const data = await response.json();
 
-        // Verificação se o CEP existe na base de dados da ViaCEP
-        if (!data.erro) {
-            setFormData(prev => ({
-                ...prev,
-                endereco: {
-                    ...prev.endereco,
-                    cep: cep, // Mantém o formato com máscara
-                    logradouro: data.logradouro || '',
-                    bairro: data.bairro || '',
-                    cidade: data.localidade || '',
-                    estado: data.uf || ''
-                }
-            }));
-        } else {
-            console.error('CEP não encontrado ou inválido');
-            setError('CEP não encontrado. Verifique se o número está correto.');
+            // Verificação se o CEP existe na base de dados da ViaCEP
+            if (!data.erro) {
+                setFormData(prev => ({
+                    ...prev,
+                    endereco: {
+                        ...prev.endereco,
+                        cep: cep, // Mantém o formato com máscara
+                        logradouro: data.logradouro || '',
+                        bairro: data.bairro || '',
+                        cidade: data.localidade || '',
+                        estado: data.uf || ''
+                    }
+                }));
+            } else {
+                console.error('CEP não encontrado ou inválido');
+                setError('CEP não encontrado. Verifique se o número está correto.');
+            }
+        } catch (error) {
+            console.error('Erro ao buscar CEP:', error);
+            setError(`Erro ao buscar CEP: ${error.message || 'Tente novamente mais tarde.'}`);
+        } finally {
+            setFetchingCep(false);
         }
-    } catch (error) {
-        console.error('Erro ao buscar CEP:', error);
-        setError(`Erro ao buscar CEP: ${error.message || 'Tente novamente mais tarde.'}`);
-    } finally {
-        setFetchingCep(false);
-    }
-};
+    };
 
     // Criar versão com debounce da função fetchAddressByCep
     const debouncedFetchCep = debounce(fetchAddressByCep, 500);
@@ -206,67 +208,26 @@ const fetchAddressByCep = async (cep) => {
     };
 
     // Função para buscar titulares
-    const searchTitulares = async (searchText) => {
-        if (!searchText || searchText.length < 3) {
-            setSearchResults([]);
-            return;
-        }
-        
-        setIsSearching(true);
-        try {
-            const usersCollection = collection(firestore, 'lojas/clientes/users');
-            
-            // Buscar por nome que começa com o texto da busca
-            const queryByName = query(usersCollection, 
-                where('dependentesDe', '==', null),
-                where('nome', '>=', searchText),
-                where('nome', '<=', searchText + '\uf8ff'),
-                limit(10)
-            );
-            
-            // Buscar por CPF que começa com o texto da busca
-            const queryByCpf = query(usersCollection,
-                where('dependentesDe', '==', null),
-                where('cpf', '>=', searchText),
-                where('cpf', '<=', searchText + '\uf8ff'),
-                limit(10)
-            );
-            
-            const [nameSnapshot, cpfSnapshot] = await Promise.all([
-                getDocs(queryByName),
-                getDocs(queryByCpf)
-            ]);
-            
-            // Juntar resultados e remover duplicatas
-            const results = [];
-            const addedIds = new Set();
-            
-            nameSnapshot.forEach((doc) => {
-                addedIds.add(doc.id);
-                results.push({
-                    id: doc.id,
-                    nome: doc.data().nome,
-                    cpf: doc.data().cpf
-                });
-            });
-            
-            cpfSnapshot.forEach((doc) => {
-                if (!addedIds.has(doc.id)) {
-                    results.push({
-                        id: doc.id,
-                        nome: doc.data().nome,
-                        cpf: doc.data().cpf
-                    });
-                }
-            });
-            
-            setSearchResults(results);
-        } catch (error) {
-            console.error('Erro ao buscar titulares:', error);
-        } finally {
-            setIsSearching(false);
-        }
-    };
+    {/* Resultados da busca com console.log para depuração */ }
+    { console.log("searchResults:", searchResults) }
+    {
+        searchResults.length > 0 && (
+            <div className="absolute z-50 left-0 right-0 bg-white shadow-lg border-2 border-[#81059e] rounded-lg mt-1 max-h-64 overflow-y-auto">
+                {searchResults.map((titular) => (
+                    <div
+                        key={titular.id}
+                        className="p-3 hover:bg-purple-100 cursor-pointer border-b border-gray-200 last:border-b-0"
+                        onClick={() => handleSelectTitular(titular)}
+                    >
+                        <div className="font-medium">{titular.nome}</div>
+                        <div className="text-sm text-gray-600">
+                            {titular.cpf ? `CPF: ${titular.cpf}` : ''}
+                        </div>
+                    </div>
+                ))}
+            </div>
+        )
+    }
 
     // Versão com debounce da função de busca
     const debouncedSearch = debounce(searchTitulares, 300);
@@ -550,6 +511,135 @@ const fetchAddressByCep = async (cep) => {
             )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+
+                {/* Seção de Tipo de Cadastro */}
+                <div className="p-2 rounded-lg h-auto min-h-80">
+                    <h3 className="text-lg font-medium text-[#81059e] flex items-center gap-1 mb-4">
+                        <FontAwesomeIcon icon={faUsers} className="h-5 w-5" /> Tipo de Cadastro
+                    </h3>
+
+                    {/* Opção Titular/Dependente */}
+                    <div className="flex items-center space-x-4 mb-4">
+                        <label className="inline-flex items-center">
+                            <input
+                                type="radio"
+                                className="form-radio text-[#81059e]"
+                                name="tipoCliente"
+                                checked={isTitular}
+                                onChange={() => setIsTitular(true)}
+                            />
+                            <span className="ml-2 text-gray-700">Cliente Titular</span>
+                        </label>
+
+                        <label className="inline-flex items-center">
+                            <input
+                                type="radio"
+                                className="form-radio text-[#81059e]"
+                                name="tipoCliente"
+                                checked={!isTitular}
+                                onChange={() => setIsTitular(false)}
+                            />
+                            <span className="ml-2 text-gray-700">Dependente</span>
+                        </label>
+                    </div>
+
+                    {/* Seleção de Titular e Parentesco (aparece apenas se for dependente) */}
+                    {!isTitular && (
+                        <div className="space-y-4">
+                            <div className="space-y-2 relative mb-20">
+                                <label className="block text-[#81059e] font-medium">
+                                    Buscar Cliente Titular
+                                </label>
+                                <div className="relative">
+                                    <div className="flex items-center border-2 border-[#81059e] rounded-lg">
+                                        <span className="pl-3 text-[#81059e]">
+                                            <FiSearch size={16} />
+                                        </span>
+                                        <input
+                                            type="text"
+                                            value={searchQuery}
+                                            onChange={(e) => {
+                                                setSearchQuery(e.target.value);
+                                                debouncedSearch(e.target.value);
+                                            }}
+                                            placeholder="Digite nome ou CPF do titular"
+                                            className="p-3 w-full text-black outline-none"
+                                            required={!isTitular}
+                                        />
+                                        {isSearching && (
+                                            <div className="pr-3">
+                                                <div className="animate-spin h-4 w-4 border-2 border-[#81059e] rounded-full border-t-transparent"></div>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Resultados da busca */}
+                                    {searchResults.length > 0 && (
+                                        <div className="absolute z-40 w-full bg-white shadow-lg rounded-lg border-2 border-[#81059e] mt-1 max-h-64 overflow-y-auto">
+                                            {searchResults.map((titular) => (
+                                                <div
+                                                    key={titular.id}
+                                                    className="p-3 hover:bg-purple-100 cursor-pointer border-b border-gray-200 last:border-b-0"
+                                                    onClick={() => handleSelectTitular(titular)}
+                                                >
+                                                    <div className="font-medium">{titular.nome}</div>
+                                                    <div className="text-sm text-gray-600">
+                                                        {titular.cpf ? `CPF: ${titular.cpf}` : ''}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {searchQuery && searchQuery.length >= 3 && searchResults.length === 0 && !isSearching && (
+                                        <div className="absolute z-40 w-full mt-1 bg-white shadow-lg rounded-lg border-2 border-[#81059e] p-3">
+                                            <p className="text-gray-500">Nenhum cliente titular encontrado</p>
+                                        </div>
+                                    )}
+                                </div>
+
+
+                                {/* Mostrar o titular selecionado */}
+                                {selectedTitular && (
+                                    <div className="mt-2 p-2 bg-purple-100 rounded-lg flex items-center justify-between">
+                                        <span>Titular selecionado</span>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setSelectedTitular('');
+                                                setSearchQuery('');
+                                            }}
+                                            className="text-red-500 hover:text-red-700"
+                                        >
+                                            <FiX size={16} />
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="block text-[#81059e] font-medium">
+                                    Parentesco com o Titular
+                                </label>
+                                <select
+                                    name="parentesco"
+                                    value={formData.parentesco}
+                                    onChange={handleChange}
+                                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                                    required={!isTitular}
+                                >
+                                    <option value="">Selecione o parentesco</option>
+                                    {parentescoOptions.map((option) => (
+                                        <option key={option} value={option}>
+                                            {option}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+                    )}
+                </div>
                 <div>
                     <label className="flex text-[#81059e] font-medium items-center gap-1">
                         <FiUser /> Nome Completo
@@ -644,130 +734,7 @@ const fetchAddressByCep = async (cep) => {
                 </div>
 
                 <div>
-                    {/* Seção de Tipo de Cadastro */}
-                    <div className="mt-6 p-4 rounded-lg h-80">
-                        <h3 className="text-lg font-medium text-[#81059e] flex items-center gap-1 mb-4">
-                            <FontAwesomeIcon icon={faUsers} className="h-5 w-5" /> Tipo de Cadastro
-                        </h3>
 
-                        {/* Opção Titular/Dependente */}
-                        <div className="flex items-center space-x-4 mb-4">
-                            <label className="inline-flex items-center">
-                                <input
-                                    type="radio"
-                                    className="form-radio text-[#81059e]"
-                                    name="tipoCliente"
-                                    checked={isTitular}
-                                    onChange={() => setIsTitular(true)}
-                                />
-                                <span className="ml-2 text-gray-700">Cliente Titular</span>
-                            </label>
-
-                            <label className="inline-flex items-center">
-                                <input
-                                    type="radio"
-                                    className="form-radio text-[#81059e]"
-                                    name="tipoCliente"
-                                    checked={!isTitular}
-                                    onChange={() => setIsTitular(false)}
-                                />
-                                <span className="ml-2 text-gray-700">Dependente</span>
-                            </label>
-                        </div>
-
-                        {/* Seleção de Titular e Parentesco (aparece apenas se for dependente) */}
-                        {!isTitular && (
-                            <div className="space-y-4">
-                                <div className="space-y-2">
-                                    <label className="block text-[#81059e] font-medium">
-                                        Buscar Cliente Titular
-                                    </label>
-                                    <div className="relative">
-                                        <div className="flex items-center border-2 border-[#81059e] rounded-lg">
-                                            <span className="pl-3 text-[#81059e]">
-                                                <FiSearch size={16} />
-                                            </span>
-                                            <input
-                                                type="text"
-                                                value={searchQuery}
-                                                onChange={(e) => {
-                                                    setSearchQuery(e.target.value);
-                                                    debouncedSearch(e.target.value);
-                                                }}
-                                                placeholder="Digite nome ou CPF do titular"
-                                                className="p-3 w-full text-black outline-none"
-                                                required={!isTitular}
-                                            />
-                                            {isSearching && (
-                                                <div className="pr-3">
-                                                    <div className="animate-spin h-4 w-4 border-2 border-[#81059e] rounded-full border-t-transparent"></div>
-                                                </div>
-                                            )}
-                                        </div>
-                                        
-                                        {/* Resultados da busca */}
-                                        {searchResults.length > 0 && (
-                                            <div className="absolute z-10 w-full mt-1 bg-white shadow-lg rounded-lg border border-[#81059e] max-h-60 overflow-y-auto">
-                                                {searchResults.map((titular) => (
-                                                    <div 
-                                                        key={titular.id} 
-                                                        className="p-3 hover:bg-purple-100 cursor-pointer border-b border-gray-200 last:border-b-0"
-                                                        onClick={() => handleSelectTitular(titular)}
-                                                    >
-                                                        <div className="font-medium">{titular.nome}</div>
-                                                        <div className="text-sm text-gray-600">CPF: {titular.cpf}</div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                        
-                                        {searchQuery && searchQuery.length >= 3 && searchResults.length === 0 && !isSearching && (
-                                            <div className="absolute z-10 w-full mt-1 bg-white shadow-lg rounded-lg border border-[#81059e] p-3">
-                                                <p className="text-gray-500">Nenhum cliente titular encontrado</p>
-                                            </div>
-                                        )}
-                                    </div>
-                                    
-                                    {/* Mostrar o titular selecionado */}
-                                    {selectedTitular && (
-                                        <div className="mt-2 p-2 bg-purple-100 rounded-lg flex items-center justify-between">
-                                            <span>Titular selecionado</span>
-                                            <button 
-                                                type="button"
-                                                onClick={() => {
-                                                    setSelectedTitular('');
-                                                    setSearchQuery('');
-                                                }}
-                                                className="text-red-500 hover:text-red-700"
-                                            >
-                                                <FiX size={16} />
-                                            </button>
-                                        </div>
-                                    )}
-                                </div>
-
-                                <div className="space-y-2">
-                                    <label className="block text-[#81059e] font-medium">
-                                        Parentesco com o Titular
-                                    </label>
-                                    <select
-                                        name="parentesco"
-                                        value={formData.parentesco}
-                                        onChange={handleChange}
-                                        className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
-                                        required={!isTitular}
-                                    >
-                                        <option value="">Selecione o parentesco</option>
-                                        {parentescoOptions.map((option) => (
-                                            <option key={option} value={option}>
-                                                {option}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </div>
-                        )}
-                    </div>
                 </div>
             </div>
 
@@ -1012,7 +979,7 @@ const fetchAddressByCep = async (cep) => {
                                     <img
                                         src={documentoPreview}
                                         alt="Preview documento"
-                                        className="w-full h-36 object-cover rounded-lg border-2 border-[#81059e]"
+                                        className="w-32 h-32 object-cover rounded-lg border-2 border-[#81059e]"
                                     />
                                 )}
                                 <button
@@ -1079,7 +1046,7 @@ const fetchAddressByCep = async (cep) => {
                                     <img
                                         src={comprovantePreview}
                                         alt="Preview comprovante"
-                                        className="w-full h-36 object-cover rounded-lg border-2 border-[#81059e]"
+                                        className="w-32 h-32 object-cover rounded-lg border-2 border-[#81059e]"
                                     />
                                 )}
                                 <button

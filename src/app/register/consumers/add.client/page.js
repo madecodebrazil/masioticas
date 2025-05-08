@@ -101,7 +101,7 @@ export default function AddClientePage() {
           </div>
 
           <div className="p-4 bg-gray-50 rounded-lg">
-            <h3 className="text-lg font-semibold text-[#81059e] mb-4 flex items-center gap-2">
+            <h3 className="text-xl font-semibold text-[#81059e] mb-4 flex items-center gap-2">
               <FiUser /> Cadastro de Cliente
             </h3>
             <ClienteForm

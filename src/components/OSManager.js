@@ -100,6 +100,7 @@ const OSManager = ({ cartItems, selectedClient, onOSChange, collections, activeC
             temColoracao: 'nao',
             tonalidade: 'cinza',
             tipoIntensidade: 'degrade_80',
+            usaPrisma: false,
             isCompleted: false // Flag para controlar se o formulário já foi preenchido
         };
 
@@ -834,8 +835,6 @@ const OSManager = ({ cartItems, selectedClient, onOSChange, collections, activeC
                             )}
                         </div>
 
-                     
-
                         {/* Dados da armação */}
                         <div className="mb-6 border border-purple-200 rounded-sm p-4 bg-purple-50">
                             <h3 className="text-md font-medium text-[#81059e] mb-3">Dados da armação</h3>
@@ -982,7 +981,7 @@ const OSManager = ({ cartItems, selectedClient, onOSChange, collections, activeC
                                         <p className="text-xs text-yellow-700 ml-6">Recomendado somente para coloração.</p>
                                     </div>
                                     <span className="text-sm font-medium">+ R$ 5,00</span>
-                                </label>
+                                    </label>
                                 <label className="flex items-center justify-between border-2 border-[#81059e] p-3 rounded-sm">
                                     <div>
                                         <div className="flex items-center">
@@ -1204,6 +1203,29 @@ const OSManager = ({ cartItems, selectedClient, onOSChange, collections, activeC
                             )}
                         </div>
 
+                        {/* Observações adicionais */}
+                        <div className="mb-4">
+                            <label className="block text-sm font-medium text-gray-700">Observações</label>
+                            <textarea
+                                name="observacoes"
+                                defaultValue={formData.observacoes || ''}
+                                className="w-full border-2 border-gray-300 p-2 rounded-sm h-20"
+                                placeholder="Observações adicionais sobre a OS..."
+                            />
+                        </div>
+
+                        {/* Data prevista para entrega */}
+                        <div className="mb-4">
+                            <label className="block text-sm font-medium text-gray-700">Data prevista para entrega</label>
+                            <input
+                                type="date"
+                                name="dataPrevistaEntrega"
+                                defaultValue={formData.dataPrevistaEntrega || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
+                                className="w-full border-2 border-gray-300 p-2 rounded-sm"
+                                required
+                            />
+                        </div>
+
                         {/* Informações adicionais */}
                         <div className="mt-4 bg-purple-50 p-3 rounded-sm flex items-start">
                             <FiInfo className="text-[#81059e] mt-1 mr-2 flex-shrink-0" />
@@ -1297,7 +1319,6 @@ const OSManager = ({ cartItems, selectedClient, onOSChange, collections, activeC
                 </div>
             </div>
 
-
             {/* Exibir coleções */}
             {osType !== 'sem_os' && collections.length > 0 && (
                 <div className="mt-4">
@@ -1307,7 +1328,7 @@ const OSManager = ({ cartItems, selectedClient, onOSChange, collections, activeC
                             colecaoPrecisaDeOS(colecao) && (
                                 <div
                                     key={colecao.id}
-                                    className={`border rounded-sm p-2 h-16 ${activeCollection === colecao.id
+                                    className={`border rounded-sm p-2 ${expandedCollection === colecao.id ? 'min-h-36' : 'h-16'} ${activeCollection === colecao.id
                                         ? 'border-[#81059e] bg-purple-50' : 'border-gray-200'
                                         }`}
                                 >
@@ -1399,8 +1420,8 @@ const OSManager = ({ cartItems, selectedClient, onOSChange, collections, activeC
                                                             <p><span className="font-medium">Olho E:</span> {osData[colecao.id].esferaEsquerdo}/{osData[colecao.id].cilindroEsquerdo}/{osData[colecao.id].eixoEsquerdo}</p>
                                                         </div>
                                                         <div>
-                                                            <p><span className="font-medium">DNP:</span> {osData[colecao.id].distanciaInterpupilar}</p>
-                                                            <p><span className="font-medium">Altura:</span> {osData[colecao.id].altura}</p>
+                                                            <p><span className="font-medium">DNP:</span> {osData[colecao.id].dnpDireito}/{osData[colecao.id].dnpEsquerdo}</p>
+                                                            <p><span className="font-medium">Altura:</span> {osData[colecao.id].alturaDireito}/{osData[colecao.id].alturaEsquerdo}</p>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -1413,29 +1434,6 @@ const OSManager = ({ cartItems, selectedClient, onOSChange, collections, activeC
                     </div>
                 </div>
             )}
-
-               {/* Observações adicionais */}
-               <div className="mb-4">
-                            <label className="block text-sm font-medium text-gray-700">Observações</label>
-                            <textarea
-                                name="observacoes"
-                                defaultValue={formData.observacoes || ''}
-                                className="w-full border-2 border-gray-300 p-2 rounded-sm h-20"
-                                placeholder="Observações adicionais sobre a OS..."
-                            />
-                        </div>
-
-                        {/* Data prevista para entrega */}
-                        <div className="mb-4">
-                            <label className="block text-sm font-medium text-gray-700">Data prevista para entrega</label>
-                            <input
-                                type="date"
-                                name="dataPrevistaEntrega"
-                                defaultValue={formData.dataPrevistaEntrega || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
-                                className="w-full border-2 border-gray-300 p-2 rounded-sm"
-                                required
-                            />
-                        </div>
 
             {/* Status do preenchimento de todos os formulários */}
             {osType !== 'sem_os' && colecoesPrecisandoOS.length > 0 && (

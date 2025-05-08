@@ -555,7 +555,7 @@ export default function GerenciamentoEstoque() {
           return (
             <div
               key={produtoKey}
-              className="bg-white rounded-lg shadow-md overflow-hidden border border-gray-200 hover:shadow-lg transition-shadow"
+              className="bg-white rounded-sm shadow-md overflow-hidden border-2 border-purple-200 hover:shadow-lg transition-shadow"
             >
               <div className="p-4">
                 <div className="flex justify-between items-start">
