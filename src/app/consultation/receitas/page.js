@@ -1,10 +1,11 @@
-// src/pages/ordem-servico/index.js
+"use client"; 
+
 import { useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { Container } from '@/components/ui/container';
-import OsManager from '@/components/ordens-servico/OsManager';
+import OsManager from '@/components/OSManager';
 import { useAuth } from '@/hooks/useAuth';
-import LoadingScreen from '@/components/ui/LoadingScreen';
+import Layout from "../../../components/Layout";
+
 
 export default function OrdemServicoPage() {
   const { user, loading, userPermissions } = useAuth();
@@ -26,9 +27,9 @@ export default function OrdemServicoPage() {
   }
 
   return (
-    <Container>
+    <Layout>
       <h1 className="text-2xl font-bold mb-6">Gerenciamento de Ordens de Serviço</h1>
       <OsManager />
-    </Container>
+    </Layout>
   );
 }
