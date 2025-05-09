@@ -8,7 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 import InputMask from "react-input-mask";
 import "react-datepicker/dist/react-datepicker.css";
 import Layout from "../../../components/Layout";
-import ConfirmationModal from '../components/ConfirmationModal.js';
+import ConfirmationModal from '../../../components/ConfirmationModal.js';
 import Link from 'next/link';
 import { FiCalendar, FiDollarSign, FiTag, FiFileText, FiUser, FiCreditCard, FiMapPin, FiLayers, FiTrendingUp, FiHome, FiPlus, FiX, FiTrash2, FiSearch } from 'react-icons/fi';
 
