@@ -18,7 +18,6 @@ import {
   faGlasses,
   faTrash,
   faIdCard,
-  faWhatsapp,
   faPhone
 } from "@fortawesome/free-solid-svg-icons";
 import Link from "next/link";
@@ -605,7 +604,7 @@ const ClientsTable = () => {
                                     </a>
                                   ) : (
                                     <span className="inline-block p-2 text-gray-400">
-                                      <FontAwesomeIcon icon={faWhatsapp} className="h-5 w-5" />
+                                      <FontAwesomeIcon icon={faPhone} className="h-5 w-5" />
                                     </span>
                                   )}
                                 </td>
@@ -684,7 +683,7 @@ const ClientsTable = () => {
                                         </a>
                                       ) : (
                                         <span className="inline-block p-2 text-gray-400">
-                                          <FontAwesomeIcon icon={faWhatsapp} className="h-5 w-5" />
+                                          <FontAwesomeIcon icon={faPhone} className="h-5 w-5" />
                                         </span>
                                       )}
                                     </td>

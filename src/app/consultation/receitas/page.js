@@ -1,11 +1,10 @@
-"use client"; 
+'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/router';
+import { useRouter } from 'next/navigation'; // Alterado de next/router para next/navigation
 import OsManager from '@/components/OSManager';
 import { useAuth } from '@/hooks/useAuth';
-import Layout from "../../../components/Layout";
-
+import Layout from "@/components/Layout"; // Corrigido o caminho de importação
 
 export default function OrdemServicoPage() {
   const { user, loading, userPermissions } = useAuth();
@@ -19,7 +18,9 @@ export default function OrdemServicoPage() {
   }, [user, loading, router]);
 
   if (loading) {
-    return <LoadingScreen />;
+    return <div className="flex items-center justify-center min-h-screen">
+      <p>Carregando...</p>
+    </div>; // Substitui o LoadingScreen que parece não estar definido
   }
 
   if (!user) {

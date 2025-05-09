@@ -5,7 +5,7 @@ import { doc, getDoc, collection, query, where, getDocs } from "firebase/firesto
 import { firestore } from "@/lib/firebaseConfig";
 import { getStorage, ref, getDownloadURL, listAll } from "firebase/storage";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUsers, faPhone, faWhatsapp } from "@fortawesome/free-solid-svg-icons";
+import { faUsers, faPhone } from "@fortawesome/free-solid-svg-icons";
 import Link from "next/link";
 import { jsPDF } from "jspdf";
 
