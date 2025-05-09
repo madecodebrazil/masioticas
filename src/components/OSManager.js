@@ -1246,7 +1246,7 @@ const OSManager = ({ cartItems, selectedClient, onOSChange, collections, activeC
                             <button
                                 type="button"
                                 onClick={closeOSForm}
-                                className="px-4 py-2 border-2 border-gray-300 rounded-sm text-gray-700 hover:bg-gray-50"
+                                className="px-4 py-2 rounded-sm text-gray-700"
                             >
                                 Cancelar
                             </button>

@@ -45,13 +45,14 @@ export default function OrcamentosPage() {
     }
   }, [selectedLoja, filtro]);
 
-  // Função para buscar orçamentos
+  // Função para buscar orçamentos - CORRIGIDA para o caminho correto
   const fetchOrcamentos = async () => {
     if (!selectedLoja) return;
 
     try {
       setIsFetching(true);
-      const orcamentosRef = collection(firestore, `lojas/${selectedLoja}/orcamentos`);
+      // Caminho corrigido para acessar a coleção de orçamentos
+      const orcamentosRef = collection(firestore, `lojas/${selectedLoja}/orcamentos/items/items`);
       
       // Construir a query com base no filtro
       let q = orcamentosRef;
@@ -179,30 +180,32 @@ export default function OrcamentosPage() {
     const telefone = orcamento.cliente.telefone.replace(/\D/g, '');
     
     // Construir a mensagem para o WhatsApp
-    let mensagem = `*Orçamento MASI Óticas - ${orcamento.codigo}*\n\n`;
+    let mensagem = `*Orçamento MASI Óticas - ${orcamento.codigo || orcamento.id}*\n\n`;
     mensagem += `Olá ${orcamento.cliente.nome}, segue o orçamento solicitado:\n\n`;
     
     // Adicionar produtos
     mensagem += "*Produtos:*\n";
-    orcamento.produtos.forEach((item, index) => {
-      mensagem += `${index + 1}. ${item.nome} - ${item.marca || 'Sem marca'}\n`;
-      mensagem += `   ${item.quantidade} x ${formatCurrency(item.preco)} = ${formatCurrency(item.total)}\n`;
-    });
+    if (orcamento.itens && Array.isArray(orcamento.itens)) {
+      orcamento.itens.forEach((item, index) => {
+        mensagem += `${index + 1}. ${item.nome} - ${item.marca || 'Sem marca'}\n`;
+        mensagem += `   ${item.quantidade} x ${formatCurrency(item.valor_unitario)} = ${formatCurrency(item.valor_total)}\n`;
+      });
+    }
     
     // Adicionar valores
     mensagem += `\n*Subtotal:* ${formatCurrency(orcamento.subtotal)}\n`;
-    if (orcamento.desconto?.total > 0) {
-      mensagem += `*Desconto${orcamento.desconto.tipo === 'percentage' ? ` (${orcamento.desconto.valor}%)` : ''}:* ${formatCurrency(orcamento.desconto.total)}\n`;
+    if (orcamento.desconto > 0) {
+      mensagem += `*Desconto${orcamento.desconto_tipo === 'percentage' ? ` (${orcamento.desconto_valor || ''}%)` : ''}:* ${formatCurrency(orcamento.desconto)}\n`;
     }
-    mensagem += `*Valor Total:* ${formatCurrency(orcamento.total)}\n\n`;
+    mensagem += `*Valor Total:* ${formatCurrency(orcamento.valor_total || orcamento.total)}\n\n`;
     
     // Adicionar validade
     const dataValidadeFormatada = orcamento.validade ? orcamento.validade.toLocaleDateString('pt-BR') : 'Não definida';
     mensagem += `Este orçamento é válido até ${dataValidadeFormatada}.\n\n`;
     
     // Adicionar observação se houver
-    if (orcamento.observacao) {
-      mensagem += `*Observações:* ${orcamento.observacao}\n\n`;
+    if (orcamento.observacoes || orcamento.observacao) {
+      mensagem += `*Observações:* ${orcamento.observacoes || orcamento.observacao}\n\n`;
     }
     
     // Adicionar mensagem de fechamento
@@ -239,8 +242,8 @@ export default function OrcamentosPage() {
 
   return (
     <Layout>
-      <div className="min-h-screen">
-        <div className="w-full max-w-7xl mx-auto rounded-lg">
+      <div className="min-h-screen mb-32">
+        <div className="w-full max-w-7xl mx-auto rounded-lg ">
           <h2 className="text-3xl font-bold text-[#81059e] mb-8 mt-8">ORÇAMENTOS</h2>
 
           {/* Seletor de Loja para Admins */}
@@ -444,7 +447,7 @@ export default function OrcamentosPage() {
                           <div className="flex items-center">
                             <FiFileText className="flex-shrink-0 h-5 w-5 text-[#81059e]" />
                             <div className="ml-2 text-sm font-medium text-gray-900">
-                              {orcamento.codigo}
+                              {orcamento.codigo || orcamento.id}
                             </div>
                           </div>
                         </td>
@@ -481,11 +484,11 @@ export default function OrcamentosPage() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm font-medium text-[#81059e]">
-                            {formatCurrency(orcamento.total)}
+                            {formatCurrency(orcamento.valor_total || orcamento.total)}
                           </div>
-                          {orcamento.desconto?.total > 0 && (
+                          {(orcamento.desconto > 0 || (orcamento.desconto && orcamento.desconto.total > 0)) && (
                             <div className="text-xs text-green-600">
-                              Desconto: {formatCurrency(orcamento.desconto.total)}
+                              Desconto: {formatCurrency(orcamento.desconto.total || orcamento.desconto)}
                             </div>
                           )}
                         </td>

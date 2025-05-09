@@ -148,6 +148,7 @@ const ModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
     const [showPixModal, setShowPixModal] = useState(false);
     const [pixQRCode, setPixQRCode] = useState('');
     const [cashbackDisponivel] = useState(0);
+    const [loading, setLoading] = useState(true);
     const [collections, setCollections] = useState([
         {
             id: 1,
@@ -184,84 +185,39 @@ const ModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
         }));
     };
 
-    // Função para finalizar a venda
+    // Função para finalizar a venda ou orçamento
     const finalizeSale = async () => {
         try {
-            // Aqui você implementaria a lógica de salvar a venda no banco de dados
+            setLoading(true);
 
-            // Gerar números fictícios para venda e OS para demonstração
-            const saleIdGenerated = Math.floor(Math.random() * 1000000).toString();
-            const osIdGenerated = Math.floor(Math.random() * 1000000).toString();
+            // Se for uma venda e tiver OS, processe as OS
+            if (tipoTransacao === 'venda' && osStatus.tipo !== 'sem_os') {
+                const colecoesPrecisandoOS = osStatus.colecoes.filter(colecao =>
+                    colecaoPrecisaDeOS(colecao)
+                );
 
-            // Atualizar o estado local
-            setLocalSaleId(saleIdGenerated);
-            setLocalOsId(osIdGenerated);
-            setStatusVendaFinal('paga');
-
-            // Processar OS para coleções que precisam
-            if (osStatus.tipo !== 'sem_os') {
-                // Obter coleções que precisam de OS
-                const colecoesPrecisandoOS = collections.filter(colecao => {
-                    // Função para verificar se um item precisa de OS
-                    const precisaDeOS = (item) => {
-                        if (!item || !item.categoria) return false;
-
-                        const categoriasComOS = ['armacoes', 'lentes', 'solares'];
-                        // Para solares, verificar se tem grau
-                        if (item.categoria === 'solares') {
-                            return item.info_geral?.tem_grau || item.info_adicional?.tem_grau || false;
-                        }
-                        return categoriasComOS.includes(item.categoria);
-                    };
-
-                    return colecao.items && colecao.items.some(item => precisaDeOS(item));
-                });
-
-                // Para cada coleção que precisa de OS, criar uma OS separada
                 for (const colecao of colecoesPrecisandoOS) {
-                    const osDados = osData[colecao.id];
+                    const osDados = osStatus.osData[colecao.id];
 
-                    // Pular coleções sem dados de OS preenchidos
                     if (!osDados || !osDados.isCompleted) continue;
 
-                    // Determinar tipo de OS para esta coleção
-                    const temArmacao = colecao.items && colecao.items.some(item => item.categoria === 'armacoes');
-                    const temLente = colecao.items && colecao.items.some(item => item.categoria === 'lentes');
-                    const temSolarComGrau = colecao.items && colecao.items.some(
-                        item => item.categoria === 'solares' && (item.info_geral?.tem_grau || item.info_adicional?.tem_grau)
-                    );
-
-                    let tipoOS = 'sem_os';
-                    if ((temArmacao && temLente) || temSolarComGrau) {
-                        tipoOS = 'completa';
-                    } else if (temArmacao || temLente) {
-                        tipoOS = 'incompleta';
-                    }
-
-                    // Criar dados da OS específica para esta coleção
                     const dadosOS = {
-                        id_os: `${newOsId}-${colecao.id}`, // ID único para cada OS
-                        id_venda: novaVendaRef.id,
-                        id_colecao: colecao.id,
-                        nome_colecao: colecao.name,
+                        id_os: `${newOsId}-${colecao.id}`,
+                        id_venda: novaVendaRef?.id || 'temp-' + Date.now(),
                         cliente: {
                             id: selectedClient.id,
                             nome: selectedClient.nome,
-                            cpf: selectedClient.cpf,
+                            cpf: selectedClient.cpf || '',
                             contato: selectedClient.telefone || ''
                         },
-                        tipo: tipoOS,
-                        status: osDados.status || osStatus.status,
+                        tipo: osStatus.tipo,
+                        status: osStatus.status,
                         data_criacao: new Date(),
-                        data_previsao: osDados.dataPrevistaEntrega ? new Date(osDados.dataPrevistaEntrega) : new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
+                        data_previsao: osDados.dataPrevistaEntrega
+                            ? new Date(osDados.dataPrevistaEntrega)
+                            : new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
                         produtos: colecao.items
-                            .filter(item => {
-                                const categoriasComOS = ['armacoes', 'lentes', 'solares'];
-                                if (item.categoria === 'solares') {
-                                    return item.info_geral?.tem_grau || item.info_adicional?.tem_grau || false;
-                                }
-                                return categoriasComOS.includes(item.categoria);
-                            })
+                            .filter(item => precisaDeOS(item))
                             .map(item => ({
                                 id: item.id,
                                 categoria: item.categoria,
@@ -289,26 +245,83 @@ const ModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
                         laboratorio: osDados.laboratorio || '',
                         detalhes_adicionais: {
                             armacao_cliente: osDados.armacaoClienteDescricao || '',
-                            lentes_cliente: osDados.lentesClienteDescricao || '',
-                            tipo_especifico: osDados.tipoOS || 'completa'
+                            lentes_cliente: osDados.lentesClienteDescricao || ''
                         }
                     };
 
-                    // Remover valores undefined antes de salvar
-                    const dadosOSLimpos = Object.fromEntries(
-                        Object.entries(dadosOS).filter(([_, v]) => v !== undefined)
-                    );
-
-                    // Registrar a OS no Firebase
+                    const dadosOSLimpos = removerValoresUndefined(dadosOS);
                     const osRef = collection(firestore, `lojas/${selectedLoja}/servicos/items/items`);
                     await addDoc(osRef, dadosOSLimpos);
                 }
             }
+
+            // Determinar a coleção correta com base no tipo de transação
+            // CORREÇÃO: Caminho correto para salvar orçamentos
+            const colecao = tipoTransacao === 'venda'
+                ? `lojas/${selectedLoja}/vendas/items/items`
+                : `lojas/${selectedLoja}/orcamentos/items/items`;
+
+            console.log(`Salvando ${tipoTransacao} na coleção:`, colecao);
+
+            // Criar objeto com dados da transação
+            const dadosTransacao = {
+                data_criacao: new Date(),
+                data_venda: dataVenda ? new Date(dataVenda) : new Date(),
+                cliente: selectedClient ? {
+                    id: selectedClient.id,
+                    nome: selectedClient.nome,
+                    cpf: selectedClient.cpf || '',
+                    telefone: selectedClient.telefone || ''
+                } : null,
+                itens: cartItems.map(item => ({
+                    id: item.id,
+                    nome: item.nome || item.titulo || '',
+                    quantidade: item.quantity || 1,
+                    valor_unitario: item.valor || 0,
+                    valor_total: (item.valor || 0) * (item.quantity || 1),
+                    categoria: item.categoria || ''
+                })),
+                subtotal: calculateSubtotal(),
+                desconto: calculateDiscount(),
+                desconto_tipo: discountType,
+                valor_total: calculateTotal(),
+                observacoes: observation,
+                vendedor: vendedor || 'Admin',
+                status: tipoTransacao === 'venda' ? 'paga' : 'aguardando_aprovacao',
+                metodos_pagamento: tipoTransacao === 'venda' ? paymentMethods : [],
+                // Adicionar a validade para orçamentos (30 dias por padrão)
+                validade: tipoTransacao === 'orcamento' ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) : null
+            };
+
+            // Registrar no Firebase
+            const transacaoRef = collection(firestore, colecao);
+            const docRef = await addDoc(transacaoRef, dadosTransacao);
+
+            // Gerar IDs
+            const idGerado = docRef.id;
+
+            // Atualizar estados
+            setSaleId(idGerado);
+            if (tipoTransacao === 'venda') {
+                const osIdGenerated = Math.floor(Math.random() * 1000000).toString();
+                setOsId(osIdGenerated);
+                setStatusVendaFinal('paga');
+            } else {
+                // Configurações específicas para orçamento
+                setOsId('');
+                setStatusVendaFinal('orcamento');
+            }
+
+            setSuccess(true);
+            setLoading(false);
+            return idGerado;  // Retornar o ID gerado
         } catch (error) {
-            console.error('Erro ao finalizar venda:', error);
+            console.error(`Erro ao finalizar ${tipoTransacao}:`, error);
+            setError(`Erro ao finalizar ${tipoTransacao}: ${error.message}`);
+            setLoading(false);
             throw error;
         }
-    };
+    }
 
     // Função para formatar o valor do desconto
     const handleDescontoChange = (e) => {
@@ -506,7 +519,10 @@ const ModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
     };
 
     // Função para lidar com o clique em finalizar
-    const handleFinalizarClicked = () => {
+    const handleFinalizarClicked = async () => {
+        // Limpar erros anteriores
+        setLocalError('');
+
         // Validações comuns
         if (cartItems.length === 0) {
             setLocalError('Adicione pelo menos um item ao carrinho');
@@ -518,22 +534,49 @@ const ModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
             return;
         }
 
-        // Validações específicas para venda
-        if (tipoTransacao === 'venda') {
-            if (osStatus.tipo !== 'sem_os' && !osFormsCompleted) {
-                setLocalError('Preencha todos os formulários de OS antes de finalizar');
-                return;
+        try {
+            setIsFinalizando(true); // Ativar estado de carregamento local
+
+            // Validações específicas para venda
+            if (tipoTransacao === 'venda') {
+                if (osStatus.tipo !== 'sem_os' && !osFormsCompleted) {
+                    setLocalError('Preencha todos os formulários de OS antes de finalizar');
+                    setIsFinalizando(false);
+                    return;
+                }
+
+                // Validações de pagamento para venda
+                if (!isPaymentComplete()) {
+                    setLocalError('O valor total dos pagamentos deve ser igual ao valor da venda');
+                    setIsFinalizando(false);
+                    return;
+                }
             }
 
-            // Validações de pagamento para venda
-            if (!isPaymentComplete()) {
-                setLocalError('O valor total dos pagamentos deve ser igual ao valor da venda');
-                return;
+            // Processar a finalização
+            const resultId = await finalizeSale();
+            console.log(`${tipoTransacao} finalizado com ID: ${resultId}`);
+
+            // Atualizar estados locais
+            setLocalSaleId(resultId);
+            setLocalSuccess(true);
+
+            // Para vendas, gere também o ID da OS
+            if (tipoTransacao === 'venda' && osStatus.tipo !== 'sem_os') {
+                const osIdGenerated = Math.floor(Math.random() * 1000000).toString();
+                setLocalOsId(osIdGenerated);
+                setStatusVendaFinal('paga');
+            } else if (tipoTransacao === 'orcamento') {
+                // Configurações específicas para orçamento
+                setStatusVendaFinal('orcamento');
             }
+
+        } catch (error) {
+            console.error(`Erro ao finalizar ${tipoTransacao}:`, error);
+            setLocalError(`Erro ao finalizar ${tipoTransacao}: ${error.message}`);
+        } finally {
+            setIsFinalizando(false);
         }
-
-        // Processar a finalização
-        finalizeSale();
     };
 
     // Função para obter o texto do botão de finalizar
