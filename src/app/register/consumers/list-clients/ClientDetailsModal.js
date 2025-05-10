@@ -5,7 +5,7 @@ import { doc, getDoc, collection, query, where, getDocs } from "firebase/firesto
 import { firestore } from "@/lib/firebaseConfig";
 import { getStorage, ref, getDownloadURL, listAll } from "firebase/storage";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUsers, faPhone } from "@fortawesome/free-solid-svg-icons";
+import { faUsers, faPhone, faX } from "@fortawesome/free-solid-svg-icons";
 import Link from "next/link";
 import { jsPDF } from "jspdf";
 
@@ -36,46 +36,46 @@ const ClientDetailsModal = ({ client, onClose }) => {
 
     // Função para buscar dados do titular e dependentes
     // Função para buscar dados do titular e dependentes
-const fetchFamilyData = async (client) => {
-    try {
-      // Resetar dados anteriores
-      setTitularData(null);
-      setDependentesData([]);
-  
-      // Se for dependente, buscar dados do titular
-      if (client.dependentesDe) {
-        // Caminho corrigido para a coleção de clientes
-        const titularRef = doc(firestore, 'lojas/clientes/users', client.dependentesDe);
-        const titularDoc = await getDoc(titularRef);
-  
-        if (titularDoc.exists()) {
-          setTitularData({
-            id: titularDoc.id,
-            ...titularDoc.data()
-          });
+    const fetchFamilyData = async (client) => {
+        try {
+            // Resetar dados anteriores
+            setTitularData(null);
+            setDependentesData([]);
+
+            // Se for dependente, buscar dados do titular
+            if (client.dependentesDe) {
+                // Caminho corrigido para a coleção de clientes
+                const titularRef = doc(firestore, 'lojas/clientes/users', client.dependentesDe);
+                const titularDoc = await getDoc(titularRef);
+
+                if (titularDoc.exists()) {
+                    setTitularData({
+                        id: titularDoc.id,
+                        ...titularDoc.data()
+                    });
+                }
+            }
+            // Se for titular com dependentes, buscar dependentes
+            else if (client.temDependentes) {
+                // Caminho corrigido para a coleção de clientes
+                const dependentesRef = collection(firestore, 'lojas/clientes/users');
+                const q = query(dependentesRef, where('dependentesDe', '==', client.id));
+                const querySnapshot = await getDocs(q);
+
+                const dependentes = [];
+                querySnapshot.forEach((doc) => {
+                    dependentes.push({
+                        id: doc.id,
+                        ...doc.data()
+                    });
+                });
+
+                setDependentesData(dependentes);
+            }
+        } catch (error) {
+            console.error('Erro ao buscar dados familiares:', error);
         }
-      }
-      // Se for titular com dependentes, buscar dependentes
-      else if (client.temDependentes) {
-        // Caminho corrigido para a coleção de clientes
-        const dependentesRef = collection(firestore, 'lojas/clientes/users');
-        const q = query(dependentesRef, where('dependentesDe', '==', client.id));
-        const querySnapshot = await getDocs(q);
-  
-        const dependentes = [];
-        querySnapshot.forEach((doc) => {
-          dependentes.push({
-            id: doc.id,
-            ...doc.data()
-          });
-        });
-  
-        setDependentesData(dependentes);
-      }
-    } catch (error) {
-      console.error('Erro ao buscar dados familiares:', error);
-    }
-  };
+    };
 
     // Função para obter URL da imagem
     const getImageUrl = async (cpf) => {
@@ -182,7 +182,7 @@ const fetchFamilyData = async (client) => {
 
     return (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-            <div className="bg-[#81059e] p-6 rounded-lg shadow-lg w-full max-w-md relative text-black overflow-y-auto max-h-[90vh]">
+            <div className="bg-gray-50 p-6 rounded-lg shadow-lg w-full max-w-md relative text-black overflow-y-auto max-h-[90vh]">
                 <h3 className="text-xl font-bold mb-4" style={{ color: "#81059e" }}>
                     Dados do Cliente
                 </h3>
@@ -445,10 +445,11 @@ const fetchFamilyData = async (client) => {
 
                 <button
                     onClick={onClose}
-                    className="absolute top-2 right-2 text-gray-600 hover:text-gray-800"
+                    className="absolute top-2 right-2 text-gray-400 hover:text-gray-800"
                 >
-                    &times;
+                    <FontAwesomeIcon icon={faX} className="h-6 w-6" />
                 </button>
+
             </div>
         </div>
     );

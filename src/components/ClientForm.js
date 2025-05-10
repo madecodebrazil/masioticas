@@ -57,70 +57,57 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
     const [isSearching, setIsSearching] = useState(false);
     const [selectedTitular, setSelectedTitular] = useState('');
 
-    // Função para buscar clientes - baseado no add-receive
+    // Função para buscar clientes - exatamente a mesma do add-receive
     const fetchConsumers = async () => {
-        if (searchTerm.trim() === "" || !selectedLoja) {
+        if (searchTerm.trim().length < 3) {
             setConsumers([]);
             return;
         }
 
         setIsSearching(true);
         try {
-            // O caminho deve ser o mesmo utilizado no ClientForm
             const clientesRef = collection(firestore, 'lojas/clientes/users');
-            const querySnapshot = await getDocs(
-                query(clientesRef,
+
+            // Busca por nome
+            const nomeQuerySnapshot = await getDocs(
+                query(
+                    clientesRef,
                     where('nome', '>=', searchTerm),
-                    where('nome', '<=', searchTerm + '\uf8ff')
+                    where('nome', '<=', searchTerm + '\uf8ff'),
+                    limit(10)
                 )
             );
 
-            // Se não encontrar por nome, tenta por CPF
-            let clientesData = querySnapshot.docs.map(doc => ({
+            let results = nomeQuerySnapshot.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data()
             }));
 
-            // Se não encontrou por nome, tente por CPF
-            if (clientesData.length === 0 && searchTerm.replace(/\D/g, '').length > 0) {
+            // Se não encontrou por nome, tenta por CPF
+            if (results.length === 0 && searchTerm.replace(/\D/g, '').length >= 11) {
                 const cpfQuerySnapshot = await getDocs(
-                    query(clientesRef, where('cpf', '==', searchTerm.replace(/\D/g, '')))
-                );
-
-                clientesData = cpfQuerySnapshot.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data()
-                }));
-            }
-
-            setConsumers(clientesData);
-        } catch (error) {
-            console.error("Erro ao buscar clientes:", error);
-
-            // Plano B: Tentar buscar na coleção 'clientes' global se existir
-            try {
-                const clientesGlobalRef = collection(firestore, 'clientes');
-                const globalQuerySnapshot = await getDocs(
-                    query(clientesGlobalRef,
-                        where('nome', '>=', searchTerm),
-                        where('nome', '<=', searchTerm + '\uf8ff')
+                    query(
+                        clientesRef,
+                        where('cpf', '==', searchTerm.replace(/\D/g, '')),
+                        limit(10)
                     )
                 );
 
-                const clientesData = globalQuerySnapshot.docs.map(doc => ({
+                results = cpfQuerySnapshot.docs.map(doc => ({
                     id: doc.id,
                     ...doc.data()
                 }));
-
-                setConsumers(clientesData);
-            } catch (fallbackError) {
-                console.error("Erro ao buscar no plano B:", fallbackError);
-                setConsumers([]);
             }
+
+            setConsumers(results);
+        } catch (error) {
+            console.error("Erro na busca de clientes:", error);
+            setConsumers([]);
         } finally {
             setIsSearching(false);
         }
     };
+
 
     // Função para formatar CPF: 00000000000 -> 000.000.000-00
     const formatCPF = (cpf) => {
@@ -146,19 +133,13 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
         };
     };
 
-    // Versão com debounce da função de busca
-    const debouncedSearch = debounce(() => {
-        fetchConsumers();
-    }, 300);
 
-    // Efeito para buscar clientes quando o termo de busca mudar
+
+    // Efeito para buscar clientes quando o termo de busca mudar - igual ao add-receive
     useEffect(() => {
-        if (searchTerm.length >= 3) {
-            debouncedSearch();
-        } else {
-            setConsumers([]);
-        }
-    }, [searchTerm, selectedLoja]);
+        fetchConsumers();
+    }, [searchTerm]);
+
 
     // Versão corrigida da função fetchAddressByCep
     const fetchAddressByCep = async (cep) => {
@@ -296,15 +277,16 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
         input.click();
     };
 
-    // Função para selecionar um cliente dos resultados da busca
+    // Função para selecionar um cliente dos resultados da busca - estilo add-receive
     const handleSelectCliente = (cliente) => {
-        setSelectedTitular(cliente.id);
+       setSelectedTitular(cliente); 
         setSearchTerm(cliente.nome);
         setFormData(prev => ({
             ...prev,
             dependentesDe: cliente.id,
             parentesco: prev.parentesco
         }));
+        setSearchTerm('');
         setConsumers([]); // Limpa os resultados após selecionar
     };
 
@@ -448,15 +430,7 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
             const documentoUrl = await uploadDocument(documentoFile, cpf, 'documento');
             const comprovanteUrl = await uploadDocument(comprovanteFile, cpf, 'comprovante');
 
-            // Adicionar informações de dependência
-            const dependenteInfo = !isTitular && selectedTitular ? {
-                dependentesDe: selectedTitular,
-                parentesco: formData.parentesco || 'Não especificado'
-            } : {
-                dependentesDe: null,
-                parentesco: null
-            };
-
+            // Criação do objeto base
             const clienteData = {
                 ...formData,
                 cpf,
@@ -470,17 +444,21 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
                     nome: userName
                 },
                 telefones: [formData.telefone],
-                ...dependenteInfo,
-                // Campo para facilitar a consulta de dependentes
                 temDependentes: false
             };
+
+            // Se for dependente, adiciona os campos específicos
+            if (!isTitular && selectedTitular) {
+                clienteData.dependentesDe = selectedTitular.id;
+                clienteData.parentesco = formData.parentesco || 'Não especificado';
+            }
 
             try {
                 // Adicionar cliente ao Firestore
                 const usersCollection = collection(firestore, 'lojas/clientes/users');
                 const docRef = await addDoc(usersCollection, clienteData);
 
-                // Se for dependente, atualizar titular para indicar que possui dependentes
+                 // Se for dependente, atualizar titular para indicar que possui dependentes
                 if (!isTitular && selectedTitular) {
                     const titularRef = doc(firestore, 'lojas/clientes/users', selectedTitular);
                     await updateDoc(titularRef, {
@@ -580,11 +558,9 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
             )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-
                 {/* Seção de Tipo de Cadastro */}
-                <div className="p-2 rounded-lg h-auto min-h-80">
-                    <h3 className="text-lg font-medium text-[#81059e] flex items-center gap-1 mb-4">
+                <div className="p-2 rounded-sm h-auto min-h-80">
+                    <h3 className="text-sm font-medium text-[#81059e] flex items-center gap-1 mb-4">
                         <FontAwesomeIcon icon={faUsers} className="h-5 w-5" /> Tipo de Cadastro
                     </h3>
 
@@ -617,11 +593,11 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
                     {!isTitular && (
                         <div className="space-y-4">
                             <div className="space-y-2 relative mb-20">
-                                <label className="block text-[#81059e] font-medium">
+                                <label className="text-[#81059e] font-medium">
                                     Buscar Cliente Titular
                                 </label>
                                 <div className="relative">
-                                    <div className="flex items-center border-2 border-[#81059e] rounded-lg">
+                                    <div className="flex items-center border-2 border-[#81059e] rounded-sm">
                                         <span className="pl-3 text-[#81059e]">
                                             <FiSearch size={16} />
                                         </span>
@@ -631,8 +607,8 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
                                             onChange={(e) => setSearchTerm(e.target.value)}
                                             placeholder="Digite nome ou CPF do titular"
                                             className="p-3 w-full text-black outline-none"
-                                            required={!isTitular}
                                         />
+
                                         {isSearching && (
                                             <div className="pr-3">
                                                 <div className="animate-spin h-4 w-4 border-2 border-[#81059e] rounded-full border-t-transparent"></div>
@@ -640,35 +616,37 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
                                         )}
                                     </div>
 
-                                    {/* Resultados da busca */}
+                                    {/* Resultados da busca - Estilo igual ao add-receive */}
                                     {!isTitular && consumers.length > 0 && (
-                                        <div className="absolute z-50 w-full bg-white shadow-lg border-2 border-[#81059e] rounded-lg mt-1 max-h-64 overflow-y-auto">
-                                            {consumers.map((cliente) => (
-                                                <div
-                                                    key={cliente.id}
-                                                    className="p-3 hover:bg-purple-100 cursor-pointer border-b border-gray-200 last:border-b-0"
-                                                    onClick={() => handleSelectCliente(cliente)}
-                                                >
-                                                    <div className="font-medium">{cliente.nome}</div>
-                                                    <div className="text-sm text-gray-600">
-                                                        {cliente.cpf ? `CPF: ${formatCPF(cliente.cpf)}` : ''}
-                                                    </div>
-                                                </div>
-                                            ))}
+                                        <div className="absolute z-50 w-full">
+                                            <ul className="bg-white border-2 border-[#81059e] rounded-sm w-full max-h-[104px] overflow-y-auto shadow-sm custom-scroll">
+                                                {consumers.map((cliente) => (
+                                                    <li
+                                                        key={cliente.id}
+                                                        onClick={() => handleSelectCliente(cliente)}
+                                                        className="p-2 hover:bg-purple-50 cursor-pointer text-black border-b last:border-b-0 h-[52px] flex items-center"
+                                                    >
+                                                        {cliente.nome} {cliente.cpf && (
+                                                            <span className="ml-2 text-xs text-gray-500">(CPF: {formatCPF(cliente.cpf)})</span>
+                                                        )}
+                                                    </li>
+                                                ))}
+                                            </ul>
                                         </div>
                                     )}
 
                                     {searchTerm && searchTerm.length >= 3 && consumers.length === 0 && !isSearching && (
-                                        <div className="absolute z-40 w-full mt-1 bg-white shadow-lg rounded-lg border-2 border-[#81059e] p-3">
-                                            <p className="text-gray-500">Nenhum cliente titular encontrado</p>
+                                        <div className="absolute z-40 w-full">
+                                            <div className="bg-white border-2 border-[#81059e] rounded-sm w-full p-2 text-gray-500">
+                                                Nenhum cliente titular encontrado
+                                            </div>
                                         </div>
                                     )}
                                 </div>
 
-                                {/* Mostrar o titular selecionado */}
                                 {selectedTitular && (
-                                    <div className="mt-2 p-2 bg-purple-100 rounded-lg flex items-center justify-between">
-                                        <span>Titular selecionado</span>
+                                    <div className="mt-2 p-2 bg-purple-100 rounded-sm flex items-center justify-between">
+                                        <span>{selectedTitular.nome || 'Titular selecionado'}</span>
                                         <button
                                             type="button"
                                             onClick={() => {
@@ -685,6 +663,7 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
                                         </button>
                                     </div>
                                 )}
+
                             </div>
 
                             <div className="space-y-2">
@@ -695,7 +674,7 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
                                     name="parentesco"
                                     value={formData.parentesco}
                                     onChange={handleChange}
-                                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
                                     required={!isTitular}
                                 >
                                     <option value="">Selecione o parentesco</option>
@@ -718,7 +697,7 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
                         name="nome"
                         value={formData.nome}
                         onChange={handleChange}
-                        className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                        className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
                         required
                     />
                 </div>
@@ -734,7 +713,7 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
                         value={formData.cpf}
                         onChange={handleChange}
                         placeholder="000.000.000-00"
-                        className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                        className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
                         required
                     />
                 </div>
@@ -745,11 +724,10 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
                     </label>
                     <input
                         type="email"
-                        name="email"
-                        value={formData.email}
+                        name="email" value={formData.email}
                         onChange={handleChange}
                         placeholder="cliente@exemplo.com"
-                        className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                        className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
                     />
                 </div>
 
@@ -764,7 +742,7 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
                         value={formData.telefone}
                         onChange={handleChange}
                         placeholder="(00) 00000-0000"
-                        className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                        className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
                         required
                     />
                 </div>
@@ -778,7 +756,7 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
                         name="dataNascimento"
                         value={formData.dataNascimento}
                         onChange={handleChange}
-                        className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                        className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
                         required
                     />
                 </div>
@@ -791,7 +769,7 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
                         name="genero"
                         value={formData.genero}
                         onChange={handleChange}
-                        className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                        className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
                         required
                     >
                         <option value="">Selecione</option>
@@ -808,7 +786,7 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
             </div>
 
             <div className="mt-6">
-                <h3 className="text-lg font-medium text-[#81059e] flex items-center gap-1">
+                <h3 className="text-sm font-medium text-[#81059e] flex items-center gap-1">
                     <FiMapPin /> Endereço
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
@@ -824,7 +802,7 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
                                 value={formData.endereco.cep}
                                 onChange={handleChange}
                                 placeholder="00000-000"
-                                className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                                className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
                                 required
                             />
                             {fetchingCep && (
@@ -844,7 +822,7 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
                             name="endereco.logradouro"
                             value={formData.endereco.logradouro}
                             onChange={handleChange}
-                            className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                            className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
                             required
                         />
                     </div>
@@ -858,7 +836,7 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
                             name="endereco.numero"
                             value={formData.endereco.numero}
                             onChange={handleChange}
-                            className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                            className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
                             required
                         />
                     </div>
@@ -872,7 +850,7 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
                             name="endereco.complemento"
                             value={formData.endereco.complemento}
                             onChange={handleChange}
-                            className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                            className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
                         />
                     </div>
 
@@ -885,7 +863,7 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
                             name="endereco.bairro"
                             value={formData.endereco.bairro}
                             onChange={handleChange}
-                            className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                            className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
                             required
                         />
                     </div>
@@ -899,7 +877,7 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
                             name="endereco.cidade"
                             value={formData.endereco.cidade}
                             onChange={handleChange}
-                            className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                            className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
                             required
                         />
                     </div>
@@ -912,7 +890,7 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
                             name="endereco.estado"
                             value={formData.endereco.estado}
                             onChange={handleChange}
-                            className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                            className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
                             required
                         >
                             <option value="">Selecione</option>
@@ -934,14 +912,14 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
                     name="observacoes"
                     value={formData.observacoes}
                     onChange={handleChange}
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
                     rows="3"
                     placeholder="Adicione observações relevantes sobre o cliente"
                 />
             </div>
 
             <div className="mt-6">
-                <h3 className="text-lg font-medium text-[#81059e] flex items-center gap-1 mb-4">
+                <h3 className="text-sm font-medium text-[#81059e] flex items-center gap-1 mb-4">
                     <FiFileText /> Documentos
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -958,11 +936,11 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
                                     className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-10"
                                     required
                                 />
-                                <div className="flex items-center border-2 border-[#81059e] py-2 px-3 rounded-lg w-full text-black">
+                                <div className="flex items-center border-2 border-[#81059e] py-2 px-3 rounded-sm w-full text-black">
                                     <span className="flex-1 truncate text-sm" title={selectedFileName}>
                                         {selectedFileName ? truncateFileName(selectedFileName) : "Escolher arquivo..."}
                                     </span>
-                                    <button type="button" className="bg-purple-100 text-[#81059e] px-3 py-1 rounded-md ml-2 text-xs sm:text-sm whitespace-nowrap">
+                                    <button type="button" className="bg-purple-100 text-[#81059e] px-3 py-1 rounded-sm ml-2 text-xs sm:text-sm whitespace-nowrap">
                                         Procurar
                                     </button>
                                 </div>
@@ -970,7 +948,7 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
                             <button
                                 type="button"
                                 onClick={() => handleCameraClick('foto')}
-                                className="bg-purple-100 text-[#81059e] p-2 rounded-lg flex items-center justify-center"
+                                className="bg-purple-100 text-[#81059e] p-2 rounded-sm flex items-center justify-center"
                                 title="Tirar foto"
                             >
                                 <FiCamera size={20} />
@@ -981,7 +959,7 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
                                 <img
                                     src={imagePreview}
                                     alt="Preview"
-                                    className="w-32 h-32 object-cover rounded-lg border-2 border-[#81059e]"
+                                    className="w-32 h-32 object-cover rounded-sm border-2 border-[#81059e]"
                                 />
                                 <button
                                     type="button"
@@ -1010,11 +988,11 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
                                     onChange={(e) => handleDocumentChange(e, 'documento')}
                                     className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-10"
                                 />
-                                <div className="flex items-center border-2 border-[#81059e] py-2 px-3 rounded-lg w-full text-black">
+                                <div className="flex items-center border-2 border-[#81059e] py-2 px-3 rounded-sm w-full text-black">
                                     <span className="flex-1 truncate text-sm" title={documentoFile?.name}>
                                         {documentoFile ? truncateFileName(documentoFile.name) : "Escolher arquivo..."}
                                     </span>
-                                    <button type="button" className="bg-purple-100 text-[#81059e] px-3 py-1 rounded-md ml-2 text-xs sm:text-sm whitespace-nowrap">
+                                    <button type="button" className="bg-purple-100 text-[#81059e] px-3 py-1 rounded-sm ml-2 text-xs sm:text-sm whitespace-nowrap">
                                         Procurar
                                     </button>
                                 </div>
@@ -1022,7 +1000,7 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
                             <button
                                 type="button"
                                 onClick={() => handleCameraClick('documento')}
-                                className="bg-purple-100 text-[#81059e] p-2 rounded-lg flex items-center justify-center"
+                                className="bg-purple-100 text-[#81059e] p-2 rounded-sm flex items-center justify-center"
                                 title="Tirar foto"
                             >
                                 <FiCamera size={20} />
@@ -1031,14 +1009,14 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
                         {documentoPreview && (
                             <div className="mt-2 relative">
                                 {typeof documentoPreview === 'string' && documentoPreview === 'pdf' ? (
-                                    <div className="w-full h-36 bg-red-100 rounded-lg border-2 border-[#81059e] flex flex-col items-center justify-center">
+                                    <div className="w-full h-36 bg-red-100 rounded-sm border-2 border-[#81059e] flex flex-col items-center justify-center">
                                         <FiFile size={36} className="text-red-500" />
                                         <span className="text-xs mt-2 text-center px-2 truncate w-full">
                                             {documentoFile?.name || 'Documento PDF'}
                                         </span>
                                     </div>
                                 ) : typeof documentoPreview === 'string' && documentoPreview === 'file' ? (
-                                    <div className="w-full h-36 bg-gray-100 rounded-lg border-2 border-[#81059e] flex flex-col items-center justify-center">
+                                    <div className="w-full h-36 bg-gray-100 rounded-sm border-2 border-[#81059e] flex flex-col items-center justify-center">
                                         <FiFileText size={36} className="text-gray-500" />
                                         <span className="text-xs mt-2 text-center px-2 truncate w-full">
                                             {documentoFile?.name || 'Documento'}
@@ -1048,7 +1026,7 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
                                     <img
                                         src={documentoPreview}
                                         alt="Preview documento"
-                                        className="w-32 h-32 object-cover rounded-lg border-2 border-[#81059e]"
+                                        className="w-32 h-32 object-cover rounded-sm border-2 border-[#81059e]"
                                     />
                                 )}
                                 <button
@@ -1077,11 +1055,11 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
                                     onChange={(e) => handleDocumentChange(e, 'comprovante')}
                                     className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-10"
                                 />
-                                <div className="flex items-center border-2 border-[#81059e] py-2 px-3 rounded-lg w-full text-black">
+                                <div className="flex items-center border-2 border-[#81059e] py-2 px-3 rounded-sm w-full text-black">
                                     <span className="flex-1 truncate text-sm" title={comprovanteFile?.name}>
                                         {comprovanteFile ? truncateFileName(comprovanteFile.name) : "Escolher arquivo..."}
                                     </span>
-                                    <button type="button" className="bg-purple-100 text-[#81059e] px-3 py-1 rounded-md ml-2 text-xs sm:text-sm whitespace-nowrap">
+                                    <button type="button" className="bg-purple-100 text-[#81059e] px-3 py-1 rounded-sm ml-2 text-xs sm:text-sm whitespace-nowrap">
                                         Procurar
                                     </button>
                                 </div>
@@ -1089,7 +1067,7 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
                             <button
                                 type="button"
                                 onClick={() => handleCameraClick('comprovante')}
-                                className="bg-purple-100 text-[#81059e] p-2 rounded-lg flex items-center justify-center"
+                                className="bg-purple-100 text-[#81059e] p-2 rounded-sm flex items-center justify-center"
                                 title="Tirar foto"
                             >
                                 <FiCamera size={20} />
@@ -1098,14 +1076,14 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
                         {comprovantePreview && (
                             <div className="mt-2 relative">
                                 {typeof comprovantePreview === 'string' && comprovantePreview === 'pdf' ? (
-                                    <div className="w-full h-36 bg-red-100 rounded-lg border-2 border-[#81059e] flex flex-col items-center justify-center">
+                                    <div className="w-full h-36 bg-red-100 rounded-sm border-2 border-[#81059e] flex flex-col items-center justify-center">
                                         <FiFile size={36} className="text-red-500" />
                                         <span className="text-xs mt-2 text-center px-2 truncate w-full">
                                             {comprovanteFile?.name || 'Comprovante PDF'}
                                         </span>
                                     </div>
                                 ) : typeof comprovantePreview === 'string' && comprovantePreview === 'file' ? (
-                                    <div className="w-full h-36 bg-gray-100 rounded-lg border-2 border-[#81059e] flex flex-col items-center justify-center">
+                                    <div className="w-full h-36 bg-gray-100 rounded-sm border-2 border-[#81059e] flex flex-col items-center justify-center">
                                         <FiFileText size={36} className="text-gray-500" />
                                         <span className="text-xs mt-2 text-center px-2 truncate w-full">
                                             {comprovanteFile?.name || 'Comprovante'}
@@ -1115,7 +1093,7 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
                                     <img
                                         src={comprovantePreview}
                                         alt="Preview comprovante"
-                                        className="w-32 h-32 object-cover rounded-lg border-2 border-[#81059e]"
+                                        className="w-32 h-32 object-cover rounded-sm border-2 border-[#81059e]"
                                     />
                                 )}
                                 <button
@@ -1164,7 +1142,7 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
 
             {showSuccessPopup && (
                 <div className="fixed top-4 right-4 z-50 animate-fade-in">
-                    <div className="bg-green-500 text-white px-6 py-4 rounded-lg shadow-lg flex items-center gap-2">
+                    <div className="bg-green-500 text-white px-6 py-4 rounded-sm shadow-sm flex items-center gap-2">
                         <FiCheckCircle size={24} />
                         <span>Cliente adicionado com sucesso!</span>
                     </div>

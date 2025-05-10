@@ -976,7 +976,7 @@ const OSManager = ({ cartItems, selectedClient, onOSChange, collections, activeC
                                                 defaultChecked={formData.tratamento === 'antirisco-tingivel'}
                                                 className="h-4 w-4 text-[#81059e] border-gray-300 focus:ring-[#81059e]"
                                             />
-                                            <span className="ml-2 font-medium">Antirisco Tingível</span>
+                                            <span className="ml-2 font-medium">Lente Esportiva</span>
                                         </div>
                                         <p className="text-xs text-yellow-700 ml-6">Recomendado somente para coloração.</p>
                                     </div>
