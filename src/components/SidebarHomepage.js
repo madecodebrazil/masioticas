@@ -1,8 +1,9 @@
+// SidebarHomepage.js
 "use client";
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
     faChartSimple,
@@ -18,22 +19,22 @@ import {
     faPeopleRoof,
     faIdBadge,
     faCode,
-    faSignOutAlt, // Adicionar ícone de logout
-    faCog, // Ícone de configurações
+    faSignOutAlt,
+    faCog,
     faBell,
     faRightFromBracket
 } from '@fortawesome/free-solid-svg-icons';
-import { auth } from '../lib/firebaseConfig'; // Ajuste o caminho conforme necessário
+import { auth } from '../lib/firebaseConfig';
 import { signOut } from 'firebase/auth';
 import NotificationsModal from '../components/NotificationsModal';
 import ConfigurationsModal from '../components/ConfigurationsModal';
 import LogoutConfirmationModal from '../components/LogoutConfirmationModal';
 
-export default function SidebarHomepage({ userPhotoURL, userData, userPermissions, currentPage }) {
+export default function SidebarHomepage({ userPhotoURL, userData, userPermissions }) {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [showUserMenu, setShowUserMenu] = useState(false);
     const router = useRouter();
-
+    const pathname = usePathname(); // Hook para obter o caminho atual
 
     const handleLogout = async () => {
         try {
@@ -46,12 +47,29 @@ export default function SidebarHomepage({ userPhotoURL, userData, userPermission
 
     // Alterna a visibilidade da sidebar
     const toggleSidebar = () => {
-        setIsSidebarOpen(!isSidebarOpen); // Alterna entre mostrar e ocultar a sidebar
+        setIsSidebarOpen(!isSidebarOpen);
     };
 
+    // Menu items com rotas correspondentes
+    const menuItems = [
+        { name: 'dashboard', path: '/homepage', icon: faChartSimple, label: 'Dashboard' },
+        { name: 'agenda', path: '/homepage/agenda', icon: faCalendarDay, label: 'Agenda' },
+        { name: 'financeiro', path: '/finance', icon: faCoins, label: 'Financeiro' },
+        { name: 'vendas', path: '/sales', icon: faMoneyBillTransfer, label: 'Vendas' },
+        { name: 'cadastros', path: '/register', icon: faUserPlus, label: 'Cadastros' },
+        { name: 'estoque', path: '/stock', icon: faCartFlatbed, label: 'Estoque' },
+        { name: 'loja-online', path: '/homepage/store', icon: faShop, label: 'Loja Online' },
+        { name: 'contratos', path: '/homepage/contracts', icon: faFileSignature, label: 'Contratos' },
+        { name: 'crm', path: '/homepage/crm', icon: faPeopleRoof, label: 'CRM' },
+        { name: 'rh', path: '/homepage/rh', icon: faIdBadge, label: 'RH' },
+        { name: 'integracoes', path: '/homepage/integrations', icon: faCode, label: 'Integrações' },
+    ];
+
     // Estilo condicional para a página ativa
-    const getLinkStyle = (page) => {
-        return currentPage === page
+    const getLinkStyle = (path) => {
+        // Verifica se o pathname atual começa com o path do menu
+        // Isso permite que subpáginas também sejam destacadas
+        return pathname === path || pathname.startsWith(`${path}/`)
             ? 'bg-[#D291BC]' // Cor ativa para a página atual
             : 'bg-[#84207B]'; // Cor padrão para as outras páginas
     };
@@ -89,7 +107,7 @@ export default function SidebarHomepage({ userPhotoURL, userData, userPermission
     };
 
     const userMenuVariants = {
-        hidden: { opacity: 0, x: '100%' }, // começa fora da tela à direita
+        hidden: { opacity: 0, x: '100%' },
         visible: { opacity: 1, x: 0, transition: { type: 'spring', stiffness: 200, damping: 25 } },
         exit: { opacity: 0, x: '100%', transition: { type: 'spring', stiffness: 200, damping: 25 } },
     };
@@ -104,7 +122,7 @@ export default function SidebarHomepage({ userPhotoURL, userData, userPermission
                 {/* Botão de fechar a sidebar */}
                 <button
                     className="absolute top-4 right-4 text-white"
-                    onClick={toggleSidebar} // Fecha a sidebar ao clicar
+                    onClick={toggleSidebar}
                 >
                     X
                 </button>
@@ -123,13 +141,13 @@ export default function SidebarHomepage({ userPhotoURL, userData, userPermission
                     </Link>
                     {/* Avatar e Nome */}
                     <Image
-                        src={userPhotoURL || '/images/default-avatar.png'} // Adicione uma imagem padrão
+                        src={userPhotoURL || '/images/default-avatar.png'}
                         alt="User Avatar"
                         width={80}
                         height={80}
                         className="rounded-full mb-4 border-2 border-white p-2"
                         onError={(e) => {
-                            e.target.src = '/images/default-avatar.png' // Fallback se a imagem falhar ao carregar
+                            e.target.src = '/images/default-avatar.png'
                         }}
                     />
                     <div className="text-center mb-6">
@@ -188,96 +206,18 @@ export default function SidebarHomepage({ userPhotoURL, userData, userPermission
                     </div>
                 </div>
 
-                {/* Menu lateral */}
+                {/* Menu lateral usando mapeamento dos itens de menu */}
                 <nav className="flex flex-col gap-4 w-[250px] overflow-y-scroll p-2 custom-scroll">
-                    <Link href="/homepage">
-                        <div className={`${getLinkStyle('dashboard')} text-white 
-                        bg-[#9b32b2] text-lg rounded-lg py-2 px-4 w-full text-center shadow-lg flex items-center justify-start gap-4 hover:bg-[#9b32b2] transition-colors duration-300`}>
-                            <FontAwesomeIcon icon={faChartSimple} />
-
-                            <span className="text-white font-medium">Dashboard</span>
-                        </div>
-                    </Link>
-
-
-                    <Link href="/homepage/agenda">
-                        <div className={`${getLinkStyle('agenda')} text-white rounded-lg py-2 px-4 w-full text-center shadow-lg flex items-center justify-start gap-4 hover:bg-[#9b32b2] transition-colors duration-300`}>
-                            <FontAwesomeIcon icon={faCalendarDay} />
-                            <span className="text-white text-lg font-medium">Agenda</span>
-                        </div>
-                    </Link>
-
-                    <Link href="/finance">
-                        <div className={`${getLinkStyle('agenda')} text-white rounded-lg py-2 px-4 w-full text-center shadow-lg flex items-center justify-start gap-4 hover:bg-[#9b32b2] transition-colors duration-300`}>
-                            <FontAwesomeIcon icon={faCoins} />
-                            <span className="text-white text-lg font-medium">Financeiro</span>
-                        </div>
-                    </Link>
-
-                    <Link href="/sales">
-                        <div className={`${getLinkStyle('agenda')} text-white rounded-lg py-2 px-4 w-full text-center shadow-lg flex items-center justify-start gap-4 hover:bg-[#9b32b2] transition-colors duration-300`}>
-                            <FontAwesomeIcon icon={faMoneyBillTransfer} />
-                            <span className="text-white text-lg font-medium">Vendas</span>
-                        </div>
-                    </Link>
-
-                    <Link href="/homepage/agenda">
-                        <div className={`${getLinkStyle('agenda')} text-white rounded-lg py-2 px-4 w-full text-center shadow-lg flex items-center justify-start gap-4 hover:bg-[#9b32b2] transition-colors duration-300`}>
-                            <FontAwesomeIcon icon={faUserPlus} />
-                            <span className="text-white text-lg font-medium">Cadastros</span>
-                        </div>
-                    </Link>
-
-                    <Link href="/homepage/agenda">
-                        <div className={`${getLinkStyle('agenda')} text-white rounded-lg py-2 px-4 w-full text-center shadow-lg flex items-center justify-start gap-4 hover:bg-[#9b32b2] transition-colors duration-300`}>
-                            <FontAwesomeIcon icon={faCartFlatbed} />
-                            <span className="text-white text-lg font-medium">Estoque</span>
-                        </div>
-                    </Link>
-
-
-                    <Link href="/homepage/agenda">
-                        <div className={`${getLinkStyle('agenda')} text-white rounded-lg py-2 px-4 w-full text-center shadow-lg flex items-center justify-start gap-4 hover:bg-[#9b32b2] transition-colors duration-300`}>
-                            <FontAwesomeIcon icon={faShop} />
-                            <span className="text-white text-lg font-medium">Loja Online</span>
-                        </div>
-                    </Link>
-
-                    <Link href="/homepage/agenda">
-                        <div className={`${getLinkStyle('agenda')} text-white rounded-lg py-2 px-4 w-full text-center shadow-lg flex items-center justify-start gap-4 hover:bg-[#9b32b2] transition-colors duration-300`}>
-                            <FontAwesomeIcon icon={faFileSignature} />
-                            <span className="text-white text-lg font-medium">Contratos</span>
-                        </div>
-                    </Link>
-
-                    <Link href="/homepage/agenda">
-                        <div className={`${getLinkStyle('agenda')} text-white rounded-lg py-2 px-4 w-full text-center shadow-lg flex items-center justify-start gap-4 hover:bg-[#9b32b2] transition-colors duration-300`}>
-                            <FontAwesomeIcon icon={faPeopleRoof} />
-                            <span className="text-white text-lg font-medium">CRM</span>
-                        </div>
-                    </Link>
-
-                    <Link href="/homepage/agenda">
-                        <div className={`${getLinkStyle('agenda')} text-white rounded-lg py-2 px-4 w-full text-center shadow-lg flex items-center justify-start gap-4 hover:bg-[#9b32b2] transition-colors duration-300`}>
-                            <FontAwesomeIcon icon={faIdBadge} />
-                            <span className="text-white text-lg font-medium">RH</span>
-                        </div>
-                    </Link>
-
-                    <Link href="/homepage/agenda">
-                        <div className={`${getLinkStyle('agenda')} text-white rounded-lg py-2 px-4 w-full text-center shadow-lg flex items-center justify-start gap-4 hover:bg-[#9b32b2] transition-colors duration-300`}>
-                            <FontAwesomeIcon icon={faCode} />
-                            <span className="text-white text-lg font-medium">Integrações</span>
-                        </div>
-                    </Link>
+                    {menuItems.map((item) => (
+                        <Link key={item.name} href={item.path}>
+                            <div className={`${getLinkStyle(item.path)} text-white 
+                            rounded-sm py-2 px-4 w-full text-center shadow-lg flex items-center justify-start gap-4 hover:bg-[#9b32b2] transition-colors duration-300`}>
+                                <FontAwesomeIcon icon={item.icon} />
+                                <span className="text-white text-lg font-medium">{item.label}</span>
+                            </div>
+                        </Link>
+                    ))}
                 </nav>
-                {/* <button
-                    onClick={handleLogout}
-                    className="mt-auto mb-4 w-full bg-[#9b32b2] text-white rounded-lg py-2 px-4 text-center shadow-lg flex items-center justify-center gap-2 hover:bg-[#D291BC] transition-colors duration-300"
-                >
-                    <FontAwesomeIcon icon={faSignOutAlt} />
-                    <span className="text-white text-lg font-medium">Sair</span>
-                </button> */}
             </aside>
 
             <NotificationsModal

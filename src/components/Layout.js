@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import BackButton from '@/components/BackButton';
 import { useNotifications } from '@/hooks/useNotifications';
 import { usePathname, useRouter } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
@@ -105,7 +106,9 @@ const Layout = ({ children }) => {
                                 lg:p-6 lg:m-10 lg:ml-14 lg:mt-20 overflow-y-auto custom-scroll
                                 p-4 bg-white min-h-screen pb-10
                             `}>
+                            <BackButton label="Voltar" size={36} />
                             {children}
+
                         </main>
                         <BottomMobileNav />
                     </div>

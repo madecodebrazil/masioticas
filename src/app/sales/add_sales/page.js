@@ -1,0 +1,615 @@
+"use client";
+
+import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation'; // use next/navigation no app router, não next/router
+import Head from 'next/head';
+import useModalNovaVenda from '@/hooks/useModalNovaVenda';
+import CarrinhoCompras from '@/components/CarrinhoCompras';
+import PaymentMethodPanel from '@/components/PaymentMethodPanel';
+import ClientForm from '@/components/ClientForm';
+import PixQRCodeModal from '@/components/PixQRCodeModal';
+import OSManager from '@/components/OSManager';
+import TipoTransacaoSelector from '@/components/TipoTransacaoSelector';
+import CreditCardForm from '@/components/CreditCardForm';
+import {
+    FiClock,
+    FiRefreshCw,
+    FiMessageSquare,
+    FiPrinter,
+    FiUser,
+    FiSearch,
+    FiPlus,
+    FiX,
+    FiShoppingCart,
+    FiDollarSign,
+    FiCheck,
+    FiFileText,
+    FiTrash2,
+    FiCreditCard,
+    FiClipboard,
+    FiCalendar,
+    FiPlusCircle,
+    FiGift,
+    FiActivity,
+    FiPercent,
+    FiAlertTriangle,
+    FiArrowLeft
+} from 'react-icons/fi';
+import { FaBitcoin, FaEthereum } from 'react-icons/fa';
+import { useAuth } from '@/hooks/useAuth';
+
+const NovaVendaPage = () => {
+    const router = useRouter();
+    const { userPermissions } = useAuth();
+    const [selectedLoja, setSelectedLoja] = useState('');
+
+    // Obter loja da URL ou selecionar a primeira disponível
+    useEffect(() => {
+        // Verificar se router.query existe antes de acessar
+        if (router.query && router.query.loja) {
+            setSelectedLoja(router.query.loja);
+        } else if (userPermissions?.lojas?.length > 0) {
+            setSelectedLoja(userPermissions.lojas[0]);
+            // Atualizar URL com a loja selecionada
+            router.replace(`/sales/add_sales?loja=${userPermissions.lojas[0]}`, undefined, { shallow: true });
+        }
+    }, [router.query, userPermissions]);
+
+    // Usar o hook existente, mas adaptado para contexto de página
+    const modalProps = {
+        isOpen: true, // sempre aberto, pois agora é uma página
+        onClose: () => router.push('/sales'), // voltar para a lista de vendas
+        selectedLoja
+    };
+
+    // Usar o hook original sem modificações
+    const novaVendaHook = useModalNovaVenda(modalProps);
+
+    // Extrair tudo que precisamos do hook
+    const {
+        cartItems,
+        setCartItems,
+        selectedClient,
+        setSelectedClient,
+        paymentMethods,
+        setPaymentMethods,
+        error,
+        setError,
+        statusVenda,
+        setStatusVenda,
+        newOsId,
+        setNewOsId,
+        novaVendaRef,
+        setNovaVendaRef,
+        searchTerm,
+        setSearchTerm,
+        clients,
+        setClients,
+        filteredClients,
+        setFilteredClients,
+        showClientForm,
+        setShowClientForm,
+        products,
+        setProducts,
+        productSearchTerm,
+        setProductSearchTerm,
+        filteredProducts,
+        setFilteredProducts,
+        focusedRow,
+        setFocusedRow,
+        newProductQty,
+        setNewProductQty,
+        produtoInputRef,
+        setProdutoInputRef,
+        discount,
+        setDiscount,
+        discountType,
+        setDiscountType,
+        observation,
+        setObservation,
+        valorPago,
+        setValorPago,
+        troco,
+        setTroco,
+        success,
+        setSuccess,
+        saleId,
+        setSaleId,
+        osId,
+        setOsId,
+        currentPaymentIndex,
+        setCurrentPaymentIndex,
+        valueDistribution,
+        setValueDistribution,
+        showCreditCardForm,
+        setShowCreditCardForm,
+        dadosCartao,
+        setDadosCartao,
+        boletoData,
+        setBoletoData,
+        fetchClients,
+        handleSelectClient,
+        tipoTransacao,
+        setTipoTransacao,
+        handleOSChange,
+        osFormsCompleted,
+        calculateTotal,
+        calculateSubtotal,
+        calculateDiscount,
+        calculateTotalAllocated,
+        calculateRemainingValue,
+        updatePaymentMethodValue,
+        addPaymentMethod,
+        removePaymentMethod,
+        changePaymentMethod,
+        processPaymentMethod,
+        handleFinalizarClicked,
+        precisaDeOS,
+        colecaoPrecisaDeOS,
+        formatCurrency,
+        boletoVencimento,
+        setBoletoVencimento,
+        parcelasCredario,
+        setParcelasCredario,
+        selectedCrypto,
+        setSelectedCrypto,
+        cryptoAddress,
+        setCryptoAddress,
+        showPixModal,
+        setShowPixModal,
+        pixQRCode,
+        cashbackDisponivel
+    } = novaVendaHook;
+
+    const [isFinalizando, setIsFinalizando] = useState(false);
+    const [collections, setCollections] = useState([
+        { id: 1, name: "Coleção 1", items: [] }
+    ]);
+    const [activeCollection, setActiveCollection] = useState(1);
+    const [osStatus, setOsStatus] = useState({ tipo: 'sem_os' });
+    const [dataVenda, setDataVenda] = useState(new Date().toISOString().split('T')[0]);
+    const [vendedor, setVendedor] = useState('Admin');
+
+    // Função para voltar à página anterior
+    const handleBack = () => {
+        router.push('/sales');
+    };
+
+    // Clone das configurações existentes de ModalNovaVenda
+    // Renderizar o conteúdo existente de ModalNovaVenda, com pequenas adaptações para contexto de página
+
+    return (
+        <div className="min-h-screen bg-gray-100 pb-6">
+            <Head>
+                <title>{tipoTransacao === 'venda' ? 'Nova Venda' : 'Novo Orçamento'} | MASI Óticas</title>
+            </Head>
+
+            {/* Barra superior com título e botão voltar */}
+            <div className="bg-[#81059e] px-4 py-3 shadow-md flex justify-between items-center text-white sticky top-0 z-10">
+                <div className="flex items-center">
+                    <button
+                        onClick={handleBack}
+                        className="mr-4 p-1 rounded-full hover:bg-purple-700 transition-colors"
+                    >
+                        <FiArrowLeft size={24} />
+                    </button>
+                    <h1 className="text-lg font-medium flex items-center gap-2">
+                        {tipoTransacao === 'venda' ? (
+                            <><FiShoppingCart className="mr-1" /> Nova Venda</>
+                        ) : (
+                            <><FiFileText className="mr-1" /> Novo Orçamento</>
+                        )}
+                    </h1>
+                </div>
+
+                {selectedLoja && (
+                    <div className="bg-purple-800 px-3 py-1 rounded-full text-sm">
+                        Loja: {selectedLoja}
+                    </div>
+                )}
+            </div>
+
+            {/* *** CONTEÚDO DO MODALNOVAVENDA *** */}
+            {/* Conteúdo principal - adaptado do ModalNovaVenda */}
+            <div className="max-w-6xl mx-auto px-4 mt-6">
+                {/* Exibir mensagem de erro */}
+                {error && (
+                    <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4">
+                        <p>{error}</p>
+                    </div>
+                )}
+
+                {/* Seletor de tipo de transação */}
+                <div className="bg-white p-4 rounded-lg shadow-sm mb-4">
+                    <div className="flex justify-center">
+                        <div className="grid grid-cols-2 gap-4 w-full max-w-md">
+                            <button
+                                type="button"
+                                onClick={() => setTipoTransacao('venda')}
+                                className={`p-2 border rounded-sm flex items-center justify-center ${tipoTransacao === 'venda'
+                                    ? 'bg-[#81059e] text-white border-[#81059e]'
+                                    : 'bg-white text-gray-700 border-gray-300 hover:bg-purple-50'
+                                    }`}
+                            >
+                                <FiShoppingCart className="mr-2" /> Venda
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setTipoTransacao('orcamento')}
+                                className={`p-2 border rounded-sm flex items-center justify-center ${tipoTransacao === 'orcamento'
+                                    ? 'bg-[#81059e] text-white border-[#81059e]'
+                                    : 'bg-white text-gray-700 border-gray-300 hover:bg-purple-50'
+                                    }`}
+                            >
+                                <FiFileText className="mr-2" /> Orçamento
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Coluna da esquerda: Detalhes da venda */}
+                    <div>
+                        {/* Data e Vendedor */}
+                        <div className="bg-white p-4 rounded-lg shadow-sm mb-4">
+                            <div className="flex mb-2 gap-4">
+                                <div className="flex items-center gap-2">
+                                    <FiCalendar className="text-[#81059e]" />
+                                    <span className="font-medium">Data:</span>
+                                    <input
+                                        type="date"
+                                        value={dataVenda}
+                                        onChange={(e) => setDataVenda(e.target.value)}
+                                        className="border border-[#81059e] rounded-sm px-2 py-1"
+                                    />
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <FiUser className="text-[#81059e]" />
+                                <span className="font-medium">Vendedor:</span>
+                                <span>{vendedor}</span>
+                            </div>
+                        </div>
+
+                        {/* Seleção de Cliente */}
+                        <div className="bg-white p-4 rounded-lg shadow-sm mb-4">
+                            <label className="block text-[#81059e] text-xl font-medium mb-1 flex items-center gap-1">
+                                <FiUser /> Cliente
+                            </label>
+
+                            {showClientForm ? (
+                                <div className="border-2 border-[#81059e] rounded-sm p-4">
+                                    <div className="flex justify-between items-center mb-4">
+                                        <h3 className="font-medium text-[#81059e]">Adicionar Novo Cliente</h3>
+                                        <button
+                                            onClick={() => setShowClientForm(false)}
+                                            className="text-gray-500 hover:text-gray-700"
+                                        >
+                                            <FiX size={20} />
+                                        </button>
+                                    </div>
+                                    <ClientForm
+                                        selectedLoja={selectedLoja}
+                                        onSuccessRedirect={() => {
+                                            setShowClientForm(false);
+                                            fetchClients(); // Atualizar a lista após adicionar
+                                        }}
+                                    />
+                                </div>
+                            ) : (
+                                <>
+                                    <div className="flex gap-2">
+                                        <div className="relative flex-1">
+                                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                <FiSearch className="text-gray-400" />
+                                            </div>
+                                            <input
+                                                type="text"
+                                                value={searchTerm}
+                                                onChange={(e) => setSearchTerm(e.target.value)}
+                                                className="border-2 border-[#81059e] pl-10 p-2 rounded-sm w-full"
+                                                placeholder="Buscar cliente por nome ou CPF"
+                                            />
+                                            {filteredClients.length > 0 && (
+                                                <div className="absolute z-10 mt-1 w-full bg-white border-2 border-[#81059e] rounded-lg max-h-[200px] overflow-y-auto shadow-lg custom-scroll">
+                                                    {filteredClients
+                                                        .filter(client => {
+                                                            const searchTermLower = searchTerm.toLowerCase();
+                                                            return (
+                                                                client.nome.toLowerCase().includes(searchTermLower) ||
+                                                                (client.cpf && client.cpf.includes(searchTermLower)) ||
+                                                                (client.telefone && client.telefone.includes(searchTermLower))
+                                                            );
+                                                        })
+                                                        .map(client => (
+                                                            <div
+                                                                key={client.id}
+                                                                className="p-2 hover:bg-purple-50 cursor-pointer border-b last:border-b-0"
+                                                                onClick={() => handleSelectClient(client)}
+                                                            >
+                                                                <div className="font-medium">{client.nome}</div>
+                                                                {client.cpf && <div className="text-sm text-gray-600">CPF: {client.cpf}</div>}
+                                                            </div>
+                                                        ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                        <button
+                                            onClick={() => setShowClientForm(true)}
+                                            className="bg-[#81059e] text-white p-2 rounded-sm flex items-center"
+                                            title="Adicionar novo cliente"
+                                        >
+                                            <FiPlus />
+                                        </button>
+                                    </div>
+
+                                    {selectedClient && (
+                                        <div className="mt-2 p-3 border-2 border-purple-100 rounded-sm bg-purple-50">
+                                            <div className="flex justify-between items-center">
+                                                <div>
+                                                    <h3 className="font-semibold text-[#81059e]">{selectedClient.nome}</h3>
+                                                    {selectedClient.cpf && <p className="text-gray-600 text-sm">CPF: {selectedClient.cpf}</p>}
+                                                    {selectedClient.telefone && <p className="text-gray-600 text-sm">Tel: {selectedClient.telefone}</p>}
+                                                </div>
+                                                <button
+                                                    onClick={() => setSelectedClient(null)}
+                                                    className="text-[#81059e] hover:text-[#6f0486]"
+                                                >
+                                                    <FiX size={20} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </>
+                            )}
+                        </div>
+
+                        {/* Seleção e Lista de Produtos */}
+                        <div className="bg-white p-4 rounded-lg shadow-sm mb-4">
+                            <label className="block text-[#81059e] text-xl font-medium mb-3 flex items-center gap-1">
+                                <FiShoppingCart /> Produtos
+                            </label>
+
+                            <div>
+                                <CarrinhoCompras
+                                    cartItems={cartItems}
+                                    setCartItems={setCartItems}
+                                    selectedLoja={selectedLoja}
+                                    formatCurrency={formatCurrency}
+                                    calculateTotal={calculateTotal}
+                                    updateCollections={(updatedCollections) => setCollections(updatedCollections)}
+                                    setActiveCollection={(colectionId) => setActiveCollection(colectionId)}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Gerenciamento de OS */}
+                        {cartItems.length > 0 && (
+                            <div className="bg-white p-4 rounded-lg shadow-sm mb-4">
+                                <OSManager
+                                    cartItems={cartItems}
+                                    selectedClient={selectedClient}
+                                    onOSChange={(data) => {
+                                        setOsStatus(data);
+                                        handleOSChange(data);
+                                    }}
+                                    collections={collections}
+                                    activeCollection={activeCollection}
+                                />
+                            </div>
+                        )}
+
+                        {/* Aviso sobre OS pendentes */}
+                        {osStatus.tipo !== 'sem_os' && !osFormsCompleted && (
+                            <div className="mb-4 p-3 bg-yellow-50 border-l-4 border-yellow-500 text-yellow-700 flex items-center rounded-md shadow-sm">
+                                <FiAlertTriangle className="mr-2" />
+                                <span>Existem formulários de OS pendentes de preenchimento</span>
+                            </div>
+                        )}
+
+                        {/* Observações */}
+                        <div className="bg-white p-4 rounded-lg shadow-sm mb-4">
+                            <label className="block text-xl mb-1 flex items-center gap-1">
+                                <FiFileText className="text-[#81059e]" /> <p className='text-[#81059e] font-medium'>Observações</p>
+                            </label>
+                            <textarea
+                                value={observation}
+                                onChange={(e) => setObservation(e.target.value)}
+                                className="border-2 border-[#81059e] p-2 rounded-sm w-full h-20"
+                                placeholder="Observações sobre a venda ou montagem do óculos..."
+                            />
+                        </div>
+                    </div>
+
+                    {/* Coluna da direita: Pagamento e Totais */}
+                    <div>
+                        {/* Desconto */}
+                        <div className="bg-white p-4 rounded-lg shadow-sm mb-4">
+                            <div className="flex justify-between items-center mb-2">
+                                <label className="block text-[#81059e] font-medium flex text-xl items-center gap-1">
+                                    <FiDollarSign /> Desconto
+                                </label>
+                                <div className="flex">
+                                    <button
+                                        type="button"
+                                        onClick={() => setDiscountType('percentage')}
+                                        className={`px-3 py-1 border first:rounded-l-md last:rounded-r-md ${discountType === 'percentage'
+                                            ? 'bg-[#81059e] text-white border-[#81059e]'
+                                            : 'bg-white text-gray-700 border-gray-300'
+                                            }`}
+                                    >
+                                        %
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setDiscountType('value')}
+                                        className={`px-3 py-1 border first:rounded-l-md last:rounded-r-md ${discountType === 'value'
+                                            ? 'bg-[#81059e] text-white border-[#81059e]'
+                                            : 'bg-white text-gray-700 border-gray-300'
+                                            }`}
+                                    >
+                                        R$
+                                    </button>
+                                </div>
+                            </div>
+
+                            <input
+                                type="text"
+                                value={discount}
+                                onChange={(e) => {
+                                    const valor = e.target.value.replace(/\D/g, '');
+                                    if (valor === '') {
+                                        setDiscount(0);
+                                        return;
+                                    }
+                                    if (discountType === 'value') {
+                                        setDiscount(Number(valor) / 100);
+                                    } else {
+                                        setDiscount(Number(valor) / 100);
+                                    }
+                                }}
+                                className="border-2 border-[#81059e] p-2 rounded-sm w-full"
+                                placeholder={discountType === 'percentage' ? "Desconto em %" : "Desconto em R$"}
+                            />
+                        </div>
+
+                        {/* Resumo da Venda */}
+                        <div className="bg-white p-4 rounded-lg shadow-sm mb-4">
+                            <h3 className="text-lg font-medium text-[#81059e] mb-4">Resumo da Venda</h3>
+
+                            <div className="space-y-2">
+                                <div className="flex justify-between">
+                                    <span>Subtotal:</span>
+                                    <span>{formatCurrency(calculateSubtotal())}</span>
+                                </div>
+
+                                {discount > 0 && (
+                                    <div className="flex justify-between text-green-600">
+                                        <span>Desconto{discountType === 'percentage' ? ` (${discount}%)` : ''}:</span>
+                                        <span>- {formatCurrency(calculateDiscount())}</span>
+                                    </div>
+                                )}
+
+                                <div className="flex justify-between font-bold text-lg pt-2 border-t border-gray-300">
+                                    <span>Total:</span>
+                                    <span className="text-[#81059e]">{formatCurrency(calculateTotal())}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Painel de métodos de pagamento - apenas mostrar para vendas */}
+                        {tipoTransacao === 'venda' && (
+                            <div className="bg-white p-4 rounded-lg shadow-sm mb-4">
+                                <PaymentMethodPanel
+                                    paymentMethods={paymentMethods}
+                                    setPaymentMethods={setPaymentMethods}
+                                    currentPaymentIndex={currentPaymentIndex}
+                                    setCurrentPaymentIndex={setCurrentPaymentIndex}
+                                    valueDistribution={valueDistribution}
+                                    setValueDistribution={setValueDistribution}
+                                    calculateTotal={calculateTotal}
+                                    calculateTotalAllocated={calculateTotalAllocated}
+                                    calculateRemainingValue={calculateRemainingValue}
+                                    updatePaymentMethodValue={updatePaymentMethodValue}
+                                    addPaymentMethod={addPaymentMethod}
+                                    removePaymentMethod={removePaymentMethod}
+                                    changePaymentMethod={changePaymentMethod}
+                                    cashbackDisponivel={cashbackDisponivel}
+                                    formatCurrency={formatCurrency}
+                                    processPaymentMethod={processPaymentMethod}
+                                    boletoVencimento={boletoVencimento}
+                                    setBoletoVencimento={setBoletoVencimento}
+                                    parcelasCredario={parcelasCredario}
+                                    setParcelasCredario={setParcelasCredario}
+                                    selectedCrypto={selectedCrypto}
+                                    setSelectedCrypto={setSelectedCrypto}
+                                    cryptoAddress={cryptoAddress}
+                                    setCryptoAddress={setCryptoAddress}
+                                />
+                            </div>
+                        )}
+
+                        {/* Botão de finalizar */}
+                        <button
+                            onClick={() => {
+                                setIsFinalizando(true);
+                                handleFinalizarClicked().finally(() => {
+                                    setIsFinalizando(false);
+                                });
+                            }}
+                            disabled={cartItems.length === 0 || !selectedClient ||
+                                (tipoTransacao === 'venda' &&
+                                    ((osStatus.tipo !== 'sem_os' && !osFormsCompleted) ||
+                                        isFinalizando))}
+                            className="w-full bg-[#81059e] text-white py-3 px-4 rounded-md flex items-center justify-center font-medium hover:bg-[#6f0486] disabled:bg-purple-300 disabled:cursor-not-allowed shadow-sm"
+                        >
+                            {isFinalizando ? (
+                                <>
+                                    <div className="animate-spin h-5 w-5 border-2 border-white rounded-full border-t-transparent mr-2"></div>
+                                    Processando...
+                                </>
+                            ) : (
+                                <>
+                                    <FiCheck className="mr-2" /> {tipoTransacao === 'venda' ? 'Finalizar Venda' : 'Salvar Orçamento'}
+                                </>
+                            )}
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            {/* Modal de cadastro de cliente */}
+            {showClientForm && (
+                <div className="fixed inset-0 z-[60] overflow-y-auto bg-black bg-opacity-50">
+                    <div className="flex items-center justify-center min-h-screen">
+                        <div className="bg-white rounded-sm shadow-xl w-full max-w-4xl p-6">
+                            <div className="flex justify-between items-center mb-4">
+                                <h2 className="text-xl font-bold text-[#81059e]">Cadastrar Novo Cliente</h2>
+                                <button
+                                    onClick={() => setShowClientForm(false)}
+                                    className="text-gray-400 hover:text-gray-600"
+                                >
+                                    <FiX size={24} />
+                                </button>
+                            </div>
+                            <ClientForm
+                                selectedLoja={selectedLoja}
+                                onSuccessRedirect={() => {
+                                    setShowClientForm(false);
+                                    fetchClients(); // Atualizar a lista após adicionar
+                                }}
+                            />
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal de pagamento com cartão */}
+            {showCreditCardForm && (
+                <div className="fixed inset-0 z-[70] overflow-y-auto bg-black bg-opacity-50">
+                    <div className="flex items-center justify-center min-h-screen p-4">
+                        <CreditCardForm
+                            onSubmit={(cardData) => {
+                                setDadosCartao(cardData);
+                                setShowCreditCardForm(false);
+                                // Implementar processamento de cartão
+                            }}
+                            onCancel={() => setShowCreditCardForm(false)}
+                            valorTotal={paymentMethods[currentPaymentIndex]?.value || 0}
+                        />
+                    </div>
+                </div>
+            )}
+
+            {/* Modal do PIX */}
+            <PixQRCodeModal
+                isOpen={showPixModal}
+                onClose={() => setShowPixModal(false)}
+                valor={paymentMethods[currentPaymentIndex]?.value || 0}
+                qrCode={pixQRCode}
+            />
+        </div>
+    );
+};
+
+export default NovaVendaPage;

@@ -5,6 +5,7 @@ import Layout from '@/components/Layout';
 import { collection, getDocs, addDoc, getDoc, Timestamp, doc, setDoc, deleteDoc } from 'firebase/firestore';
 import { firestore } from '../../../lib/firebaseConfig';
 import { useAuth } from '@/hooks/useAuth';
+import BackButton from '@/components/BackButton';
 import Link from 'next/link';
 import ConfirmationModal from '../../../components/ConfirmationModalPay.js';
 import { FiCalendar, FiDollarSign, FiTag, FiFileText, FiUser, FiCreditCard, FiMapPin, FiLayers, FiTrendingUp, FiHome, FiPlus, FiX, FiTrash2 } from 'react-icons/fi';
@@ -470,11 +471,11 @@ export default function ContasPagar() {
   // Função para buscar os caixas disponíveis
   const fetchCaixas = async () => {
     if (!selectedLoja) return;
-    
+
     try {
       const caixasRef = collection(firestore, `lojas/${selectedLoja}/financeiro/controle_caixa/caixas`);
       const caixasSnapshot = await getDocs(caixasRef);
-      
+
       const caixas = [];
       caixasSnapshot.forEach(doc => {
         caixas.push({
@@ -482,7 +483,7 @@ export default function ContasPagar() {
           ...doc.data()
         });
       });
-      
+
       setCaixasDisponiveis(caixas);
     } catch (error) {
       console.error("Erro ao buscar caixas:", error);
@@ -539,6 +540,7 @@ export default function ContasPagar() {
     <Layout>
       <div className="min-h-screen">
         <div className="w-full max-w-5xl mx-auto rounded-lg">
+          {/* <BackButton label="Voltar" size={36} /> */}
           <h2 className="text-3xl font-bold text-[#81059e] mb-8 mt-8">CONTAS A PAGAR</h2>
 
           {/* Seletor de Loja para Admins */}
@@ -834,7 +836,7 @@ export default function ContasPagar() {
                       ))}
                       <option value="add_new">+ ADICIONAR NOVA CATEGORIA</option>
                     </select>
-                    
+
                     {formData.categoriaDespesa && (
                       <button
                         type="button"
@@ -844,17 +846,17 @@ export default function ContasPagar() {
                               const path = `lojas/${selectedLoja}/financeiro/configuracoes/categorias_despesa`;
                               const docId = formData.categoriaDespesa.toLowerCase().replace(/\s+/g, '_');
                               const docRef = doc(firestore, path, docId);
-                              
+
                               await deleteDoc(docRef);
-                              
+
                               // Atualizar a lista de categorias
                               setCategoriasDespesa(categoriasDespesa.filter(
                                 cat => cat !== formData.categoriaDespesa
                               ));
-                              
+
                               // Limpar a seleção atual
                               setFormData(prev => ({ ...prev, categoriaDespesa: '' }));
-                              
+
                               alert(`Categoria ${formData.categoriaDespesa} removida com sucesso!`);
                             } catch (error) {
                               console.error("Erro ao remover categoria:", error);
@@ -868,7 +870,7 @@ export default function ContasPagar() {
                         <FiTrash2 />
                       </button>
                     )}
-                    
+
                     {showAddCategoriaInput && (
                       <div className="absolute z-10 top-full left-0 w-full mt-1 bg-white border-2 border-[#81059e] p-3 rounded-lg shadow-lg">
                         <div className="flex items-center gap-2">

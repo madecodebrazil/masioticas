@@ -37,7 +37,7 @@ export default function Dashboard() {
   return (
     <div className="flex flex-col -p-2 md:p-4  space-y-6 ">
       {/* Header Section */}
-      <div className='bg-gradient-to-b from-[#81059e]/90 to-[#81059e]/70 rounded-none md:rounded-xl shadow-lg p-6'>
+      <div className='bg-gradient-to-b from-[#81059e]/90 to-[#81059e]/70 rounded-none md:rounded-sm shadow-lg p-6'>
       <div className="flex items-center justify-between">
         <h1 className="p-2 text-3xl pb-4 font-semibold text-white">Seus Insights</h1>
         <div className="text-sm text-gray-100">
@@ -77,7 +77,7 @@ export default function Dashboard() {
         </div>
 
         {/* Ordens de Serviço */}
-        <div className="bg-[#fafafa]  rounded-lg  p-6">
+        <div className="bg-[#fafafa]  rounded-sm  p-6">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold text-gray-700">Ordens de Serviço</h2>
             <FontAwesomeIcon icon={faClipboardCheck} className="text-purple-300 text-xl" />
@@ -108,7 +108,7 @@ export default function Dashboard() {
         </div>
 
         {/* Comissões */}
-        <div className="bg-[#fafafa]  rounded-xl border-2 border-gray-200 p-6">
+        <div className="bg-[#fafafa]  rounded-sm border-2 border-gray-200 p-6">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold text-gray-700">Comissões</h2>
             <FontAwesomeIcon icon={faFileInvoiceDollar} className="text-[#84207B] text-xl" />
@@ -120,11 +120,11 @@ export default function Dashboard() {
             </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-600 text-base">Projeção</span>
-              <span className="text-purple-300 font-semibold">R$ {commissions.projected}</span>
+              <span className="text-purple-500 font-semibold">R$ {commissions.projected}</span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
               <div 
-                className="bg-[#D291BC] h-2 rounded-full" 
+                className="bg-[#81059e] h-2 rounded-full" 
                 style={{width: `${(commissions.current/commissions.projected) * 100}%`}}
               ></div>
             </div>
@@ -136,10 +136,10 @@ export default function Dashboard() {
       {/* Agenda e Consultas */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Agenda do Dia */}
-        <div className="bg-[#fafafa]  rounded-lg border-2 border-purple-100 p-6 md:col-span-2">
+        <div className="bg-[#fafafa]  rounded-sm border-2 p-6 md:col-span-2">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-semibold text-gray-700">Agenda do Dia</h2>
-            <FontAwesomeIcon icon={faUserClock} className="text-[#84207B] text-xl" />
+            <FontAwesomeIcon icon={faUserClock} className="text-[#81059e] text-xl" />
           </div>
           <div className="space-y-4">
             <div className="p-4 border border-gray-200 rounded-lg">
@@ -165,7 +165,7 @@ export default function Dashboard() {
         </div>
 
         {/* Status do Mês */}
-        <div className="bg-[#fafafa]  rounded-lg border-2 border-purple-100 p-6">
+        <div className="bg-[#fafafa]  rounded-sm border-2 p-6">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-semibold text-gray-700">Status do Mês</h2>
             <FontAwesomeIcon icon={faChartLine} className="text-[#84207B] text-xl" />

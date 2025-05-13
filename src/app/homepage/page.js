@@ -1,3 +1,4 @@
+//Homepage.js
 "use client";
 import Image from 'next/image';
 import Link from 'next/link';
@@ -194,15 +195,15 @@ export default function Home() {
     }, [user, contarOS, contarConsultas, contarVendasDoUsuario]);
 
     const items = [
-        { label: <>Financeiro</>, img: '/images/homepage/Coins.png', href: '/finance' },
-        { label: <>Vendas</>, img: '/images/homepage/Product.png', href: '/sales' },
-        { label: <>Estoque</>, img: '/images/homepage/Boxes.png', href: '/stock' },
-        { label: <>Produtos</>, img: '/images/homepage/Product.png', href: '/products_and_services' },
-        { label: <>Cadastros</>, img: '/images/homepage/Task.png', href: '/register' },
-        { label: <>Consultas</>, img: '/images/homepage/Stethoscope.png', href: '/consultation' },
-        { label: <>Clientes</>, img: '/images/homepage/User.png', href: 'register/consumers' },
-        { label: <>Comercial</>, img: '/images/homepage/Shopping.png', href: '/commercial' },
-        { label: <>Cobranças</>, img: '/images/homepage/Receipt_Dollar.png', href: '/billing' },
+        { label: <>Financeiro</>, img: '/images/dock/finance_icon.png', href: '/finance' },
+        { label: <>Vendas</>, img: '/images/dock/sales_icon.png', href: '/sales' },
+        { label: <>Estoque</>, img: '/images/dock/stock_icon.png', href: '/stock' },
+        { label: <>Produtos</>, img: '/images/dock/products_icon.png', href: '/products_and_services' },
+        { label: <>Cadastros</>, img: '/images/dock/cadastro_icon.png', href: '/register' },
+        { label: <>Consultas</>, img: '/images/dock/consultas_icon.png', href: '/consultation' },
+        { label: <>Clientes</>, img: '/images/dock/clients_icon.png', href: 'register/consumers' },
+        { label: <>Comercial</>, img: '/images/dock/commercial_icon.png', href: '/commercial' },
+        { label: <>Cobranças</>, img: '/images/dock/bills_icon.png', href: '/billing' },
 
     ];
 
@@ -218,7 +219,7 @@ export default function Home() {
     }
 
     return (
-        <div className="flex flex-col md:flex-row min-h-screen bg-gradient-to-b from-[#81059e] to-[#B7328C]">
+        <div className="flex flex-col md:flex-row min-h-screen ">
             {/* MobileHeader apenas no mobile */}
             <div className="block md:hidden">
                 <MobileHeader
@@ -229,7 +230,7 @@ export default function Home() {
             </div>
 
             {/* Sidebar fixa para desktop */}
-            <aside className="hidden md:block md:w-[300px] lg:w-[350px] bg-[#81059e] text-white p-4 pl-10 shadow-xl rounded-tr-xl rounded-br-lg fixed h-screen overflow-y-auto">
+            <aside className="hidden md:block md:w-[300px] lg:w-[300px] bg-gradient-to-b from-[#81059e] to-[#B7328C] text-white p-4 shadow-xl rounded-tr-xl rounded-br-lg fixed h-screen overflow-y-auto">
                 <SidebarHomepage
                     userPhotoURL={userPhotoURL}
                     userData={userData}
@@ -238,7 +239,7 @@ export default function Home() {
             </aside>
 
             {/* Conteúdo principal */}
-            <div className="flex-1 flex flex-col bg-white p-0 md:p-4 overflow-auto shadow-xl rounded-tl-xl rounded-bl-xl md:ml-[300px] lg:ml-[350px]">
+            <div className="flex-1 flex flex-col bg-white p-0 md:p-4 overflow-auto shadow-xl rounded-tl-xl rounded-bl-xl md:ml-[300px] lg:ml-[300px]">
                 {/* Feedback de carregamento */}
                 {(loadingOS || loadingVendas) && (
                     <div className="flex justify-center items-center">
@@ -248,50 +249,48 @@ export default function Home() {
 
                 <Dashboard />
 
-                <div className="flex flex-col p-2">
+                <div className="flex flex-col">
                     <CarrouselPromo />
                 </div>
 
-                <div className="grid grid-cols-2 gap-x-2 gap-y-4 md:grid-cols-4 mb-32 justify-center mx-auto lg:gap-x-14 lg:gap-y-6 mt-10">
+                <div className="grid grid-cols-2 gap-2 md:grid-cols-3 md:gap-8 lg:grid-cols-4 lg:gap-4 px-2 sm:px-8 md:px-12 lg:px-16 my-10 mb-32">
                     {items.map((item, index) => (
                         <div key={index} className="flex justify-center">
-                            <Link href={item.href} className="w-full max-w-[180px]">
+                            <Link href={item.href} className="w-full">
                                 <motion.div
-                                    className="relative flex justify-center items-center bg-gradient-to-r from-[#81059e] to-[#B7328C] text-white w-full h-[100px] md:h-[80px] lg:h-[100px] rounded-xl transition-transform transform hover:scale-105 hover:shadow-2xl cursor-pointer p-6"
-                                    style={{
-                                        boxShadow: '0px 10px 25px rgba(0, 0, 0, 0.5)',
-                                        boxSizing: 'border-box'
-                                    }}
+                                    className="relative flex justify-center items-center bg-gradient-to-r from-[#81059e] to-[#B7328C] text-white w-full h-[100px] md:h-[90px] lg:h-[100px] rounded-sm shadow-lg hover:shadow-2xl"
+                                    style={{ boxShadow: '0px 6px 15px rgba(0, 0, 0, 0.3)' }}
                                     initial={{ opacity: 0, scale: 0.9 }}
                                     animate={{ opacity: 1, scale: 1 }}
-                                    whileHover={{ scale: 1.1, boxShadow: "0px 15px 30px rgba(0, 0, 0, 0.6)" }} // Aumenta a escala e adiciona uma sombra mais intensa ao passar o mouse
+                                    whileHover={{ scale: 1.05, boxShadow: "0px 10px 20px rgba(0, 0, 0, 0.4)" }}
                                     transition={{ duration: 0.3 }}
                                 >
                                     <div
-                                        className="absolute inset-0 opacity-10 pointer-events-none"
+                                        className="absolute inset-0 opacity-10 rounded-sm pointer-events-none overflow-hidden"
                                         style={{
                                             backgroundImage: `url('/images/fundo.png')`,
                                             backgroundSize: 'cover',
-                                            backgroundRepeat: 'no-repeat',
-                                            backgroundPosition: 'center'
+                                            backgroundPosition: 'center',
+                                            borderRadius: 'inherit'
                                         }}
-                                    ></div>
+                                    />
 
-                                    <div className="relative z-10 flex flex-row justify-between items-center w-full h-full p-0 m-0">
-                                        <span className="text-white font-medium text-base md:text-sm w-1/2 text-left pointer-events-none p-0 m-0">
+                                    <div className="flex items-center justify-between w-full px-4">
+                                        <span className="text-white font-medium text-sm md:text-base w-2/5">
                                             {item.label}
                                         </span>
-                                        <Image
-                                            src={item.img}
-                                            alt={item.label}
-                                            width={65}
-                                            height={65}
-                                            className="w-1/2 h-[60px] object-contain pointer-events-none"
-                                            style={{ width: 'auto', height: 'auto' }}
-                                        />
+                                        <div className="flex justify-end w-3/5">
+                                            <Image
+                                                src={item.img}
+                                                alt={item.label}
+                                                width={60}
+                                                height={60}
+                                                className="object-contain"
+                                                priority
+                                            />
+                                        </div>
                                     </div>
                                 </motion.div>
-
                             </Link>
                         </div>
                     ))}

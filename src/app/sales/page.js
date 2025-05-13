@@ -62,7 +62,7 @@ export default function SalesPage() {
     {
       icon: "/images/financeiro/vendas.png",
       label: "Nova Venda",
-      action: handleOpenVendaModal
+      route:"/sales/add_sales"
     },
     {
       icon: "/images/financeiro/receber.png",

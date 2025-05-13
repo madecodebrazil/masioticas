@@ -65,7 +65,7 @@ const BottomMobileNav = ({ sidebarOpen }) => {
                 </div>
             </Link>
            
-            <Link href="/homepage/agenda">
+            <Link href="/commercial">
                 <div className="flex flex-col items-center hover:bg-purple-400 rounded-full p-2 transition-all duration-300 transform hover:p-1">
                 <Image 
                         src="/images/nav-mobile/agenda.png" 

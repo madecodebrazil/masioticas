@@ -196,11 +196,11 @@ export default function MobileNavSidebar({ handleLogout, userPhotoURL, userData,
                                     <FontAwesomeIcon icon={faCartFlatbed} className="mr-3" />
                                     Estoque
                                 </Link>
-                                <Link href="/homepage/loja" className="block py-4 px-4 rounded-lg hover:bg-purple-100 transition-colors text-lg">
+                                <Link href="'/homepage/store" className="block py-4 px-4 rounded-lg hover:bg-purple-100 transition-colors text-lg">
                                     <FontAwesomeIcon icon={faShop} className="mr-3" />
                                     Loja Online
                                 </Link>
-                                <Link href="/homepage/contratos" className="block py-4 px-4 rounded-lg hover:bg-purple-100 transition-colors text-lg">
+                                <Link href="/homepage/contracts" className="block py-4 px-4 rounded-lg hover:bg-purple-100 transition-colors text-lg">
                                     <FontAwesomeIcon icon={faFileSignature} className="mr-3" />
                                     Contratos
                                 </Link>
@@ -212,7 +212,7 @@ export default function MobileNavSidebar({ handleLogout, userPhotoURL, userData,
                                     <FontAwesomeIcon icon={faIdBadge} className="mr-3" />
                                     RH
                                 </Link>
-                                <Link href="/homepage/integracoes" className="block py-4 px-4 rounded-lg hover:bg-purple-100 transition-colors text-lg">
+                                <Link href="/homepage/integrations" className="block py-4 px-4 rounded-lg hover:bg-purple-100 transition-colors text-lg">
                                     <FontAwesomeIcon icon={faCode} className="mr-3" />
                                     Integrações
                                 </Link>

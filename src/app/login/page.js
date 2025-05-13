@@ -97,7 +97,7 @@ export default function Login() {
             {!isMobile && (
                 <div className="w-1/2 h-full relative flex justify-start items-start z-10">
                     <div className='flex items-start'>
-                        <img src="/images/masioticaslogo.png" alt="Logo" className="max-h-20 w-auto" />
+                        <img src="/images/masioticaslogo.png" alt="Logo" className="w-44" />
                     </div>
                 </div>
             )}
@@ -120,7 +120,7 @@ export default function Login() {
                                 placeholder="E-mail"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                className="mb-1 px-4 text-black py-2 rounded-xl border-2 bg-white border-gray-300 bg-transparent "
+                                className="mb-1 px-4 text-black py-2 rounded-sm border-2 bg-white border-gray-300 bg-transparent "
                                 required
                             />
 
@@ -131,7 +131,7 @@ export default function Login() {
                                     placeholder="Senha"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
-                                    className="mb-4 px-4 py-2 text-black rounded-xl border-2 bg-white border-gray-300 bg-transparent w-full"
+                                    className="mb-4 px-4 py-2 text-black rounded-sm border-2 bg-white border-gray-300 bg-transparent w-full"
                                 />
                                 <button
                                     type="button"
@@ -150,7 +150,7 @@ export default function Login() {
                             <div className="btn flex justify-center mt-4">
                                 <button
                                     type="submit"
-                                    className={`w-full text-base text-white font-semibold bg-[#81059e] border border-[#81059e] rounded-xl px-4 py-3 hover:bg-opacity-90 transition-all duration-300 ${isButtonDisabled || isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    className={`w-full text-base text-white font-semibold bg-[#81059e] border border-[#81059e] rounded-sm px-4 py-3 hover:bg-opacity-90 transition-all duration-300 ${isButtonDisabled || isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
                                     disabled={isButtonDisabled || isLoading}
                                 >
                                     {isLoading ? 'Carregando' : 'Fazer Login'}
