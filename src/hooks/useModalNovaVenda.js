@@ -1,6 +1,6 @@
 // src/hooks/useModalNovaVenda.js
 import { useState, useEffect } from 'react';
-import { collection, addDoc, getDocs } from 'firebase/firestore';
+import { collection, doc, setDoc, getDocs, query, limit, orderBy, where } from 'firebase/firestore';
 import { firestore } from '../lib/firebaseConfig';
 
 const useModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
@@ -15,19 +15,19 @@ const useModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
     const [dataVenda, setDataVenda] = useState(new Date().toISOString().split('T')[0]);
     const [vendedor, setVendedor] = useState('Admin');
 
-    
+
     // Estados para gerenciamento de ID
     const [saleId, setSaleId] = useState('');
     const [osId, setOsId] = useState('');
     const [newOsId, setNewOsId] = useState(Math.floor(Math.random() * 1000000).toString());
     const [novaVendaRef, setNovaVendaRef] = useState(null);
-    
+
     // Estados para gerenciamento de clientes
     const [searchTerm, setSearchTerm] = useState('');
     const [clients, setClients] = useState([]);
     const [filteredClients, setFilteredClients] = useState([]);
     const [showClientForm, setShowClientForm] = useState(false);
-    
+
     // Estados para gerenciamento de produtos
     const [products, setProducts] = useState([]);
     const [productSearchTerm, setProductSearchTerm] = useState('');
@@ -35,11 +35,11 @@ const useModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
     const [focusedRow, setFocusedRow] = useState(null);
     const [newProductQty, setNewProductQty] = useState(1);
     const [produtoInputRef, setProdutoInputRef] = useState(null);
-    
+
     // Estados para gerenciamento de descontos
     const [discount, setDiscount] = useState(0);
     const [discountType, setDiscountType] = useState('percentage');
-    
+
     // Estados para gerenciamento de pagamento (apenas para vendas)
     const [paymentMethods, setPaymentMethods] = useState([]);
     const [valorPago, setValorPago] = useState(0);
@@ -59,7 +59,7 @@ const useModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
     const [cryptoAddress, setCryptoAddress] = useState('');
     const [showPixModal, setShowPixModal] = useState(false);
     const [pixQRCode, setPixQRCode] = useState('');
-    
+
     // Estados para OS (Ordem de Serviço)
     const [osStatus, setOsStatus] = useState({
         tipo: 'sem_os',
@@ -98,57 +98,86 @@ const useModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
         return calculateTotal() - calculateTotalAllocated();
     };
 
-    // Implementação da função fetchClients
+    // Função fetchClients melhorada para carregar e mostrar clientes corretamente
     const fetchClients = async () => {
         try {
+            setLoading(true);
+            console.log("Buscando clientes...");
+
+            // Caminho correto: lojas/clientes/users
             const clientsRef = collection(firestore, `lojas/clientes/users`);
-            const querySnapshot = await getDocs(clientsRef);
+
+            // Limitar a 10 resultados e ordenar por nome
+            const q = query(clientsRef, orderBy("nome"), limit(10));
+            const querySnapshot = await getDocs(q);
+
             const clientsList = querySnapshot.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data()
             }));
+
+            console.log(`Clientes carregados: ${clientsList.length}`);
             setClients(clientsList);
-            setFilteredClients([]); // Não mostra clientes por padrão
+
+            // Se houver um termo de busca, aplicar filtro imediatamente
+            if (searchTerm && searchTerm.trim() !== '') {
+                filterClients(searchTerm, clientsList);
+            } else {
+                setFilteredClients([]);
+            }
+
+            setLoading(false);
         } catch (error) {
             console.error('Erro ao buscar clientes:', error);
             setError('Erro ao carregar lista de clientes');
+            setLoading(false);
         }
     };
 
-    // Atualizar filteredClients quando searchTerm mudar
-    useEffect(() => {
-        if (searchTerm) {
-            const filtered = clients.filter(client => {
-                const searchTermLower = searchTerm.toLowerCase();
+    // Função separada para filtrar clientes - mais eficiente
+    const filterClients = (term, clientsList = clients) => {
+        if (!term || term.trim() === '') {
+            setFilteredClients([]);
+            return;
+        }
+
+        console.log(`Filtrando clientes com termo: "${term}"`);
+        const searchTermLower = term.toLowerCase().trim();
+
+        // Filtrar clientes que correspondem ao termo de busca
+        const filtered = clientsList
+            .filter(client => {
+                // Verificar se client e client.nome existem para evitar erros
+                if (!client || !client.nome) return false;
+
                 return (
-                    client.nome?.toLowerCase().includes(searchTermLower) ||
+                    client.nome.toLowerCase().includes(searchTermLower) ||
                     (client.cpf && client.cpf.includes(searchTermLower)) ||
                     (client.telefone && client.telefone.includes(searchTermLower))
                 );
-            });
-            setFilteredClients(filtered);
-        } else {
-            setFilteredClients([]); // Não mostra clientes se não houver busca
-        }
-    }, [searchTerm, clients]);
+            })
+            .slice(0, 10); // Limite de 10 resultados para melhor performance
 
-    // Atualizar produtos filtrados quando productSearchTerm mudar
+        console.log(`Resultados filtrados: ${filtered.length}`);
+        setFilteredClients(filtered);
+    };
+
+    // useEffect atualizado para filtrar em tempo real
     useEffect(() => {
-        if (productSearchTerm) {
-            const filtered = products.filter(product => {
-                const searchTermLower = productSearchTerm.toLowerCase();
-                return (
-                    product.nome?.toLowerCase().includes(searchTermLower) ||
-                    product.titulo?.toLowerCase().includes(searchTermLower) ||
-                    product.codigo?.toLowerCase().includes(searchTermLower) ||
-                    product.marca?.toLowerCase().includes(searchTermLower)
-                );
-            });
-            setFilteredProducts(filtered);
-        } else {
-            setFilteredProducts([]);
+        // Se não houver termo de busca, não mostrar resultados
+        if (!searchTerm || searchTerm.trim() === '') {
+            setFilteredClients([]);
+            return;
         }
-    }, [productSearchTerm, products]);
+
+        // Se houver termo de busca e clientes carregados, filtrar
+        if (clients.length > 0) {
+            filterClients(searchTerm);
+        } else {
+            // Se não houver clientes carregados, buscar do banco
+            fetchClients();
+        }
+    }, [searchTerm]);
 
     // Função para buscar produtos
     const fetchProducts = async () => {
@@ -228,7 +257,7 @@ const useModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
         // Verifica se o valor total pago é igual ao valor da venda
         const total = calculateTotal();
         const totalPago = calculateTotalAllocated();
-        
+
         return todosProcessados && Math.abs(total - totalPago) < 0.01;
     };
 
@@ -290,21 +319,21 @@ const useModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
     // Função para processar método de pagamento
     const processPaymentMethod = (index) => {
         if (tipoTransacao !== 'venda') return;
-        
+
         const updatedMethods = [...paymentMethods];
         const method = updatedMethods[index];
-        
+
         // Simulação de processamento bem-sucedido
         method.processed = true;
         method.details = { ...method.details, pagamento_confirmado: true };
-        
+
         setPaymentMethods(updatedMethods);
     };
 
     // Função para adicionar item ao carrinho
     const addToCart = (product, quantity = 1) => {
         const existingItemIndex = cartItems.findIndex(item => item.id === product.id);
-        
+
         if (existingItemIndex >= 0) {
             // Atualizar quantidade se o item já estiver no carrinho
             const updatedItems = [...cartItems];
@@ -327,11 +356,11 @@ const useModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
             removeFromCart(itemId);
             return;
         }
-        
-        const updatedItems = cartItems.map(item => 
+
+        const updatedItems = cartItems.map(item =>
             item.id === itemId ? { ...item, quantity: newQuantity } : item
         );
-        
+
         setCartItems(updatedItems);
     };
 
@@ -357,11 +386,11 @@ const useModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
     const handleCreditCardSubmit = (cardData) => {
         setDadosCartao(cardData);
         setShowCreditCardForm(false);
-        
+
         // Marcar o método como processado
         const updatedMethods = [...paymentMethods];
         const index = currentPaymentIndex;
-        
+
         if (updatedMethods[index]) {
             updatedMethods[index].processed = true;
             updatedMethods[index].details = {
@@ -369,7 +398,7 @@ const useModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
                 card: cardData,
                 pagamento_confirmado: true
             };
-            
+
             setPaymentMethods(updatedMethods);
         }
     };
@@ -378,7 +407,7 @@ const useModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
     const finalizeSale = async () => {
         try {
             setLoading(true);
-            
+
             // Se for uma venda e tiver OS, processe as OS
             if (tipoTransacao === 'venda' && osStatus.tipo !== 'sem_os') {
                 const colecoesPrecisandoOS = osStatus.colecoes.filter(colecao =>
@@ -402,8 +431,8 @@ const useModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
                         tipo: osStatus.tipo,
                         status: osStatus.status,
                         data_criacao: new Date(),
-                        data_previsao: osDados.dataPrevistaEntrega 
-                            ? new Date(osDados.dataPrevistaEntrega) 
+                        data_previsao: osDados.dataPrevistaEntrega
+                            ? new Date(osDados.dataPrevistaEntrega)
                             : new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
                         produtos: colecao.items
                             .filter(item => precisaDeOS(item))
@@ -509,7 +538,7 @@ const useModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
         }
     };
 
-    // Função para lidar com clique no botão de finalizar
+    // Função handleFinalizarClicked atualizada
     const handleFinalizarClicked = async () => {
         // Resetar erro
         setError('');
@@ -527,6 +556,36 @@ const useModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
 
         try {
             setLoading(true);
+
+            // Verificar se é um cliente temporário (apenas nome)
+            if (selectedClient.isTemp) {
+                try {
+                    // Criar o cliente na coleção com dados mínimos - Caminho correto
+                    const clienteRef = doc(collection(firestore, `lojas/clientes/users`));
+
+                    await setDoc(clienteRef, {
+                        nome: selectedClient.nome,
+                        createdAt: new Date().toISOString(),
+                        isTemp: true, // Marcar como cliente temporário para futuras referências
+                        dataUltimaCompra: new Date().toISOString(),
+                        tipo: 'pessoa_fisica',
+                        status: 'ativo'
+                    });
+
+                    // Atualizar o cliente selecionado com o ID correto do banco de dados
+                    setSelectedClient({
+                        ...selectedClient,
+                        id: clienteRef.id,
+                    });
+
+                    console.log('Cliente temporário salvo com sucesso:', clienteRef.id);
+                } catch (error) {
+                    console.error('Erro ao salvar cliente temporário:', error);
+                    setError('Erro ao salvar informações do cliente');
+                    setLoading(false);
+                    return;
+                }
+            }
 
             // Validações específicas para venda
             if (tipoTransacao === 'venda') {
@@ -556,6 +615,7 @@ const useModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
         }
     };
 
+    // ATENÇÃO: Este return deve ser adicionado ao final da função useModalNovaVenda (antes do último }):
     return {
         // Estados
         cartItems,
@@ -609,8 +669,12 @@ const useModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
         setSelectedClient,
         setTipoTransacao,
         setSearchTerm,
+        setClients,
+        setFilteredClients,
         setShowClientForm,
+        setProducts,
         setProductSearchTerm,
+        setFilteredProducts,
         setFocusedRow,
         setNewProductQty,
         setProdutoInputRef,

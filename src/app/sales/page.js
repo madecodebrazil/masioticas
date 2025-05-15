@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Layout from "@/components/Layout";
 import { motion } from "framer-motion";
-import ModalNovaVenda from "@/components/ModalNovaVenda";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function SalesPage() {

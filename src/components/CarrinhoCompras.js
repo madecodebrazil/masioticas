@@ -213,12 +213,12 @@ const CarrinhoCompras = ({
       const searchTermLower = productSearchTerm.toLowerCase();
       // Busca nos produtos do estoque
       const filtered = estoqueData.filter(product => {
-        const titulo = (product.titulo || '').toLowerCase();
+        const nome = (product.nome || '').toLowerCase();
         const codigo = (product.codigo || '').toLowerCase();
         const marca = (product.marca || '').toLowerCase();
         const sku = (product.sku || '').toLowerCase();
 
-        return titulo.includes(searchTermLower) ||
+        return nome.includes(searchTermLower) ||
           codigo.includes(searchTermLower) ||
           marca.includes(searchTermLower) ||
           sku.includes(searchTermLower);
@@ -361,8 +361,7 @@ const CarrinhoCompras = ({
         id: product.id,
         categoria: product.categoria,
         loja: product.loja || selectedLoja,
-        titulo: product.titulo || '',
-        nome: product.titulo || '', // Manter compatibilidade com ambos os campos
+        nome: product.nome || '',
         codigo: product.codigo || '',
         marca: product.marca || '',
         sku: product.sku || '',
@@ -591,7 +590,7 @@ const CarrinhoCompras = ({
                 className="p-3 border-b last:border-b-0 hover:bg-gray-50 cursor-pointer"
                 onClick={() => addToCart(product)}
               >
-                <div className="font-medium">{product.titulo || "Produto sem título"}</div>
+                <div className="font-medium">{product.nome || "Produto sem nome"}</div>
                 <div className="text-sm text-gray-600">
                   {formatCurrencyValue(product.valor || 0)} - Estoque: {product.quantidade}
                 </div>

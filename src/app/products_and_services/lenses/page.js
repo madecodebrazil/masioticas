@@ -652,7 +652,7 @@ export default function ListaLentes() {
             {/* Botões de ação */}
             <div className="flex gap-2">
               {/* Botão Adicionar */}
-              <Link href="/products_and_services/lenses/add-lens">
+              <Link href="/products_and_services/lenses/add-lense">
                 <button className="bg-green-400 text-white h-10 w-10 rounded-md flex items-center justify-center">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />

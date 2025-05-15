@@ -11,14 +11,24 @@ import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { format, parseISO } from 'date-fns';
 import { useRef } from "react";
-import { ptBR } from 'date-fns/locale';
 import { storage } from "@/lib/firebaseConfig";
 import "react-datepicker/dist/react-datepicker.css";
-import { FiPlus, FiX } from 'react-icons/fi';
+import { FiPlus, FiTrash, FiTrash2 } from 'react-icons/fi';
 import ProductConfirmModal from '@/components/ProductConfirmModal';
 import { QRCodeSVG } from 'qrcode.react';
 
-const SelectWithAddOption = ({ label, options, value, onChange, collectionName, addNewOption, canAddNew = true }) => {
+const SelectWithAddOption = ({
+  label,
+  options,
+  value,
+  onChange,
+  collectionName,
+  addNewOption,
+  canAddNew = true,
+  selectedLoja,
+  setOptions,
+}) => {
+
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [newItemValue, setNewItemValue] = useState("");
   const [showAddInput, setShowAddInput] = useState(false);
@@ -28,47 +38,25 @@ const SelectWithAddOption = ({ label, options, value, onChange, collectionName, 
     try {
       const loja = selectedLoja || "loja1";
       const path = `estoque/${loja}/armacoes/configuracoes/${collectionName}`;
-      const docRef = doc(firestore, path, itemToRemove.toLowerCase().replace(/\s+/g, '_'));
+
+      const docId = itemToRemove.toString().replace(/\./g, '_'); // ← EXATAMENTE igual ao usado na criação
+      const docRef = doc(firestore, path, docId);
       await deleteDoc(docRef);
 
-      // Atualizar a lista de opções removendo o item
-      const updatedOptions = options.filter(option => option !== itemToRemove);
-      onChange(""); // Limpar a seleção atual
-
-      // Atualizar o estado correspondente baseado na coleção
-      switch (collectionName) {
-        case "armacoes_fabricantes":
-          setFabricantes(updatedOptions);
-          break;
-        case "fornecedores":
-          setFornecedores(updatedOptions);
-          break;
-        case "armacoes_marcas":
-          setMarcas(updatedOptions);
-          break;
-        case "armacoes_formatos":
-          setFormatos(updatedOptions);
-          break;
-        case "armacoes_aros":
-          setAros(updatedOptions);
-          break;
-        case "armacoes_materiais":
-          setMateriais(updatedOptions);
-          break;
-        case "armacoes_cores":
-          setCores(updatedOptions);
-          break;
-        default:
-          break;
-      }
+      const updatedOptions = options.filter(opt => opt !== itemToRemove);
+      onChange("");
+      setOptions(updatedOptions);
 
       alert(`${itemToRemove} removido com sucesso!`);
       setShowRemoveOptions(false);
     } catch (error) {
-      console.error(`Erro ao remover ${itemToRemove}:`, error);
-      alert(`Erro ao remover ${itemToRemove}`);
+      console.error("Erro ao remover:", error);
+      alert("Erro ao remover item.");
     }
   };
+
+
+
 
   const handleAddItem = async () => {
     if (!newItemValue.trim()) return;
@@ -99,7 +87,7 @@ const SelectWithAddOption = ({ label, options, value, onChange, collectionName, 
                   setShowRemoveOptions(false);
                 }
               }}
-              className="bg-gray-100 w-full px-4 py-3 border-2 border-[#81059e] rounded-lg text-black focus:outline-none focus:border-[#81059e] focus:ring-1 focus:ring-[#81059e]"
+              className="bg-gray-100 w-full px-4 py-3 border-2 border-[#81059e] rounded-sm text-black focus:outline-none focus:border-[#81059e] focus:ring-1 focus:ring-[#81059e]"
             >
               <option value="">Selecione uma opção</option>
               {options.map((option) => (
@@ -114,9 +102,9 @@ const SelectWithAddOption = ({ label, options, value, onChange, collectionName, 
               <button
                 type="button"
                 onClick={() => setShowRemoveOptions(!showRemoveOptions)}
-                className="ml-2 bg-gray-100 border-2 border-[#81059e] text-[#81059e] p-2 rounded-lg"
+                className="ml-2 bg-gray-100 border-2 border-[#81059e] text-[#81059e] p-3 rounded-sm text-lg"
               >
-                <FiX />
+                <FiTrash2 />
               </button>
             )}
           </div>
@@ -139,7 +127,7 @@ const SelectWithAddOption = ({ label, options, value, onChange, collectionName, 
                     }}
                     className="text-red-500 hover:text-red-700 p-1 rounded-full hover:bg-red-50"
                   >
-                    <FiX />
+                    <FiTrash2 />
                   </button>
                 </div>
               ))}
@@ -152,20 +140,20 @@ const SelectWithAddOption = ({ label, options, value, onChange, collectionName, 
             type="text"
             value={newItemValue}
             onChange={(e) => setNewItemValue(e.target.value)}
-            className="bg-gray-100 w-full px-4 py-3 border-2 border-[#81059e] rounded-lg text-black focus:outline-none focus:border-[#81059e] focus:ring-1 focus:ring-[#81059e]"
+            className="bg-gray-100 w-full px-4 py-3 border-2 border-[#81059e] rounded-sm text-black focus:outline-none focus:border-[#81059e] focus:ring-1 focus:ring-[#81059e]"
             placeholder={`Adicionar novo ${label.toLowerCase()}`}
           />
           <button
             type="button"
             onClick={handleAddItem}
-            className="bg-[#81059e] text-white p-3 rounded-lg"
+            className="bg-[#81059e] text-white p-3 rounded-sm"
           >
             <FiPlus />
           </button>
           <button
             type="button"
             onClick={() => setShowAddInput(false)}
-            className="border-2 border-[#81059e] text-[#81059e] p-3 rounded-lg"
+            className="border-2 border-[#81059e] text-[#81059e] p-3 rounded-sm"
           >
             Cancelar
           </button>
@@ -208,7 +196,7 @@ export function FormularioLoja() {
     const materialFormatted = material.trim().charAt(0).toUpperCase() + material.trim().slice(1).toLowerCase();
 
     // Construir o título
-    return `Armação ${marcaFormatted} ${corFormatted} ${generoFormatted} ${materialFormatted}`;
+    return `${marcaFormatted} ${corFormatted} ${generoFormatted} ${materialFormatted}`;
   };
 
 
@@ -258,7 +246,7 @@ export function FormularioLoja() {
     genero: "",
     aro: "",
     material: [],
-    titulo: "", // Novo campo para título do produto
+    nome: "",
     subcategoria: "grau", // Substituição do campo categoria por subcategoria
     cor: "",
     formato: "",
@@ -606,7 +594,7 @@ export function FormularioLoja() {
       const loja = selectedLoja || "loja1";
       const path = `estoque/${loja}/armacoes/configuracoes/armacoes_hastes`;
       const snapshot = await getDocs(collection(firestore, path));
-      const list = snapshot.docs.map(doc => doc.data().name);
+      const list = snapshot.docs.map(doc => doc.data().value || doc.id); // ← aqui também
       setHastes(list);
     } catch (error) {
       console.error("Erro ao buscar hastes:", error);
@@ -654,7 +642,7 @@ export function FormularioLoja() {
       const loja = selectedLoja || "loja1";
       const path = `estoque/${loja}/armacoes/configuracoes/armacoes_pontes`;
       const snapshot = await getDocs(collection(firestore, path));
-      const list = snapshot.docs.map(doc => doc.data().name);
+      const list = snapshot.docs.map(doc => doc.data().value || doc.id); // ← aqui está o segredo
       setPontes(list);
     } catch (error) {
       console.error("Erro ao buscar pontes:", error);
@@ -746,7 +734,7 @@ export function FormularioLoja() {
       };
 
       // Nova lógica: se o percentual de lucro ou custo mudar, recalcula o valor de venda
-      if (name === "titulo") {
+      if (name === "nome") {
         updatedData.tituloAutomatico = false;
       }
 
@@ -799,23 +787,24 @@ export function FormularioLoja() {
   };
 
   useEffect(() => {
-    if (!formData.titulo || formData.tituloAutomatico) {
-      const novoTitulo = generateProductTitle(
+    if (!formData.nome || formData.tituloAutomatico) {
+      const novoNome = generateProductTitle(
         formData.marca,
         formData.cor,
         formData.genero,
         formData.material
       );
 
-      if (novoTitulo) {
+      if (novoNome) {
         setFormData(prev => ({
           ...prev,
-          titulo: novoTitulo,
-          tituloAutomatico: true // Marca que o título foi gerado automaticamente
+          nome: novoNome,
+          tituloAutomatico: true // Mantém o controle de geração automática
         }));
       }
     }
   }, [formData.marca, formData.cor, formData.genero, formData.material]);
+
 
   const handleCustoChange = (e) => {
     const raw = e.target.value.replace(/\D/g, '');
@@ -988,7 +977,7 @@ export function FormularioLoja() {
   return (
     <div>
       <Layout>
-        <div className="w-full max-w-5xl mx-auto rounded-lg">
+        <div className="w-full max-w-5xl mx-auto rounded-sm">
           <h2 className="text-3xl font-bold text-[#81059e] mb-8 mt-8 text-center">ADICIONAR ARMAÇÃO</h2>
 
           {/* Seletor de Loja para Admins */}
@@ -1010,7 +999,7 @@ export function FormularioLoja() {
                     setSelectedLojas([]);
                   }
                 }}
-                className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black mt-1"
+                className="border-2 border-[#81059e] p-2 rounded-sm w-48 text-[#81059e] mt-1 ml-4"
               >
                 {userPermissions.lojas.map((loja) => (
                   <option key={loja} value={loja}>
@@ -1037,7 +1026,7 @@ export function FormularioLoja() {
           </div>
 
           <form onSubmit={handleSubmit} className="mt-8 mb-20">
-            <div className="p-4 bg-gray-50 rounded-lg mb-6">
+            <div className="p-4 bg-gray-50 rounded-sm mb-6">
               <h3 className="text-lg font-semibold text-[#81059e] mb-4">Informações Básicas</h3>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1053,11 +1042,11 @@ export function FormularioLoja() {
                   </label>
                   <input
                     type="text"
-                    id="titulo"
-                    name="titulo"
-                    value={formData.titulo || ""}
+                    id="nome"
+                    name="nome"
+                    value={formData.nome || ""}
                     onChange={handleChange}
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
                     placeholder="Gerado automaticamente"
                     required disabled
                   />
@@ -1072,7 +1061,7 @@ export function FormularioLoja() {
                     name="sku"
                     value={formData.sku}
                     readOnly
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black bg-gray-100"
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black bg-gray-100"
                   />
                 </div>
               </div>
@@ -1084,7 +1073,7 @@ export function FormularioLoja() {
                     type="text"
                     value={dataExibicao}
                     readOnly
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black bg-gray-100"
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black bg-gray-100"
                   />
                 </div>
 
@@ -1096,7 +1085,7 @@ export function FormularioLoja() {
                     name="codigo"
                     value={formData.codigo || ""}
                     onChange={(e) => setFormData({ ...formData, codigo: e.target.value })}
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
                     required
                   />
                 </div>
@@ -1111,7 +1100,7 @@ export function FormularioLoja() {
                     name="codigoBarras"
                     value={formData.codigoBarras || ""}
                     onChange={(e) => setFormData({ ...formData, codigoBarras: e.target.value })}
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
                     required
                   />
                 </div>
@@ -1124,7 +1113,7 @@ export function FormularioLoja() {
                     name="codigoFabricante"
                     value={formData.codigoFabricante || ""}
                     onChange={(e) => setFormData({ ...formData, codigoFabricante: e.target.value })}
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
                     required
                   />
                 </div>
@@ -1132,7 +1121,7 @@ export function FormularioLoja() {
             </div>
 
             {/* Seção Características do Produto */}
-            <div className="p-4 bg-gray-50 rounded-lg mb-6">
+            <div className="p-4 bg-gray-50 rounded-sm mb-6">
               <h3 className="text-lg font-semibold text-[#81059e] mb-4">Características do Produto</h3>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1143,6 +1132,7 @@ export function FormularioLoja() {
                   value={formData.fabricante}
                   onChange={(value) => setFormData({ ...formData, fabricante: value })}
                   addNewOption={(value) => addNewItem("armacoes_fabricantes", value)}
+                  selectedLoja={selectedLoja}
                 />
 
                 {/* Fornecedor - Agora sem opção de adicionar */}
@@ -1157,7 +1147,7 @@ export function FormularioLoja() {
                         setFormData(prev => ({ ...prev, fornecedor: e.target.value }));
                       }}
                       placeholder="Buscar fornecedor"
-                      className="bg-gray-100 w-full px-4 py-3 border-2 border-[#81059e] rounded-lg text-black"
+                      className="bg-gray-100 w-full px-4 py-3 border-2 border-[#81059e] rounded-sm text-black"
                     />
                     {formData.fornecedor && (
                       <button
@@ -1166,7 +1156,7 @@ export function FormularioLoja() {
                           setFormData(prev => ({ ...prev, fornecedor: "" }));
                           setSearchFornecedor("");
                         }}
-                        className="ml-2 bg-gray-100 border-2 border-[#81059e] text-[#81059e] p-2 rounded-lg"
+                        className="ml-2 bg-gray-100 border-2 border-[#81059e] text-[#81059e] p-2 rounded-sm"
                       >
                         <FiX />
                       </button>
@@ -1206,6 +1196,7 @@ export function FormularioLoja() {
                   value={formData.marca}
                   onChange={(value) => setFormData({ ...formData, marca: value })}
                   addNewOption={(value) => addNewItem("armacoes_marcas", value)}
+                  selectedLoja={selectedLoja}
                 />
 
                 {/* Gênero */}
@@ -1215,7 +1206,7 @@ export function FormularioLoja() {
                     name="genero"
                     value={formData.genero || ""}
                     onChange={(e) => setFormData({ ...formData, genero: e.target.value })}
-                    className="bg-gray-100 w-full px-4 py-3 border-2 border-[#81059e] rounded-lg text-black focus:outline-none focus:border-[#81059e] focus:ring-1 focus:ring-[#81059e]"
+                    className="bg-gray-100 w-full px-4 py-3 border-2 border-[#81059e] rounded-sm text-black focus:outline-none focus:border-[#81059e] focus:ring-1 focus:ring-[#81059e]"
                     required
                   >
                     <option value="">Selecione o Gênero</option>
@@ -1236,6 +1227,7 @@ export function FormularioLoja() {
                   value={formData.formato}
                   onChange={(value) => setFormData({ ...formData, formato: value })}
                   addNewOption={(value) => addNewItem("armacoes_formatos", value)}
+                  selectedLoja={selectedLoja}
                 />
 
                 {/* Cor com opção de adicionar */}
@@ -1245,6 +1237,7 @@ export function FormularioLoja() {
                   value={formData.cor}
                   onChange={(value) => setFormData({ ...formData, cor: value })}
                   addNewOption={(value) => addNewItem("armacoes_cores", value)}
+                  selectedLoja={selectedLoja}
                 />
               </div>
 
@@ -1256,6 +1249,7 @@ export function FormularioLoja() {
                   value={formData.material}
                   onChange={(value) => setFormData({ ...formData, material: value })}
                   addNewOption={(value) => addNewItem("armacoes_materiais", value)}
+                  selectedLoja={selectedLoja}
                 />
 
                 {/* Aro com opção de adicionar */}
@@ -1265,6 +1259,7 @@ export function FormularioLoja() {
                   value={formData.aro}
                   onChange={(value) => setFormData({ ...formData, aro: value })}
                   addNewOption={(value) => addNewItem("armacoes_aros", value)}
+                  selectedLoja={selectedLoja}
                 />
               </div>
 
@@ -1276,6 +1271,7 @@ export function FormularioLoja() {
                   value={formData.ponte}
                   onChange={(value) => setFormData({ ...formData, ponte: value })}
                   addNewOption={(value) => addNewValueItem("armacoes_pontes", value)}
+                  selectedLoja={selectedLoja}
                 />
 
                 {/* Haste com opção de adicionar */}
@@ -1285,28 +1281,30 @@ export function FormularioLoja() {
                   value={formData.haste}
                   onChange={(value) => setFormData({ ...formData, haste: value })}
                   addNewOption={(value) => addNewValueItem("armacoes_hastes", value)}
+                  selectedLoja={selectedLoja}
+                  setOptions={setHastes}
                 />
+
 
               </div>
             </div>
 
             {/* Seção Valores - MODIFICADA PARA CALCULAR PREÇO A PARTIR DO PERCENTUAL */}
-            <div className="p-4 bg-gray-50 rounded-lg mb-6">
+            <div className="p-4 bg-gray-50 rounded-sm mb-6">
               <h3 className="text-lg font-semibold text-[#81059e] mb-4">Valores</h3>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {/* Custo */}
                 <div>
                   <label className="text-[#81059e] font-medium">Custo (R$)</label>
-                  <div className="flex items-center border-2 border-[#81059e] rounded-lg">
-                    <span className="px-2 text-gray-400">R$</span>
+                  <div className="flex items-center border-2 border-[#81059e] rounded-sm">
                     <input
                       type="text"
                       name="custo"
                       value={formData.custo}
                       onChange={handleCustoChange}
                       placeholder="R$ 0,00"
-                      className="w-full px-2 py-3 text-black rounded-lg"
+                      className="w-full px-2 py-3 text-black rounded-sm"
                     />
 
                   </div>
@@ -1315,33 +1313,31 @@ export function FormularioLoja() {
                 {/* Percentual de Lucro - CAMPO MODIFICADO */}
                 <div>
                   <label className="text-[#81059e] font-medium">Percentual de Lucro (%)</label>
-                  <div className="flex items-center border-2 border-[#81059e] rounded-lg">
+                  <div className="flex items-center border-2 border-[#81059e] rounded-sm">
                     <input
                       type="number"
                       id="percentual_lucro"
                       name="percentual_lucro"
                       value={formData.percentual_lucro}
                       onChange={handleChange}
-                      placeholder="0,00"
-                      className="w-full px-2 py-3 text-black focus:outline-none focus:border-[#81059e] focus:ring-1 focus:ring-[#81059e] rounded-lg"
+                      placeholder="%0,00"
+                      className="w-full px-2 py-3 text-black focus:outline-none focus:border-[#81059e] focus:ring-1 focus:ring-[#81059e] rounded-sm"
                       required
                     />
-                    <span className="px-2 text-gray-400">%</span>
                   </div>
                 </div>
 
                 {/* Valor de Venda - AGORA CALCULADO AUTOMATICAMENTE */}
                 <div>
                   <label className="text-[#81059e] font-medium">Valor de Venda (R$)</label>
-                  <div className="flex items-center border-2 border-[#81059e] rounded-lg">
-                    <span className="px-2 text-gray-400">R$</span>
+                  <div className="flex items-center border-2 border-[#81059e] rounded-sm">
                     <input
                       type="number"
                       name="valor"
                       value={formData.valor}
                       onChange={handleChange}
                       placeholder="0,00"
-                      className="w-full px-2 py-3 text-black focus:outline-none focus:border-[#81059e] focus:ring-1 focus:ring-[#81059e] rounded-lg"
+                      className="w-full px-2 py-3 text-black focus:outline-none focus:border-[#81059e] focus:ring-1 focus:ring-[#81059e] rounded-sm"
                       required
                     />
                   </div>
@@ -1358,7 +1354,7 @@ export function FormularioLoja() {
                     name="custo_medio"
                     value={formData.custo_medio || ""}
                     readOnly
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black bg-gray-100"
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black bg-gray-100"
                     placeholder="Calculado automaticamente"
                   />
                 </div>
@@ -1377,7 +1373,7 @@ export function FormularioLoja() {
                       }
                     }}
                     min="1"
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
                     required
                   />
                 </div>
@@ -1386,7 +1382,7 @@ export function FormularioLoja() {
 
 
             {/* Seção Fiscal */}
-            <div className="p-4 bg-gray-50 rounded-lg mb-6">
+            <div className="p-4 bg-gray-50 rounded-sm mb-6">
               <h3 className="text-lg font-semibold text-[#81059e] mb-4">Informações Fiscais</h3>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -1398,6 +1394,7 @@ export function FormularioLoja() {
                     value={formData.NCM}
                     onChange={(value) => setFormData({ ...formData, NCM: value })}
                     addNewOption={(value) => addNewItem("ncm", value)}
+                    selectedLoja={selectedLoja}
                   />
                 </div>
 
@@ -1409,7 +1406,7 @@ export function FormularioLoja() {
                     name="CEST"
                     value={formData.CEST || ""}
                     onChange={(e) => setFormData({ ...formData, CEST: e.target.value })}
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
                     required
                   />
                 </div>
@@ -1422,7 +1419,7 @@ export function FormularioLoja() {
                     name="csosn"
                     value={formData.csosn || ""}
                     onChange={(e) => setFormData({ ...formData, csosn: e.target.value })}
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
                     required
                   />
                 </div>
@@ -1437,7 +1434,7 @@ export function FormularioLoja() {
                     name="cfop"
                     value={formData.cfop || ""}
                     onChange={(e) => setFormData({ ...formData, cfop: e.target.value })}
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
                     required
                   />
                 </div>
@@ -1450,7 +1447,7 @@ export function FormularioLoja() {
                     name="origem_produto"
                     value={formData.origem_produto || ""}
                     onChange={(e) => setFormData({ ...formData, origem_produto: e.target.value })}
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
                     required
                   />
                 </div>
@@ -1465,7 +1462,7 @@ export function FormularioLoja() {
                     name="aliquota_icms"
                     value={formData.aliquota_icms || ""}
                     onChange={(e) => setFormData({ ...formData, aliquota_icms: e.target.value })}
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
                     required
                   />
                 </div>
@@ -1478,7 +1475,7 @@ export function FormularioLoja() {
                     name="base_calculo_icms"
                     value={formData.base_calculo_icms || ""}
                     onChange={(e) => setFormData({ ...formData, base_calculo_icms: e.target.value })}
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
                     required
                   />
                 </div>
@@ -1491,7 +1488,7 @@ export function FormularioLoja() {
                     name="cst_pis"
                     value={formData.cst_pis || ""}
                     onChange={(e) => setFormData({ ...formData, cst_pis: e.target.value })}
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
                     required
                   />
                 </div>
@@ -1506,7 +1503,7 @@ export function FormularioLoja() {
                     name="cst_cofins"
                     value={formData.cst_cofins || ""}
                     onChange={(e) => setFormData({ ...formData, cst_cofins: e.target.value })}
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
                     required
                   />
                 </div>
@@ -1519,7 +1516,7 @@ export function FormularioLoja() {
                     name="aliquota_ipi"
                     value={formData.aliquota_ipi || ""}
                     onChange={(e) => setFormData({ ...formData, aliquota_ipi: e.target.value })}
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
                     required
                   />
                 </div>
@@ -1532,7 +1529,7 @@ export function FormularioLoja() {
                     name="cst_ipi"
                     value={formData.cst_ipi || ""}
                     onChange={(e) => setFormData({ ...formData, cst_ipi: e.target.value })}
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
                     required
                   />
                 </div>
@@ -1547,7 +1544,7 @@ export function FormularioLoja() {
                     name="base_calculo_ipi"
                     value={formData.base_calculo_ipi || ""}
                     onChange={(e) => setFormData({ ...formData, base_calculo_ipi: e.target.value })}
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
                     required
                   />
                 </div>
@@ -1560,7 +1557,7 @@ export function FormularioLoja() {
                     name="peso_bruto"
                     value={formData.peso_bruto || ""}
                     onChange={(e) => setFormData({ ...formData, peso_bruto: e.target.value })}
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
                     required
                   />
                 </div>
@@ -1573,7 +1570,7 @@ export function FormularioLoja() {
                     name="peso_liquido"
                     value={formData.peso_liquido || ""}
                     onChange={(e) => setFormData({ ...formData, peso_liquido: e.target.value })}
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
                     required
                   />
                 </div>
@@ -1581,7 +1578,7 @@ export function FormularioLoja() {
             </div>
 
             {/* Seção Imagem */}
-            <div className="p-4 bg-gray-50 rounded-lg mb-6">
+            <div className="p-4 bg-gray-50 rounded-sm mb-6">
               <h3 className="text-lg font-semibold text-[#81059e] mb-4">Imagem do Produto</h3>
 
               <div className="flex flex-col">
@@ -1597,7 +1594,7 @@ export function FormularioLoja() {
                       setPreviewUrl(URL.createObjectURL(file));
                     }
                   }}
-                  className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black bg-gray-100"
+                  className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black bg-gray-100"
                   required
                 />
 
@@ -1656,10 +1653,10 @@ export function FormularioLoja() {
 
         {
           showSuccessPopup && (
-            <div className="fixed bottom-4 right-4 bg-green-500 text-white p-4 rounded-lg shadow-lg">
+            <div className="fixed bottom-4 right-4 bg-green-500 text-white p-4 rounded-sm shadow-lg">
               <p>Produto enviado com sucesso!</p>
               {qrCodeData && (
-                <div className="mt-4 p-4 bg-white rounded-lg">
+                <div className="mt-4 p-4 bg-white rounded-sm">
                   <h3 className="text-lg font-semibold text-gray-800 mb-2">QR Code da Armação</h3>
                   <div className="flex justify-center">
                     <QRCodeSVG value={qrCodeData} size={200} />

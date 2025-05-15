@@ -283,8 +283,8 @@ export default function Home() {
                                             <Image
                                                 src={item.img}
                                                 alt={item.label}
-                                                width={60}
-                                                height={60}
+                                                width={55}
+                                                height={55}
                                                 className="object-contain"
                                                 priority
                                             />

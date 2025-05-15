@@ -1,15 +1,17 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation'; // use next/navigation no app router, não next/router
+import { useRouter, useSearchParams } from 'next/navigation'; // Corrigido para usar useSearchParams
 import Head from 'next/head';
+import Image from 'next/image';
+import Link from 'next/link';
 import useModalNovaVenda from '@/hooks/useModalNovaVenda';
-import CarrinhoCompras from '@/components/CarrinhoCompras';
-import PaymentMethodPanel from '@/components/PaymentMethodPanel';
+import ClienteSelecao from '@/components/ClienteSelecao';
 import ClientForm from '@/components/ClientForm';
+import CarrinhoCompras from '@/components/CarrinhoCompras';
 import PixQRCodeModal from '@/components/PixQRCodeModal';
+import PaymentMethodPanel from '@/components/PaymentMethodPanel';
 import OSManager from '@/components/OSManager';
-import TipoTransacaoSelector from '@/components/TipoTransacaoSelector';
 import CreditCardForm from '@/components/CreditCardForm';
 import {
     FiClock,
@@ -28,6 +30,7 @@ import {
     FiCreditCard,
     FiClipboard,
     FiCalendar,
+    FiMapPin,
     FiPlusCircle,
     FiGift,
     FiActivity,
@@ -38,128 +41,148 @@ import {
 import { FaBitcoin, FaEthereum } from 'react-icons/fa';
 import { useAuth } from '@/hooks/useAuth';
 
+// Função auxiliar para formatação de moeda
+const formatCurrencyBR = (value) => {
+    return new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'BRL'
+    }).format(value || 0);
+};
+
 const NovaVendaPage = () => {
     const router = useRouter();
+    const searchParams = useSearchParams(); // Usando useSearchParams para obter parâmetros de URL
     const { userPermissions } = useAuth();
     const [selectedLoja, setSelectedLoja] = useState('');
 
     // Obter loja da URL ou selecionar a primeira disponível
     useEffect(() => {
-        // Verificar se router.query existe antes de acessar
-        if (router.query && router.query.loja) {
-            setSelectedLoja(router.query.loja);
+        const lojaParam = searchParams.get('loja');
+        if (lojaParam) {
+            setSelectedLoja(lojaParam);
         } else if (userPermissions?.lojas?.length > 0) {
-            setSelectedLoja(userPermissions.lojas[0]);
-            // Atualizar URL com a loja selecionada
-            router.replace(`/sales/add_sales?loja=${userPermissions.lojas[0]}`, undefined, { shallow: true });
+            const primeiraLoja = userPermissions.lojas[0];
+            setSelectedLoja(primeiraLoja);
+            // Atualizar URL com a loja selecionada usando o router
+            router.push(`/sales/add_sales?loja=${primeiraLoja}`);
         }
-    }, [router.query, userPermissions]);
+    }, [searchParams, userPermissions, router]);
 
-    // Usar o hook existente, mas adaptado para contexto de página
+    // Configurar as props para o hook useModalNovaVenda
     const modalProps = {
         isOpen: true, // sempre aberto, pois agora é uma página
         onClose: () => router.push('/sales'), // voltar para a lista de vendas
         selectedLoja
     };
 
-    // Usar o hook original sem modificações
+    // Usar o hook original
     const novaVendaHook = useModalNovaVenda(modalProps);
 
-    // Extrair tudo que precisamos do hook
+    // Extrair as funções e states do hook com valores padrão para evitar indefinidos
     const {
-        cartItems,
-        setCartItems,
-        selectedClient,
-        setSelectedClient,
-        paymentMethods,
-        setPaymentMethods,
-        error,
-        setError,
-        statusVenda,
-        setStatusVenda,
-        newOsId,
-        setNewOsId,
-        novaVendaRef,
-        setNovaVendaRef,
-        searchTerm,
-        setSearchTerm,
-        clients,
-        setClients,
-        filteredClients,
-        setFilteredClients,
-        showClientForm,
-        setShowClientForm,
-        products,
-        setProducts,
-        productSearchTerm,
-        setProductSearchTerm,
-        filteredProducts,
-        setFilteredProducts,
-        focusedRow,
-        setFocusedRow,
-        newProductQty,
-        setNewProductQty,
-        produtoInputRef,
-        setProdutoInputRef,
-        discount,
-        setDiscount,
-        discountType,
-        setDiscountType,
-        observation,
-        setObservation,
-        valorPago,
-        setValorPago,
-        troco,
-        setTroco,
-        success,
-        setSuccess,
-        saleId,
-        setSaleId,
-        osId,
-        setOsId,
-        currentPaymentIndex,
-        setCurrentPaymentIndex,
-        valueDistribution,
-        setValueDistribution,
-        showCreditCardForm,
-        setShowCreditCardForm,
-        dadosCartao,
-        setDadosCartao,
-        boletoData,
-        setBoletoData,
-        fetchClients,
-        handleSelectClient,
-        tipoTransacao,
-        setTipoTransacao,
-        handleOSChange,
-        osFormsCompleted,
-        calculateTotal,
+        cartItems = [],
+        setCartItems = () => { },
+        selectedClient = null,
+        setSelectedClient = () => { },
+        paymentMethods = [],
+        setPaymentMethods = () => { },
+        error = null,
+        setError = () => { },
+        statusVenda = '',
+        setStatusVenda = () => { },
+        newOsId = null,
+        setNewOsId = () => { },
+        novaVendaRef = null,
+        setNovaVendaRef = () => { },
+        searchTerm = '',
+        setSearchTerm = () => { },
+        clients = [],
+        setClients = () => { },
+        filteredClients = [],
+        setFilteredClients = () => { },
+        showClientForm = false,
+        setShowClientForm = () => { },
+        products = [],
+        setProducts = () => { },
+        productSearchTerm = '',
+        setProductSearchTerm = () => { },
+        filteredProducts = [],
+        setFilteredProducts = () => { },
+        focusedRow = -1,
+        setFocusedRow = () => { },
+        newProductQty = 1,
+        setNewProductQty = () => { },
+        produtoInputRef = null,
+        setProdutoInputRef = () => { },
+        discount = 0,
+        setDiscount = () => { },
+        discountType = 'percentage',
+        setDiscountType = () => { },
+        observation = '',
+        setObservation = () => { },
+        valorPago = 0,
+        setValorPago = () => { },
+        troco = 0,
+        setTroco = () => { },
+        success = false,
+        setSuccess = () => { },
+        saleId = null,
+        setSaleId = () => { },
+        osId = null,
+        setOsId = () => { },
+        currentPaymentIndex = 0,
+        setCurrentPaymentIndex = () => { },
+        valueDistribution = {},
+        setValueDistribution = () => { },
+        showCreditCardForm = false,
+        setShowCreditCardForm = () => { },
+        dadosCartao = null,
+        setDadosCartao = () => { },
+        boletoData = null,
+        setBoletoData = () => { },
+        fetchClients = () => { },
+        handleSelectClient = () => { },
+        tipoTransacao = 'venda',
+        setTipoTransacao = () => { },
+        handleOSChange = () => { },
+        osFormsCompleted = true,
+        calculateTotal = () => 0,
         calculateSubtotal,
-        calculateDiscount,
-        calculateTotalAllocated,
-        calculateRemainingValue,
-        updatePaymentMethodValue,
-        addPaymentMethod,
-        removePaymentMethod,
-        changePaymentMethod,
-        processPaymentMethod,
-        handleFinalizarClicked,
-        precisaDeOS,
-        colecaoPrecisaDeOS,
-        formatCurrency,
-        boletoVencimento,
-        setBoletoVencimento,
-        parcelasCredario,
-        setParcelasCredario,
-        selectedCrypto,
-        setSelectedCrypto,
-        cryptoAddress,
-        setCryptoAddress,
-        showPixModal,
-        setShowPixModal,
-        pixQRCode,
-        cashbackDisponivel
+        calculateDiscount = () => 0,
+        calculateTotalAllocated = () => 0,
+        calculateRemainingValue = () => 0,
+        updatePaymentMethodValue = () => { },
+        addPaymentMethod = () => { },
+        removePaymentMethod = () => { },
+        changePaymentMethod = () => { },
+        processPaymentMethod = () => { },
+        handleFinalizarClicked = () => Promise.resolve(),
+        precisaDeOS = false,
+        colecaoPrecisaDeOS = false,
+        formatCurrency = null,
+        boletoVencimento = new Date(),
+        setBoletoVencimento = () => { },
+        parcelasCredario = 1,
+        setParcelasCredario = () => { },
+        selectedCrypto = 'bitcoin',
+        setSelectedCrypto = () => { },
+        cryptoAddress = '',
+        setCryptoAddress = () => { },
+        showPixModal = false,
+        setShowPixModal = () => { },
+        pixQRCode = '',
+        cashbackDisponivel = 0
     } = novaVendaHook;
+
+    // Função para calcular subtotal com fallback
+    const calcSubtotal = calculateSubtotal || (() => {
+        return Array.isArray(cartItems) && cartItems.length > 0
+            ? cartItems.reduce((total, item) => total + (item.price * item.quantity), 0)
+            : 0;
+    });
+
+    // Usar nossa função de formatação de moeda
+    const formatCurrencyFn = formatCurrency || formatCurrencyBR;
 
     const [isFinalizando, setIsFinalizando] = useState(false);
     const [collections, setCollections] = useState([
@@ -168,49 +191,81 @@ const NovaVendaPage = () => {
     const [activeCollection, setActiveCollection] = useState(1);
     const [osStatus, setOsStatus] = useState({ tipo: 'sem_os' });
     const [dataVenda, setDataVenda] = useState(new Date().toISOString().split('T')[0]);
-    const [vendedor, setVendedor] = useState('Admin');
+    const [vendedor, setVendedor] = useState('');
+    const { userData } = useAuth();
+
+    useEffect(() => {
+        if (userData) {
+            const cargo = userData.isAdmin ? 'Administrador' : (userData.cargo || 'Usuário');
+            setVendedor(`${cargo}: ${userData.nome}`);
+        }
+    }, [userData]);
+
 
     // Função para voltar à página anterior
     const handleBack = () => {
         router.push('/sales');
     };
 
-    // Clone das configurações existentes de ModalNovaVenda
-    // Renderizar o conteúdo existente de ModalNovaVenda, com pequenas adaptações para contexto de página
+    const handleDiscountInputChange = (e) => {
+        const rawValue = e.target.value.replace(/\D/g, '');
+        if (rawValue === '') {
+            setDiscount(0);
+            return;
+        }
+
+        const valor = Number(rawValue) / 100;
+        setDiscount(valor);
+    };
+
 
     return (
         <div className="min-h-screen bg-gray-100 pb-6">
             <Head>
                 <title>{tipoTransacao === 'venda' ? 'Nova Venda' : 'Novo Orçamento'} | MASI Óticas</title>
+
             </Head>
 
             {/* Barra superior com título e botão voltar */}
-            <div className="bg-[#81059e] px-4 py-3 shadow-md flex justify-between items-center text-white sticky top-0 z-10">
-                <div className="flex items-center">
+            <div className="bg-[#81059e] px-4 py-3 shadow-md flex items-center text-white sticky top-0 z-10">
+                {/* Botão voltar e tipo de transação - à esquerda */}
+                <div className="w-1/3 flex items-center">
                     <button
                         onClick={handleBack}
-                        className="mr-4 p-1 rounded-full hover:bg-purple-700 transition-colors"
+                        className="mr-2 p-1 rounded-full hover:bg-purple-700 transition-colors"
                     >
                         <FiArrowLeft size={24} />
                     </button>
-                    <h1 className="text-lg font-medium flex items-center gap-2">
-                        {tipoTransacao === 'venda' ? (
-                            <><FiShoppingCart className="mr-1" /> Nova Venda</>
-                        ) : (
-                            <><FiFileText className="mr-1" /> Novo Orçamento</>
-                        )}
-                    </h1>
+                    <span className="text-sm md:text-base ">
+                        {tipoTransacao === 'venda' ? 'Nova Venda' : 'Novo Orçamento'}
+                    </span>
                 </div>
 
-                {selectedLoja && (
-                    <div className="bg-purple-800 px-3 py-1 rounded-full text-sm">
-                        Loja: {selectedLoja}
-                    </div>
-                )}
+                {/* MASI Óticas centralizado */}
+                <div className="w-1/3 flex justify-center items-center">
+                    <Link href="/homepage" className="flex items-center">
+                        <Image
+                            src="/images/masioticas.png"
+                            alt="Logo Masi"
+                            width={120}
+                            height={60}
+                            className="object-contain hover:brightness-110 transition-all duration-300 max-w-[120px] max-h-[60px]"
+                        />
+                    </Link>
+                </div>
+
+
+                {/* Informação da loja - à direita */}
+                <div className="w-1/3 flex justify-end">
+                    {selectedLoja && (
+                        <div className="bg-purple-800 px-3 py-1 rounded-full text-sm">
+                            Loja: {selectedLoja}
+                        </div>
+                    )}
+                </div>
             </div>
 
-            {/* *** CONTEÚDO DO MODALNOVAVENDA *** */}
-            {/* Conteúdo principal - adaptado do ModalNovaVenda */}
+            {/* Conteúdo principal */}
             <div className="max-w-6xl mx-auto px-4 mt-6">
                 {/* Exibir mensagem de erro */}
                 {error && (
@@ -260,108 +315,56 @@ const NovaVendaPage = () => {
                                         type="date"
                                         value={dataVenda}
                                         onChange={(e) => setDataVenda(e.target.value)}
-                                        className="border border-[#81059e] rounded-sm px-2 py-1"
+                                        className="border-2 border-gray-300 rounded-sm px-2 py-1"
                                     />
                                 </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <FiUser className="text-[#81059e]" />
-                                <span className="font-medium">Vendedor:</span>
-                                <span>{vendedor}</span>
-                            </div>
+                            {vendedor && (
+                                <div className="flex items-center gap-2">
+                                    <FiUser className="text-[#81059e]" />
+                                    <span className="font-medium">{vendedor}</span>
+                                </div>
+                            )}
+
+                            {userPermissions?.isAdmin && (
+                                <div className="mt-2 flex items-center gap-2">
+                                    <FiMapPin className="text-[#81059e]" />
+                                    <label className=" font-medium">Selecionar Loja:</label>
+                                    <select
+                                        value={selectedLoja}
+                                        onChange={(e) => {
+                                            setSelectedLoja(e.target.value);
+                                            router.push(`/sales/add_sales?loja=${e.target.value}`);
+                                        }}
+                                        className="border-2 border-gray-300 rounded-sm px-2 py-1"
+                                    >
+                                        {userPermissions.lojas.map((loja) => (
+                                            <option key={loja} value={loja}>
+                                                {loja}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
                         </div>
 
+
+
                         {/* Seleção de Cliente */}
-                        <div className="bg-white p-4 rounded-lg shadow-sm mb-4">
-                            <label className="block text-[#81059e] text-xl font-medium mb-1 flex items-center gap-1">
-                                <FiUser /> Cliente
-                            </label>
-
-                            {showClientForm ? (
-                                <div className="border-2 border-[#81059e] rounded-sm p-4">
-                                    <div className="flex justify-between items-center mb-4">
-                                        <h3 className="font-medium text-[#81059e]">Adicionar Novo Cliente</h3>
-                                        <button
-                                            onClick={() => setShowClientForm(false)}
-                                            className="text-gray-500 hover:text-gray-700"
-                                        >
-                                            <FiX size={20} />
-                                        </button>
-                                    </div>
-                                    <ClientForm
-                                        selectedLoja={selectedLoja}
-                                        onSuccessRedirect={() => {
-                                            setShowClientForm(false);
-                                            fetchClients(); // Atualizar a lista após adicionar
-                                        }}
-                                    />
-                                </div>
-                            ) : (
-                                <>
-                                    <div className="flex gap-2">
-                                        <div className="relative flex-1">
-                                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                                <FiSearch className="text-gray-400" />
-                                            </div>
-                                            <input
-                                                type="text"
-                                                value={searchTerm}
-                                                onChange={(e) => setSearchTerm(e.target.value)}
-                                                className="border-2 border-[#81059e] pl-10 p-2 rounded-sm w-full"
-                                                placeholder="Buscar cliente por nome ou CPF"
-                                            />
-                                            {filteredClients.length > 0 && (
-                                                <div className="absolute z-10 mt-1 w-full bg-white border-2 border-[#81059e] rounded-lg max-h-[200px] overflow-y-auto shadow-lg custom-scroll">
-                                                    {filteredClients
-                                                        .filter(client => {
-                                                            const searchTermLower = searchTerm.toLowerCase();
-                                                            return (
-                                                                client.nome.toLowerCase().includes(searchTermLower) ||
-                                                                (client.cpf && client.cpf.includes(searchTermLower)) ||
-                                                                (client.telefone && client.telefone.includes(searchTermLower))
-                                                            );
-                                                        })
-                                                        .map(client => (
-                                                            <div
-                                                                key={client.id}
-                                                                className="p-2 hover:bg-purple-50 cursor-pointer border-b last:border-b-0"
-                                                                onClick={() => handleSelectClient(client)}
-                                                            >
-                                                                <div className="font-medium">{client.nome}</div>
-                                                                {client.cpf && <div className="text-sm text-gray-600">CPF: {client.cpf}</div>}
-                                                            </div>
-                                                        ))}
-                                                </div>
-                                            )}
-                                        </div>
-                                        <button
-                                            onClick={() => setShowClientForm(true)}
-                                            className="bg-[#81059e] text-white p-2 rounded-sm flex items-center"
-                                            title="Adicionar novo cliente"
-                                        >
-                                            <FiPlus />
-                                        </button>
-                                    </div>
-
-                                    {selectedClient && (
-                                        <div className="mt-2 p-3 border-2 border-purple-100 rounded-sm bg-purple-50">
-                                            <div className="flex justify-between items-center">
-                                                <div>
-                                                    <h3 className="font-semibold text-[#81059e]">{selectedClient.nome}</h3>
-                                                    {selectedClient.cpf && <p className="text-gray-600 text-sm">CPF: {selectedClient.cpf}</p>}
-                                                    {selectedClient.telefone && <p className="text-gray-600 text-sm">Tel: {selectedClient.telefone}</p>}
-                                                </div>
-                                                <button
-                                                    onClick={() => setSelectedClient(null)}
-                                                    className="text-[#81059e] hover:text-[#6f0486]"
-                                                >
-                                                    <FiX size={20} />
-                                                </button>
-                                            </div>
-                                        </div>
-                                    )}
-                                </>
-                            )}
+                        <div className="bg-white h-60 p-4 rounded-lg shadow-sm mb-4">
+                            <ClienteSelecao
+                                searchTerm={searchTerm}
+                                setSearchTerm={setSearchTerm}
+                                filteredClients={filteredClients}
+                                selectedClient={selectedClient}
+                                setSelectedClient={setSelectedClient}
+                                handleSelectClient={handleSelectClient}
+                                showClientForm={showClientForm}
+                                setShowClientForm={setShowClientForm}
+                                fetchClients={fetchClients}
+                                selectedLoja={selectedLoja}
+                                ClientForm={ClientForm}
+                            />
                         </div>
 
                         {/* Seleção e Lista de Produtos */}
@@ -375,8 +378,8 @@ const NovaVendaPage = () => {
                                     cartItems={cartItems}
                                     setCartItems={setCartItems}
                                     selectedLoja={selectedLoja}
-                                    formatCurrency={formatCurrency}
-                                    calculateTotal={calculateTotal}
+                                    formatCurrency={formatCurrencyFn}
+                                    calculateTotal={calculateTotal || (() => 0)}
                                     updateCollections={(updatedCollections) => setCollections(updatedCollections)}
                                     setActiveCollection={(colectionId) => setActiveCollection(colectionId)}
                                 />
@@ -384,7 +387,7 @@ const NovaVendaPage = () => {
                         </div>
 
                         {/* Gerenciamento de OS */}
-                        {cartItems.length > 0 && (
+                        {cartItems?.length > 0 && (
                             <div className="bg-white p-4 rounded-lg shadow-sm mb-4">
                                 <OSManager
                                     cartItems={cartItems}
@@ -455,18 +458,18 @@ const NovaVendaPage = () => {
 
                             <input
                                 type="text"
-                                value={discount}
+                                inputMode="numeric"
+                                value={
+                                    discount === 0
+                                        ? ''
+                                        : discountType === 'value'
+                                            ? (discount * 100).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, '.').replace(/(\d{2})$/, ',$1')
+                                            : discount.toString().replace('.', ',')
+                                }
                                 onChange={(e) => {
-                                    const valor = e.target.value.replace(/\D/g, '');
-                                    if (valor === '') {
-                                        setDiscount(0);
-                                        return;
-                                    }
-                                    if (discountType === 'value') {
-                                        setDiscount(Number(valor) / 100);
-                                    } else {
-                                        setDiscount(Number(valor) / 100);
-                                    }
+                                    const raw = e.target.value.replace(/\D/g, '');
+                                    const parsed = raw ? Number(raw) / 100 : 0;
+                                    setDiscount(parsed);
                                 }}
                                 className="border-2 border-[#81059e] p-2 rounded-sm w-full"
                                 placeholder={discountType === 'percentage' ? "Desconto em %" : "Desconto em R$"}
@@ -480,19 +483,26 @@ const NovaVendaPage = () => {
                             <div className="space-y-2">
                                 <div className="flex justify-between">
                                     <span>Subtotal:</span>
-                                    <span>{formatCurrency(calculateSubtotal())}</span>
+                                    <span>{formatCurrencyFn(calcSubtotal())}</span>
                                 </div>
 
                                 {discount > 0 && (
                                     <div className="flex justify-between text-green-600">
-                                        <span>Desconto{discountType === 'percentage' ? ` (${discount}%)` : ''}:</span>
-                                        <span>- {formatCurrency(calculateDiscount())}</span>
+                                        <span>
+                                            Desconto
+                                            {discountType === 'percentage'
+                                                ? ` (${discount.toFixed(2).replace('.', ',')}%)`
+                                                : ''}
+                                            :
+                                        </span>
+                                        <span>- {formatCurrencyFn(calculateDiscount())}</span>
                                     </div>
                                 )}
 
+
                                 <div className="flex justify-between font-bold text-lg pt-2 border-t border-gray-300">
                                     <span>Total:</span>
-                                    <span className="text-[#81059e]">{formatCurrency(calculateTotal())}</span>
+                                    <span className="text-[#81059e]">{formatCurrencyFn(calculateTotal())}</span>
                                 </div>
                             </div>
                         </div>
@@ -515,7 +525,7 @@ const NovaVendaPage = () => {
                                     removePaymentMethod={removePaymentMethod}
                                     changePaymentMethod={changePaymentMethod}
                                     cashbackDisponivel={cashbackDisponivel}
-                                    formatCurrency={formatCurrency}
+                                    formatCurrency={formatCurrencyFn}
                                     processPaymentMethod={processPaymentMethod}
                                     boletoVencimento={boletoVencimento}
                                     setBoletoVencimento={setBoletoVencimento}
@@ -537,7 +547,7 @@ const NovaVendaPage = () => {
                                     setIsFinalizando(false);
                                 });
                             }}
-                            disabled={cartItems.length === 0 || !selectedClient ||
+                            disabled={!cartItems || cartItems.length === 0 || !selectedClient ||
                                 (tipoTransacao === 'venda' &&
                                     ((osStatus.tipo !== 'sem_os' && !osFormsCompleted) ||
                                         isFinalizando))}
