@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { collection, getDocs, getDoc, query, where, doc, updateDoc } from "firebase/firestore";
 import { firestore } from '@/lib/firebaseConfig';
 import Layout from '@/components/Layout';
-import { FaPencilAlt, FaFileInvoice, FaDollarSign, FaClock, FaExclamationTriangle, FaFilter, FaX, FaCheck } from 'react-icons/fa';
+import { FaPencilAlt, FaFileInvoice, FaDollarSign, FaClock, FaExclamationTriangle, FaFilter, FaTimes, FaCheck } from 'react-icons/fa';
 import { Popover } from '@headlessui/react';
 import jsPDF from 'jspdf';
 
@@ -430,7 +430,7 @@ export default function ListAgreementsPage() {
                             <div className="bg-white rounded-lg shadow-lg w-full max-w-md flex flex-col h-3/5 overflow-hidden">
                                 <div className="bg-[#81059e] text-white p-4 flex justify-between items-center">
                                     <h3 className="text-xl font-bold">Detalhes do Acordo</h3>
-                                    <FaX
+                                    <FaTimes
                                         className="h-5 w-5 text-white cursor-pointer hover:text-gray-200"
                                         onClick={closeModal}
                                     />

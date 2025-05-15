@@ -1,7 +1,7 @@
 "use client";
-
-import React, { useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation'; // Corrigido para usar useSearchParams
+export const dynamic = 'force-dynamic';
+import React, { useEffect, useState, Suspense } from 'react';
+import { useRouter } from 'next/navigation';
 import Head from 'next/head';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -41,7 +41,7 @@ import {
 import { FaBitcoin, FaEthereum } from 'react-icons/fa';
 import { useAuth } from '@/hooks/useAuth';
 
-// Função auxiliar para formatação de moeda
+// Função para formatação de moeda
 const formatCurrencyBR = (value) => {
     return new Intl.NumberFormat('pt-BR', {
         style: 'currency',
@@ -49,24 +49,34 @@ const formatCurrencyBR = (value) => {
     }).format(value || 0);
 };
 
+// Componente principal simplificado
 const NovaVendaPage = () => {
     const router = useRouter();
-    const searchParams = useSearchParams(); // Usando useSearchParams para obter parâmetros de URL
-    const { userPermissions } = useAuth();
+    const { userPermissions, userData } = useAuth();
     const [selectedLoja, setSelectedLoja] = useState('');
+    const [isFinalizando, setIsFinalizando] = useState(false);
+    const [collections, setCollections] = useState([
+        { id: 1, name: "Coleção 1", items: [] }
+    ]);
+    const [activeCollection, setActiveCollection] = useState(1);
+    const [osStatus, setOsStatus] = useState({ tipo: 'sem_os' });
+    const [dataVenda, setDataVenda] = useState(new Date().toISOString().split('T')[0]);
+    const [vendedor, setVendedor] = useState('');
 
-    // Obter loja da URL ou selecionar a primeira disponível
+    // Definir a loja baseada apenas nas permissões do usuário
     useEffect(() => {
-        const lojaParam = searchParams.get('loja');
-        if (lojaParam) {
-            setSelectedLoja(lojaParam);
-        } else if (userPermissions?.lojas?.length > 0) {
-            const primeiraLoja = userPermissions.lojas[0];
-            setSelectedLoja(primeiraLoja);
-            // Atualizar URL com a loja selecionada usando o router
-            router.push(`/sales/add_sales?loja=${primeiraLoja}`);
+        if (userPermissions?.lojas?.length > 0) {
+            setSelectedLoja(userPermissions.lojas[0]);
         }
-    }, [searchParams, userPermissions, router]);
+    }, [userPermissions]);
+
+    // Definir o vendedor baseado nos dados do usuário
+    useEffect(() => {
+        if (userData) {
+            const cargo = userData.isAdmin ? 'Administrador' : (userData.cargo || 'Usuário');
+            setVendedor(`${cargo}: ${userData.nome}`);
+        }
+    }, [userData]);
 
     // Configurar as props para o hook useModalNovaVenda
     const modalProps = {
@@ -172,7 +182,7 @@ const NovaVendaPage = () => {
         setShowPixModal = () => { },
         pixQRCode = '',
         cashbackDisponivel = 0
-    } = novaVendaHook;
+    } = novaVendaHook || {};
 
     // Função para calcular subtotal com fallback
     const calcSubtotal = calculateSubtotal || (() => {
@@ -184,46 +194,24 @@ const NovaVendaPage = () => {
     // Usar nossa função de formatação de moeda
     const formatCurrencyFn = formatCurrency || formatCurrencyBR;
 
-    const [isFinalizando, setIsFinalizando] = useState(false);
-    const [collections, setCollections] = useState([
-        { id: 1, name: "Coleção 1", items: [] }
-    ]);
-    const [activeCollection, setActiveCollection] = useState(1);
-    const [osStatus, setOsStatus] = useState({ tipo: 'sem_os' });
-    const [dataVenda, setDataVenda] = useState(new Date().toISOString().split('T')[0]);
-    const [vendedor, setVendedor] = useState('');
-    const { userData } = useAuth();
-
-    useEffect(() => {
-        if (userData) {
-            const cargo = userData.isAdmin ? 'Administrador' : (userData.cargo || 'Usuário');
-            setVendedor(`${cargo}: ${userData.nome}`);
-        }
-    }, [userData]);
-
-
     // Função para voltar à página anterior
     const handleBack = () => {
         router.push('/sales');
     };
 
-    const handleDiscountInputChange = (e) => {
-        const rawValue = e.target.value.replace(/\D/g, '');
-        if (rawValue === '') {
-            setDiscount(0);
-            return;
-        }
-
-        const valor = Number(rawValue) / 100;
-        setDiscount(valor);
-    };
-
+    if (!userPermissions || !selectedLoja) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-100">
+                <div className="animate-spin h-10 w-10 border-4 border-[#81059e] rounded-full border-t-transparent"></div>
+                <p className="ml-3 text-[#81059e] font-medium">Carregando...</p>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-gray-100 pb-6">
             <Head>
                 <title>{tipoTransacao === 'venda' ? 'Nova Venda' : 'Novo Orçamento'} | MASI Óticas</title>
-
             </Head>
 
             {/* Barra superior com título e botão voltar */}
@@ -253,7 +241,6 @@ const NovaVendaPage = () => {
                         />
                     </Link>
                 </div>
-
 
                 {/* Informação da loja - à direita */}
                 <div className="w-1/3 flex justify-end">
@@ -334,7 +321,6 @@ const NovaVendaPage = () => {
                                         value={selectedLoja}
                                         onChange={(e) => {
                                             setSelectedLoja(e.target.value);
-                                            router.push(`/sales/add_sales?loja=${e.target.value}`);
                                         }}
                                         className="border-2 border-gray-300 rounded-sm px-2 py-1"
                                     >
@@ -347,8 +333,6 @@ const NovaVendaPage = () => {
                                 </div>
                             )}
                         </div>
-
-
 
                         {/* Seleção de Cliente */}
                         <div className="bg-white h-60 p-4 rounded-lg shadow-sm mb-4">
@@ -498,7 +482,6 @@ const NovaVendaPage = () => {
                                         <span>- {formatCurrencyFn(calculateDiscount())}</span>
                                     </div>
                                 )}
-
 
                                 <div className="flex justify-between font-bold text-lg pt-2 border-t border-gray-300">
                                     <span>Total:</span>

@@ -12,7 +12,7 @@ import { useRouter } from "next/navigation"; // Para redirecionar
 import { useAuth } from "@/hooks/useAuth"; // Importe o hook useAuth
 import Layout from "@/components/Layout"; // Seu layout instanciado
 import { app } from "@/lib/firebaseConfig"; // Certifique-se de que o Firebase está corretamente inicializado
-import { FaTrash, FaEdit, FaFilePdf, FaPrint, FaFilter, FaX, FaCheck, FaDollarSign, FaClock, FaExclamationTriangle, FaPlus } from "react-icons/fa"; // Ícones da biblioteca react-icons
+import { FaTrash, FaEdit, FaFilePdf, FaPrint, FaFilter, FaTimes, FaCheck, FaDollarSign, FaClock, FaExclamationTriangle, FaPlus } from "react-icons/fa"; // Ícones da biblioteca react-icons
 import jsPDF from "jspdf"; // Para gerar o PDF
 import "jspdf-autotable"; // Plugin para tabelas no jsPDF
 import Link from "next/link";
@@ -420,7 +420,7 @@ function ListConsultation() {
                 if (filter.type === 'Dia') setDayFilter('Todos');
               }}
             >
-              <FaX className="h-3 w-3" />
+              <FaTimes className="h-3 w-3" />
             </button>
           </span>
         ))}
