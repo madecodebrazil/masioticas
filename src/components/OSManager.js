@@ -242,18 +242,19 @@ const OSManager = ({ cartItems, selectedClient, onOSChange, collections, activeC
 
         return (
             <div className="fixed inset-0 z-[80] overflow-y-auto bg-black bg-opacity-50 flex items-center justify-center">
-                <div className="bg-white p-6 rounded-lg shadow-lg max-h-[80vh] overflow-y-auto w-full max-w-4xl m-4">
-                    <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-lg font-bold text-[#81059e]">
+                <div className="bg-white  rounded-lg shadow-lg max-h-[90vh] overflow-y-auto w-full max-w-4xl m-4">
+                    <div className="flex justify-between items-center mb-4 bg-[#81059e]">
+                        <h2 className="text-xl font-bold text-white p-4">
                             Dados da Ordem de Serviço - {colecao.name}
                         </h2>
                         <button
                             onClick={closeOSForm}
-                            className="text-gray-400 hover:text-gray-600"
+                            className="text-gray-200 hover:text-gray-600"
                         >
                             <FiX size={24} />
                         </button>
                     </div>
+                    <div className='p-6'>
 
                     {/* Alerta para OS especiais */}
                     {(osFormTipo === "somente_armacao" || osFormTipo === "somente_lente") && (
@@ -982,70 +983,6 @@ const OSManager = ({ cartItems, selectedClient, onOSChange, collections, activeC
                                     </div>
                                     <span className="text-sm font-medium">+ R$ 5,00</span>
                                     </label>
-                                <label className="flex items-center justify-between border-2 border-[#81059e] p-3 rounded-sm">
-                                    <div>
-                                        <div className="flex items-center">
-                                            <input
-                                                type="radio"
-                                                name="tratamento"
-                                                value="antirreflexo-verde"
-                                                defaultChecked={formData.tratamento === 'antirreflexo-verde'}
-                                                className="h-4 w-4 text-[#81059e] border-gray-300 focus:ring-[#81059e]"
-                                            />
-                                            <span className="ml-2 font-medium">Antirreflexo Verde</span>
-                                        </div>
-                                        <p className="text-xs text-blue-700 ml-6">Super-Hidrofóbico - 1 Ano de Garantia</p>
-                                    </div>
-                                    <span className="text-sm font-medium">+ R$ 25,00</span>
-                                </label>
-                                <label className="flex items-center justify-between border-2 border-[#81059e] p-3 rounded-sm">
-                                    <div>
-                                        <div className="flex items-center">
-                                            <input
-                                                type="radio"
-                                                name="tratamento"
-                                                value="antirreflexo-azul"
-                                                defaultChecked={formData.tratamento === 'antirreflexo-azul'}
-                                                className="h-4 w-4 text-[#81059e] border-gray-300 focus:ring-[#81059e]"
-                                            />
-                                            <span className="ml-2 font-medium">Antirreflexo Azul</span>
-                                        </div>
-                                        <p className="text-xs text-blue-700 ml-6">Super-Hidrofóbico - 1 Ano de Garantia</p>
-                                    </div>
-                                    <span className="text-sm font-medium">+ R$ 30,00</span>
-                                </label>
-                                <label className="flex items-center justify-between border-2 border-[#81059e] p-3 rounded-sm">
-                                    <div>
-                                        <div className="flex items-center">
-                                            <input
-                                                type="radio"
-                                                name="tratamento"
-                                                value="antirreflexo-premium-verde"
-                                                defaultChecked={formData.tratamento === 'antirreflexo-premium-verde'}
-                                                className="h-4 w-4 text-[#81059e] border-gray-300 focus:ring-[#81059e]"
-                                            />
-                                            <span className="ml-2 font-medium">Antirreflexo Premium Verde</span>
-                                        </div>
-                                        <p className="text-xs text-blue-700 ml-6">Super-Hidrofóbico - 2 Anos de Garantia</p>
-                                    </div>
-                                    <span className="text-sm font-medium">+ R$ 55,00</span>
-                                </label>
-                                <label className="flex items-center justify-between border-2 border-[#81059e] p-3 rounded-sm">
-                                    <div>
-                                        <div className="flex items-center">
-                                            <input
-                                                type="radio"
-                                                name="tratamento"
-                                                value="antirreflexo-premium-azul"
-                                                defaultChecked={formData.tratamento === 'antirreflexo-premium-azul'}
-                                                className="h-4 w-4 text-[#81059e] border-gray-300 focus:ring-[#81059e]"
-                                            />
-                                            <span className="ml-2 font-medium">Antirreflexo Premium Azul</span>
-                                        </div>
-                                        <p className="text-xs text-blue-700 ml-6">Super-Hidrofóbico - 2 Anos de Garantia</p>
-                                    </div>
-                                    <span className="text-sm font-medium">+ R$ 60,00</span>
-                                </label>
                             </div>
                         </div>
 
@@ -1259,6 +1196,7 @@ const OSManager = ({ cartItems, selectedClient, onOSChange, collections, activeC
                         </div>
                     </form>
                 </div>
+            </div>
             </div>
         );
     };

@@ -1,105 +1,214 @@
 "use client";
-import React, { Suspense, useEffect, useState } from "react";
+import React, { Suspense, useEffect, useState, useRef } from "react";
 import Layout from "@/components/Layout";
-import { doc, setDoc, getDoc, getDocs, collection } from "firebase/firestore";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { doc, setDoc, getDoc, getDocs, collection, addDoc, query, where, deleteDoc } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { firestore } from "../../../lib/firebaseConfig";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
+import { useAuth } from "@/hooks/useAuth";
+import { format, parseISO } from 'date-fns';
+import { storage } from "@/lib/firebaseConfig";
+import "react-datepicker/dist/react-datepicker.css";
+import { FiPlus, FiTrash, FiTrash2 } from 'react-icons/fi';
+import ProductConfirmModal from '@/components/ProductConfirmModal';
+import { QRCodeSVG } from 'qrcode.react';
+
+const SelectWithAddOption = ({
+  label,
+  options,
+  value,
+  onChange,
+  collectionName,
+  addNewOption,
+  canAddNew = true,
+  selectedLoja,
+  setOptions,
+}) => {
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [newItemValue, setNewItemValue] = useState("");
+  const [showAddInput, setShowAddInput] = useState(false);
+  const [showRemoveOptions, setShowRemoveOptions] = useState(false);
+
+  const handleRemoveItem = async (itemToRemove) => {
+    try {
+      const loja = selectedLoja || "loja1";
+      const path = `estoque/${loja}/solares/configuracoes/${collectionName}`;
+
+      const docId = itemToRemove.toString().replace(/\./g, '_');
+      const docRef = doc(firestore, path, docId);
+      await deleteDoc(docRef);
+
+      const updatedOptions = options.filter(opt => opt !== itemToRemove);
+      onChange("");
+      setOptions(updatedOptions);
+
+      alert(`${itemToRemove} removido com sucesso!`);
+      setShowRemoveOptions(false);
+    } catch (error) {
+      console.error("Erro ao remover:", error);
+      alert("Erro ao remover item.");
+    }
+  };
+
+  const handleAddItem = async () => {
+    if (!newItemValue.trim()) return;
+
+    try {
+      await addNewOption(newItemValue);
+      setNewItemValue("");
+      setShowAddInput(false);
+    } catch (error) {
+      console.error("Erro ao adicionar novo item:", error);
+    }
+  };
+
+  return (
+    <div className="space-y-2 relative">
+      <h3 className="text-lg font-semibold text-[#81059e]">{label}:</h3>
+
+      {!showAddInput ? (
+        <div className="relative">
+          <div className="flex items-center">
+            <select
+              value={value || ""}
+              onChange={(e) => {
+                if (e.target.value === "add_new") {
+                  setShowAddInput(true);
+                } else {
+                  onChange(e.target.value);
+                  setShowRemoveOptions(false);
+                }
+              }}
+              className="bg-gray-100 w-full px-4 py-3 border-2 border-[#81059e] rounded-sm text-black focus:outline-none focus:border-[#81059e] focus:ring-1 focus:ring-[#81059e]"
+            >
+              <option value="">Selecione uma opção</option>
+              {options.map((option) => (
+                <option key={option} value={option}>
+                  {option ? (typeof option === 'object' ? option.nome : option.toUpperCase()) : ""}
+                </option>
+              ))}
+              {canAddNew && <option value="add_new">+ ADICIONAR NOVO</option>}
+            </select>
+
+            {value && (
+              <button
+                type="button"
+                onClick={() => setShowRemoveOptions(!showRemoveOptions)}
+                className="ml-2 bg-gray-100 border-2 border-[#81059e] text-[#81059e] p-3 rounded-sm text-lg"
+              >
+                <FiTrash2 />
+              </button>
+            )}
+          </div>
+
+          {showRemoveOptions && (
+            <div className="absolute top-full left-0 w-full bg-white border border-gray-200 rounded-b-lg shadow-lg z-10 mt-1">
+              <div className="py-2 px-4 bg-gray-50 border-b text-sm font-semibold text-gray-700">
+                Clique no X para remover {label.toLowerCase()}
+              </div>
+              {options.map((option) => (
+                <div key={option} className="flex justify-between items-center px-4 py-2 hover:bg-gray-50">
+                  <span>{option ? (typeof option === 'object' ? option.nome : option.toUpperCase()) : ""}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (confirm(`Deseja remover ${option}?`)) {
+                        handleRemoveItem(option);
+                      }
+                    }}
+                    className="text-red-500 hover:text-red-700 p-1 rounded-full hover:bg-red-50"
+                  >
+                    <FiTrash2 />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            value={newItemValue}
+            onChange={(e) => setNewItemValue(e.target.value)}
+            className="bg-gray-100 w-full px-4 py-3 border-2 border-[#81059e] rounded-sm text-black focus:outline-none focus:border-[#81059e] focus:ring-1 focus:ring-[#81059e]"
+            placeholder={`Adicionar novo ${label.toLowerCase()}`}
+          />
+          <button
+            type="button"
+            onClick={handleAddItem}
+            className="bg-[#81059e] text-white p-3 rounded-sm"
+          >
+            <FiPlus />
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowAddInput(false)}
+            className="border-2 border-[#81059e] text-[#81059e] p-3 rounded-sm"
+          >
+            Cancelar
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
 
 export function FormularioLoja() {
-  const [ncm, setNcm] = useState([]);
   const searchParams = useSearchParams();
-  const router = useRouter();
-  const [selectedLojas, setSelectedLojas] = useState([]);
-  const [formData, setFormData] = useState({
-    codigoBarras: "",
-    unidade: "",
-    data: "",
-    hora: "",
-    fabricante: "",
-    fornecedor: "",
-    marca: "",
-    genero: "",
-    aro: "",
-    material: "",
-    categoria: "solares", // Definindo como "solar" por padrão
-    cor: "",
-    formato: "",
-    codigo: "",
-    lente: "",
-    cor: "",
-    ponte: "",
-    haste: "",
-    NCM: "",
-    custo: "",
-    valor: "",
-    percentualLucro: "",
-    custoMedio: "",
-    sku: "",
-    produto: "",
-    quantidade: "",
-    avaria: false,
-    imagem: null,
+  const { userPermissions, userData } = useAuth();
+  const [ncm, setNcm] = useState([]);
+  const [selectedLoja, setSelectedLoja] = useState(null);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [productToConfirm, setProductToConfirm] = useState(null);
+  const [dataExibicao, setDataExibicao] = useState('');
+  const [searchFornecedor, setSearchFornecedor] = useState("");
+  const [listaFornecedores, setListaFornecedores] = useState([]);
+  const [isLoadingFornecedores, setIsLoadingFornecedores] = useState(false);
+  const [qrCodeData, setQrCodeData] = useState(null);
+  const imageInputRef = useRef(null);
 
-    // Novos campos de dados fiscais e peso
-    csosn: "",
-    cest: "",
-    aliquotaICMS: "",
-    baseCalculoICMS: "",
-    aliquotaIPI: "",
-    cstIPI: "",
-    baseCalculoIPI: "",
-    cstPIS: "",
-    cstCOFINS: "",
-    CFOP: "",
-    origemProduto: "",
-    pesoBruto: "",
-    pesoLiquido: "",
-  });
   useEffect(() => {
-    const cloneId = searchParams.get("cloneId");
-    const loja = searchParams.get("loja");
+    fetchFornecedoresDinamico();
+  }, [searchFornecedor]);
 
-    if (cloneId && loja) {
-      fetchCloneData(cloneId, loja);
+  const generateProductTitle = (marca, cor, genero, material) => {
+    if (!marca || !cor || !genero || !material) {
+      return "";
     }
-  }, [searchParams]);
+
+    const marcaFormatted = marca.trim().toUpperCase();
+    const corFormatted = cor.trim().charAt(0).toUpperCase() + cor.trim().slice(1).toLowerCase();
+    const generoFormatted = genero === "Unissex" ? "Unissex" :
+      genero === "Masculino" ? "Masculino" : "Feminino";
+    const materialFormatted = material.trim().charAt(0).toUpperCase() + material.trim().slice(1).toLowerCase();
+
+    return `${marcaFormatted} ${corFormatted} ${generoFormatted} ${materialFormatted}`;
+  };
+
+  const renderLojaName = (lojaId) => {
+    const lojaNames = {
+      'loja1': 'Loja 1 - Centro',
+      'loja2': 'Loja 2 - Caramuru'
+    };
+
+    return lojaNames[lojaId] || lojaId;
+  };
+
   const fetchCloneData = async (cloneId, loja) => {
     try {
-      const collectionName =
-        loja === "Loja 1" ? "loja1_solares" : "loja2_solares";
-      const docRef = doc(firestore, collectionName, cloneId);
+      const docRef = doc(firestore, `estoque/${loja}/solares`, cloneId);
       const docSnap = await getDoc(docRef);
 
       if (docSnap.exists()) {
         const data = docSnap.data();
-        // Extrair o campo 'lojas' dos dados
-        const { id, lojas, data: dataDoc, hora, ...clonedData } = data;
-
-        // Atualizar data e hora para os valores atuais
-        const now = new Date();
-        const formattedDate = now.toISOString().split("T")[0]; // Formato YYYY-MM-DD
-        const formattedTime = now
-          .toTimeString()
-          .split(":")
-          .slice(0, 2)
-          .join(":"); // Formato HH:MM
-
+        const { id, loja, ...clonedData } = data;
         setFormData((prevData) => ({
           ...prevData,
           ...clonedData,
-          data: formattedDate,
-          hora: formattedTime,
         }));
-
-        // Atualizar o estado 'selectedLojas' com base em 'lojas'
-        if (lojas && Array.isArray(lojas)) {
-          setSelectedLojas(lojas);
-        } else if (loja) {
-          setSelectedLojas([loja]);
-        }
       } else {
         console.error("Documento não encontrado");
       }
@@ -108,19 +217,71 @@ export function FormularioLoja() {
     }
   };
 
-  const fetchUnidades = async () => {
-    try {
-      const unidadesSnapshot = await getDocs(
-        collection(firestore, "armacoes_unidades")
-      );
-      const unidadesList = unidadesSnapshot.docs.map((doc) => doc.data().name); // Supondo que o campo seja "name"
-      setUnidades(unidadesList); // Salva as unidades no estado
-    } catch (error) {
-      console.error("Erro ao buscar unidades:", error);
-    }
-  };
+  const router = useRouter();
+  const [selectedLojas, setSelectedLojas] = useState([]);
+  const [formData, setFormData] = useState({
+    codigoBarras: "",
+    unidade: "",
+    codigoFabricante: "",
+    data: "",
+    hora: "",
+    fabricante: "",
+    fornecedor: "",
+    marca: "",
+    genero: "",
+    aro: "",
+    material: [],
+    nome: "",
+    subcategoria: "solar", // Alterado para solar
+    cor: "",
+    formato: "",
+    codigo: "",
+    lente: "",
+    ponte: "",
+    haste: "",
+    NCM: "",
+    custo: "",
+    valor: "",
+    percentual_lucro: "",
+    custo_medio: "",
+    sku: "",
+    quantidade: "",
+    avaria: false,
+    imagem: null,
 
-  const [unidades, setUnidades] = useState([]);
+    // Campos adicionais
+    CEST: "",
+    aliquota_icms: "",
+    base_calculo_icms: "",
+    aliquota_ipi: "",
+    cst_ipi: "",
+    base_calculo_ipi: "",
+    cst_pis: "",
+    cst_cofins: "",
+    cfop: "",
+    origem_produto: "",
+    peso_bruto: "",
+    peso_liquido: "",
+    csosn: "",
+  });
+
+  // Definir loja inicial baseado nas permissões
+  useEffect(() => {
+    if (userPermissions && userPermissions.lojas && userPermissions.lojas.length > 0) {
+      const defaultLoja = userPermissions.lojas[0];
+      setSelectedLoja(defaultLoja);
+      setSelectedLojas([renderLojaName(defaultLoja)]);
+    }
+  }, [userPermissions]);
+
+  useEffect(() => {
+    const cloneId = searchParams.get("cloneId");
+    const loja = searchParams.get("loja");
+
+    if (cloneId && loja) {
+      fetchCloneData(cloneId, loja);
+    }
+  }, [searchParams]);
 
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
@@ -131,41 +292,10 @@ export function FormularioLoja() {
   const [aros, setAros] = useState([]);
   const [materiais, setMateriais] = useState([]);
   const [cores, setCores] = useState([]);
-  const [lentes, setLentes] = useState([]);
   const [pontes, setPontes] = useState([]);
   const [hastes, setHastes] = useState([]);
+  const [unidades, setUnidades] = useState([]);
 
-  useEffect(() => {
-    if (router.state?.formData) {
-      setFormData(router.state.formData); // Preenche o formulário com os dados existentes
-    }
-  }, [router.state]);
-  // Função para pegar a data e hora atuais
-  useEffect(() => {
-    const now = new Date();
-
-    // Definindo as opções de formatação para o fuso horário do Brasil
-    const options = {
-      timeZone: "America/Sao_Paulo",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    };
-
-    // Formatando a data e hora com o fuso de Brasília (BR)
-    const formattedDate = now.toLocaleDateString("pt-BR", options); // Formato DD/MM/YYYY
-    const formattedTime = now.toTimeString().split(":").slice(0, 2).join(":"); // Formato HH:MM
-
-    // Transformando a data no formato compatível com o input date (YYYY-MM-DD)
-    const [day, month, year] = formattedDate.split("/");
-    const date = `${year}-${month}-${day}`; // Formato compatível com o campo input "date"
-
-    setFormData((prevData) => ({
-      ...prevData,
-      data: date, // Formato YYYY-MM-DD
-      hora: formattedTime, // Formato HH:MM
-    }));
-  }, []);
   const generateRandomCode = (length = 3) => {
     const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     let result = "";
@@ -176,39 +306,243 @@ export function FormularioLoja() {
     }
     return result;
   };
+
   const fetchNcm = async () => {
     try {
+      // Tente a coleção original primeiro
       const ncmSnapshot = await getDocs(collection(firestore, "ncm"));
-      const ncmList = ncmSnapshot.docs.map((doc) => doc.data().name); // Supondo que o campo seja "name"
-      setNcm(ncmList);
+
+      // Se não houver dados, tente um caminho alternativo
+      if (ncmSnapshot.empty) {
+        console.log("Coleção NCM vazia, tentando caminho alternativo...");
+        // Tente outro caminho que poderia conter os dados NCM
+        const altNcmSnapshot = await getDocs(collection(firestore, "/estoque/${loja}/configuracoes/ncm"));
+
+        if (!altNcmSnapshot.empty) {
+          const ncmList = altNcmSnapshot.docs.map((doc) => {
+            const data = doc.data();
+            return data.codigo ? `${data.codigo} - ${data.descricao || ''}` : data.name || doc.id;
+          });
+          setNcm(ncmList);
+          return;
+        }
+
+        // Se nenhum dado for encontrado, adicione alguns NCMs comuns para armações óticas como fallback
+        const defaultNcms = [
+          "9003.11.00 - Armações de plástico",
+          "9003.19.10 - Armações de metais preciosos",
+          "9003.19.90 - Armações de outros materiais",
+          "9004.10.00 - Óculos de sol"
+        ];
+        setNcm(defaultNcms);
+        console.log("Usando NCMs padrão como fallback");
+      } else {
+        // Se encontrou dados no caminho original
+        const ncmList = ncmSnapshot.docs.map((doc) => {
+          const data = doc.data();
+          return data.codigo ? `${data.codigo} - ${data.descricao || ''}` : data.name || doc.id;
+        });
+        setNcm(ncmList);
+      }
     } catch (error) {
       console.error("Erro ao buscar NCMs: ", error);
+      // Adicione NCMs padrão como fallback em caso de erro
+      const defaultNcms = [
+        "9003.11.00 - Armações de plástico",
+        "9003.19.10 - Armações de metais preciosos",
+        "9003.19.90 - Armações de outros materiais",
+        "9004.10.00 - Óculos de sol"
+      ];
+      setNcm(defaultNcms);
+      console.log("Usando NCMs padrão devido a erro");
     }
   };
 
   const generateSKU = () => {
-    const randomPart = Math.floor(Math.random() * 10000); // Número aleatório
-    const productCode = formData.codigo || generateRandomCode(); // Gera letras aleatórias se não houver código
-    const productName = formData.produto
-      ? formData.produto.substring(0, 3).toUpperCase()
-      : "AMC"; // Pega os primeiros 3 caracteres do nome do produto
+    const randomPart = Math.floor(Math.random() * 10000);
+    const productCode = formData.codigo || generateRandomCode();
+    const productName = formData.nome
+      ? formData.nome.substring(0, 3).toUpperCase()
+      : "SOL";
 
-    return `${productName}-${productCode}-${randomPart}`; // Exemplo: PRD-ABC-4567
+    return `${productName}-${productCode}-${randomPart}`;
   };
+
+  const parseValorMonetario = (valorFormatado) => {
+    if (!valorFormatado) return 0;
+
+    return parseFloat(
+      valorFormatado
+        .replace(/[^\d,]/g, '') // remove R$ e pontos
+        .replace(',', '.')      // converte vírgula em ponto
+    );
+  };
+
+  // Atualiza o SKU automaticamente quando o código ou nome do produto muda
   useEffect(() => {
     const sku = generateSKU();
     setFormData((prevData) => ({
       ...prevData,
       sku: sku,
     }));
-  }, [formData.codigo, formData.produto]);
+  }, [formData.codigo, formData.nome]);
+
+  useEffect(() => {
+    if (router.state?.formData) {
+      setFormData(router.state.formData);
+    }
+  }, [router.state]);
+
+  useEffect(() => {
+    const now = new Date();
+    const formattedDate = format(now, 'yyyy-MM-dd');
+    // Formato para exibição (DD/MM/YYYY)
+    const displayDate = format(now, 'dd/MM/yyyy');
+
+    setFormData(prevData => ({
+      ...prevData,
+      data: formattedDate,
+      hora: format(now, 'HH:mm')
+    }));
+
+    // Define a data formatada em um estado separado
+    setDataExibicao(displayDate);
+  }, []);
+
+  // Funções para adicionar novos itens às coleções
+  const addNewItem = async (collectionName, value) => {
+    if (!selectedLoja && selectedLojas.length === 0) {
+      alert("Selecione uma loja antes de adicionar novos itens!");
+      return;
+    }
+
+    try {
+      // Determinar a loja para salvar
+      let lojaToUse;
+      if (selectedLoja === "ambas") {
+        lojaToUse = "loja1"; // Default para "ambas"
+      } else if (selectedLoja) {
+        lojaToUse = selectedLoja;
+      } else if (selectedLojas.length > 0) {
+        lojaToUse = selectedLojas[0]?.includes("Loja 1") ? "loja1" :
+          selectedLojas[0]?.includes("Loja 2") ? "loja2" : "loja1";
+      } else {
+        lojaToUse = "loja1"; // Default final
+      }
+
+      // Ajuste para salvar na estrutura de solares
+      const lojaPath = `/estoque/${lojaToUse}/solares/configuracoes/${collectionName}`;
+      const lojaItemRef = doc(firestore, lojaPath, value.toLowerCase().replace(/\s+/g, '_'));
+
+      await setDoc(lojaItemRef, {
+        name: value,
+        createdAt: new Date(),
+        addedBy: userData?.nome || 'Sistema'
+      });
+      // Atualizar a lista correspondente
+      switch (collectionName) {
+        case "armacoes_fabricantes":
+          setFabricantes([...fabricantes, value]);
+          break;
+        case "fornecedores":
+          setFornecedores([...fornecedores, value]);
+          break;
+        case "armacoes_marcas":
+          setMarcas([...marcas, value]);
+          break;
+        case "armacoes_formatos":
+          setFormatos([...formatos, value]);
+          break;
+        case "armacoes_aros":
+          setAros([...aros, value]);
+          break;
+        case "armacoes_materiais":
+          setMateriais([...materiais, value]);
+          break;
+        case "armacoes_cores":
+          setCores([...cores, value]);
+          break;
+        case "armacoes_unidades":
+          setUnidades([...unidades, value]);
+          break;
+        default:
+          break;
+      }
+
+      // Se o item adicionado corresponder ao campo atual, atualizar o formData
+      if (collectionName === "armacoes_fabricantes") setFormData(prev => ({ ...prev, fabricante: value }));
+      if (collectionName === "fornecedores") setFormData(prev => ({ ...prev, fornecedor: value }));
+      if (collectionName === "armacoes_marcas") setFormData(prev => ({ ...prev, marca: value }));
+      if (collectionName === "armacoes_formatos") setFormData(prev => ({ ...prev, formato: value }));
+      if (collectionName === "armacoes_aros") setFormData(prev => ({ ...prev, aro: value }));
+      if (collectionName === "armacoes_materiais") setFormData(prev => ({ ...prev, material: value }));
+      if (collectionName === "armacoes_cores") setFormData(prev => ({ ...prev, cor: value }));
+      if (collectionName === "armacoes_unidades") setFormData(prev => ({ ...prev, unidade: value }));
+
+      alert(`${value} adicionado com sucesso!`);
+    } catch (error) {
+      console.error(`Erro ao adicionar ${value} à coleção ${collectionName}:`, error);
+      alert(`Erro ao adicionar ${value}`);
+    }
+  };
+
+  // Função para adicionar novos valores numéricos às coleções
+  const addNewValueItem = async (collectionName, value) => {
+    if (!selectedLoja && selectedLojas.length === 0) {
+      alert("Selecione uma loja antes de adicionar novos itens!");
+      return;
+    }
+    try {
+      // Determinar a loja para salvar
+      const lojaToUse = selectedLoja ||
+        (selectedLojas[0]?.includes("Loja 1") ? "loja1" :
+          selectedLojas[0]?.includes("Loja 2") ? "loja2" : "loja1");
+
+      // Ajuste para salvar na estrutura de solares
+      const lojaPath = `/estoque/${lojaToUse}/solares/configuracoes/${collectionName}`;
+      const lojaItemRef = doc(firestore, lojaPath, value.toString().replace(/\./g, '_'));
+
+      await setDoc(lojaItemRef, {
+        value: value,
+        createdAt: new Date(),
+        addedBy: userData?.nome || 'Sistema'
+      });
+
+      // Atualizar a lista correspondente
+      switch (collectionName) {
+        case "armacoes_hastes":
+          setHastes([...hastes, value]);
+          break;
+        case "armacoes_largura_lentes":
+          setLentes([...lentes, value]);
+          break;
+        case "armacoes_pontes":
+          setPontes([...pontes, value]);
+          break;
+        default:
+          break;
+      }
+
+      // Se o item adicionado corresponder ao campo atual, atualizar o formData
+      if (collectionName === "armacoes_hastes") setFormData(prev => ({ ...prev, haste: value }));
+      if (collectionName === "armacoes_largura_lentes") setFormData(prev => ({ ...prev, lente: value }));
+      if (collectionName === "armacoes_pontes") setFormData(prev => ({ ...prev, ponte: value }));
+
+      alert(`${value} adicionado com sucesso!`);
+    } catch (error) {
+      console.error(`Erro ao adicionar ${value} à coleção ${collectionName}:`, error);
+      alert(`Erro ao adicionar ${value}`);
+    }
+  };
+
+  // Funções para buscar dados
   const fetchAros = async () => {
     try {
-      const arosSnapshot = await getDocs(
-        collection(firestore, "armacoes_aros")
-      );
-      const arosList = arosSnapshot.docs.map((doc) => doc.data().name);
-      setAros(arosList);
+      const loja = selectedLoja || "loja1";
+      const path = `estoque/${loja}/solares/configuracoes/armacoes_aros`;
+      const snapshot = await getDocs(collection(firestore, path));
+      const list = snapshot.docs.map(doc => doc.data().name);
+      setAros(list);
     } catch (error) {
       console.error("Erro ao buscar aros:", error);
     }
@@ -216,11 +550,11 @@ export function FormularioLoja() {
 
   const fetchCores = async () => {
     try {
-      const corSnapshot = await getDocs(
-        collection(firestore, "armacoes_cores")
-      );
-      const corList = corSnapshot.docs.map((doc) => doc.data().name);
-      setCores(corList);
+      const loja = selectedLoja || "loja1";
+      const path = `estoque/${loja}/solares/configuracoes/armacoes_cores`;
+      const snapshot = await getDocs(collection(firestore, path));
+      const list = snapshot.docs.map(doc => doc.data().name);
+      setCores(list);
     } catch (error) {
       console.error("Erro ao buscar cores:", error);
     }
@@ -228,112 +562,148 @@ export function FormularioLoja() {
 
   const fetchFabricantes = async () => {
     try {
-      const fabricantesSnapshot = await getDocs(
-        collection(firestore, "armacoes_fabricantes")
-      );
-      const fabricantesList = fabricantesSnapshot.docs.map(
-        (doc) => doc.data().name
-      );
-      setFabricantes(fabricantesList);
+      const loja = selectedLoja || "loja1";
+      const path = `estoque/${loja}/solares/configuracoes/armacoes_fabricantes`;
+      const snapshot = await getDocs(collection(firestore, path));
+      const list = snapshot.docs.map(doc => doc.data().name);
+      setFabricantes(list);
     } catch (error) {
       console.error("Erro ao buscar fabricantes:", error);
     }
   };
 
-  const fetchFornecedores = async () => {
-    try {
-      const fornecedoresSnapshot = await getDocs(
-        collection(firestore, "fornecedores")
-      );
-      const fornecedoresList = fornecedoresSnapshot.docs.map(
-        (doc) => doc.data().name
-      );
-      setFornecedores(fornecedoresList);
-    } catch (error) {
-      console.error("Erro ao buscar fornecedores:", error);
-    }
-  };
-
-  const fetchMarcas = async () => {
-    try {
-      const marcasSnapshot = await getDocs(
-        collection(firestore, "armacoes_marcas")
-      );
-      const marcasList = marcasSnapshot.docs.map((doc) => doc.data().name);
-      setMarcas(marcasList);
-    } catch (error) {
-      console.error("Erro ao buscar marcas:", error);
-    }
-  };
-  const fetchMateriais = async () => {
-    try {
-      const materiaisSnapshot = await getDocs(
-        collection(firestore, "armacoes_materiais")
-      );
-      const materiaisList = materiaisSnapshot.docs.map(
-        (doc) => doc.data().name
-      );
-      setMateriais(materiaisList);
-    } catch (error) {
-      console.error("Erro ao buscar materiais:", error);
-    }
-  };
-
-  const fetchFormatos = async () => {
-    try {
-      const formatosSnapshot = await getDocs(
-        collection(firestore, "armacoes_formatos")
-      );
-      const formatosList = formatosSnapshot.docs.map((doc) => doc.data().name);
-      setFormatos(formatosList);
-    } catch (error) {
-      console.error("Erro ao buscar formatos:", error);
-    }
-  };
-
-  const fetchLentes = async () => {
-    try {
-      const lenteSnapshot = await getDocs(
-        collection(firestore, "armacoes_largura_lentes")
-      );
-      const lentesList = lenteSnapshot.docs.map((doc) => doc.data().value);
-      setLentes(lentesList);
-    } catch (error) {
-      console.error("Erro ao buscar lentes:", error);
-    }
-  };
-
   const fetchHastes = async () => {
     try {
-      const hasteSnapshot = await getDocs(
-        collection(firestore, "armacoes_hastes")
-      );
-      const hasteList = hasteSnapshot.docs.map((doc) => doc.data().value);
-      setHastes(hasteList);
+      const loja = selectedLoja || "loja1";
+      const path = `estoque/${loja}/solares/configuracoes/armacoes_hastes`;
+      const snapshot = await getDocs(collection(firestore, path));
+      const list = snapshot.docs.map(doc => doc.data().value || doc.id);
+      setHastes(list);
     } catch (error) {
       console.error("Erro ao buscar hastes:", error);
     }
   };
 
+  const fetchLentes = async () => {
+    try {
+      const loja = selectedLoja || "loja1";
+      const path = `estoque/${loja}/solares/configuracoes/armacoes_lentes`;
+      const snapshot = await getDocs(collection(firestore, path));
+      const list = snapshot.docs.map(doc => doc.data().name);
+      setLentes(list);
+    } catch (error) {
+      console.error("Erro ao buscar lentes:", error);
+    }
+  };
+
+  const fetchMarcas = async () => {
+    try {
+      const loja = selectedLoja || "loja1";
+      const path = `estoque/${loja}/solares/configuracoes/armacoes_marcas`;
+      const snapshot = await getDocs(collection(firestore, path));
+      const list = snapshot.docs.map(doc => doc.data().name);
+      setMarcas(list);
+    } catch (error) {
+      console.error("Erro ao buscar marcas:", error);
+    }
+  };
+
+  const fetchMateriais = async () => {
+    try {
+      const loja = selectedLoja || "loja1";
+      const path = `estoque/${loja}/solares/configuracoes/armacoes_materiais`;
+      const snapshot = await getDocs(collection(firestore, path));
+      const list = snapshot.docs.map(doc => doc.data().name);
+      setMateriais(list);
+    } catch (error) {
+      console.error("Erro ao buscar materiais:", error);
+    }
+  };
+
   const fetchPontes = async () => {
     try {
-      const pontesSnapshot = await getDocs(
-        collection(firestore, "armacoes_pontes")
-      );
-      const ponteList = pontesSnapshot.docs.map((doc) => doc.data().value);
-      setPontes(ponteList);
+      const loja = selectedLoja || "loja1";
+      const path = `estoque/${loja}/solares/configuracoes/armacoes_pontes`;
+      const snapshot = await getDocs(collection(firestore, path));
+      const list = snapshot.docs.map(doc => doc.data().value || doc.id);
+      setPontes(list);
     } catch (error) {
       console.error("Erro ao buscar pontes:", error);
     }
   };
 
-  // Outras funções para buscar fornecedores, hastes, lentes, etc.
+  const fetchFormatos = async () => {
+    try {
+      const loja = selectedLoja || "loja1";
+      const path = `estoque/${loja}/solares/configuracoes/armacoes_formatos`;
+      const snapshot = await getDocs(collection(firestore, path));
+      const list = snapshot.docs.map(doc => doc.data().name);
+      setFormatos(list);
+    } catch (error) {
+      console.error("Erro ao buscar formatos:", error);
+    }
+  };
+
+  const fetchUnidades = async () => {
+    try {
+      const loja = selectedLoja || "loja1";
+      const path = `estoque/${loja}/solares/configuracoes/armacoes_unidades`;
+      const snapshot = await getDocs(collection(firestore, path));
+      const list = snapshot.docs.map(doc => doc.data().name);
+      setUnidades(list);
+    } catch (error) {
+      console.error("Erro ao buscar unidades:", error);
+      
+      // Fallback para outra localização se necessário
+      try {
+        const snapshot = await getDocs(collection(firestore, "estoque/items/armacoes_unidades"));
+        const list = snapshot.docs.map(doc => doc.data().name);
+        setUnidades(list);
+      } catch (err) {
+        console.error("Erro no fallback de unidades:", err);
+      }
+    }
+  };
+
+  // Nova função para buscar fornecedores da estrutura correta do banco
+  const fetchFornecedoresDinamico = async () => {
+    if (!searchFornecedor.trim()) {
+      setListaFornecedores([]);
+      return;
+    }
+
+    setIsLoadingFornecedores(true);
+    try {
+      const fornecedoresRef = collection(firestore, 'lojas/fornecedores/users');
+      const snapshot = await getDocs(fornecedoresRef);
+
+      const fornecedoresData = snapshot.docs
+        .map(doc => {
+          const data = doc.data();
+          const nome = data.nomeFantasia || data.razaoSocial || "Fornecedor";
+          const representante = data.representante || "";
+          const nomeCompleto = nome + (representante ? ` - ${representante}` : "");
+          return {
+            id: doc.id,
+            nome: nomeCompleto.toLowerCase(),
+          };
+        })
+        .filter(f => f.nome.includes(searchFornecedor.toLowerCase()));
+
+      setListaFornecedores(fornecedoresData);
+    } catch (error) {
+      console.error("Erro ao buscar fornecedores:", error);
+      setListaFornecedores([]);
+    } finally {
+      setIsLoadingFornecedores(false);
+    }
+  };
 
   useEffect(() => {
     fetchAros();
     fetchCores();
     fetchFabricantes();
-    fetchFornecedores();
+    fetchFornecedoresDinamico();
     fetchLentes();
     fetchMarcas();
     fetchMateriais();
@@ -342,20 +712,7 @@ export function FormularioLoja() {
     fetchHastes();
     fetchNcm();
     fetchUnidades();
-  }, []);
-
-  // Função para alternar a seleção das lojas
-  const handleLojaClick = (loja) => {
-    setSelectedLojas((prevSelectedLojas) => {
-      if (prevSelectedLojas.includes(loja)) {
-        return prevSelectedLojas.filter(
-          (selectedLoja) => selectedLoja !== loja
-        );
-      } else {
-        return [...prevSelectedLojas, loja];
-      }
-    });
-  };
+  }, [selectedLoja]);
 
   // Função para tratar mudanças nos inputs do formulário
   const handleChange = (e) => {
@@ -366,15 +723,49 @@ export function FormularioLoja() {
         [name]: value,
       };
 
-      // Calcular o Percentual de Lucro e Custo Médio automaticamente
-      if (updatedData.custo && updatedData.valor) {
-        const valorCusto = parseFloat(updatedData.custo);
-        const valorVenda = parseFloat(updatedData.valor);
+      // Nova lógica: se o percentual de lucro ou custo mudar, recalcula o valor de venda
+      if (name === "nome") {
+        updatedData.tituloAutomatico = false;
+      }
 
-        if (valorCusto > 0) {
+      // Nova lógica: se o percentual de lucro ou custo mudar, recalcula o valor de venda
+// Continuação do arquivo anterior...
+
+      if (name === "percentual_lucro" && updatedData.custo) {
+        const valorCusto = parseValorMonetario(updatedData.custo);
+        const percentualLucro = parseFloat(value);
+
+        if (valorCusto > 0 && !isNaN(percentualLucro)) {
+          // Calcula o valor de venda baseado no percentual de lucro
+          const valorVenda = valorCusto * (1 + (percentualLucro / 100));
+          updatedData.valor = valorVenda.toFixed(2);
+
+          // Calcula o custo médio (média simples)
+          const custoMedio = (valorCusto + valorVenda) / 2;
+          updatedData.custo_medio = custoMedio.toFixed(2);
+        }
+      } else if (name === "custo" && updatedData.percentual_lucro) {
+        // Se o custo for alterado, recalcula o valor com base no percentual já definido
+        const valorCusto = parseFloat(value);
+        const percentualLucro = parseFloat(updatedData.percentual_lucro);
+
+        if (valorCusto > 0 && !isNaN(percentualLucro)) {
+          // Calcula o valor de venda baseado no percentual de lucro
+          const valorVenda = valorCusto * (1 + (percentualLucro / 100));
+          updatedData.valor = valorVenda.toFixed(2);
+
+          // Calcula o custo médio (média simples)
+          const custoMedio = (valorCusto + valorVenda) / 2;
+          updatedData.custo_medio = custoMedio.toFixed(2);
+        }
+      } else if (name === "valor" && updatedData.custo) {
+        // Se o usuário preferir definir o valor diretamente, recalculamos o percentual
+        const valorCusto = parseFloat(updatedData.custo);
+        const valorVenda = parseFloat(value);
+
+        if (valorCusto > 0 && valorVenda > 0) {
           // Calcula o percentual de lucro
-          const percentualLucro =
-            ((valorVenda - valorCusto) / valorCusto) * 100;
+          const percentualLucro = ((valorVenda - valorCusto) / valorCusto) * 100;
           updatedData.percentual_lucro = percentualLucro.toFixed(2);
 
           // Calcula o custo médio (média simples)
@@ -385,6 +776,54 @@ export function FormularioLoja() {
 
       return updatedData;
     });
+  };
+
+  useEffect(() => {
+    if (!formData.nome || formData.tituloAutomatico) {
+      const novoNome = generateProductTitle(
+        formData.marca,
+        formData.cor,
+        formData.genero,
+        formData.material
+      );
+
+      if (novoNome) {
+        setFormData(prev => ({
+          ...prev,
+          nome: novoNome,
+          tituloAutomatico: true // Mantém o controle de geração automática
+        }));
+      }
+    }
+  }, [formData.marca, formData.cor, formData.genero, formData.material]);
+
+
+  const handleCustoChange = (e) => {
+    const raw = e.target.value.replace(/\D/g, '');
+
+    if (raw === '') {
+      setFormData(prev => ({ ...prev, custo: '', valor: '', custo_medio: '' }));
+      return;
+    }
+
+    const valorCusto = Number(raw) / 100;
+
+    const custoFormatado = valorCusto.toLocaleString('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    });
+
+    const percentual = parseFloat(formData.percentual_lucro?.toString().replace(',', '.')) || 0;
+
+    const valorVenda = valorCusto * (1 + percentual / 100);
+    const custoMedio = (valorCusto + valorVenda) / 2;
+
+    setFormData(prev => ({
+      ...prev,
+      custo: custoFormatado,
+      valor: valorVenda.toFixed(2),
+      custo_medio: custoMedio.toFixed(2)
+    }));
   };
 
   // Função para limpar o formulário
@@ -411,11 +850,29 @@ export function FormularioLoja() {
       NCM: "",
       custo: "",
       valor: "",
-      produto: "",
+      nome: "",
+      tituloAutomatico: true, // Adicionado para controlar a geração automática
+      percentual_lucro: "",
       quantidade: "",
       imagem: null,
+      codigoBarras: "",
+      codigoFabricante: "",
+      CEST: "",
+      aliquota_icms: "",
+      base_calculo_icms: "",
+      aliquota_ipi: "",
+      cst_ipi: "",
+      base_calculo_ipi: "",
+      cst_pis: "",
+      cst_cofins: "",
+      cfop: "",
+      origem_produto: "",
+      peso_bruto: "",
+      peso_liquido: "",
+      csosn: "",
+      subcategoria: "solar", // Mantém o tipo como solar
     });
-    setSelectedLojas([]);
+    setPreviewUrl(null);
   };
 
   useEffect(() => {
@@ -436,62 +893,79 @@ export function FormularioLoja() {
 
   // Função para subir a imagem no Firebase Storage
   const handleImageUpload = async (imageFile) => {
-    const storage = getStorage();
-    const storageRef = ref(storage, `temp_images/${imageFile.name}`);
-    await uploadBytes(storageRef, imageFile);
-    const downloadURL = await getDownloadURL(storageRef);
-    return downloadURL;
-  };
-
-  useEffect(() => {
-    // Definindo a data e hora atuais
-    const currentDate = new Date();
-    const formattedDate = currentDate.toISOString().split("T")[0]; // Formato YYYY-MM-DD
-    const formattedTime = currentDate.toTimeString().slice(0, 5); // Formato HH:MM
-
-    setFormData({
-      data: formattedDate,
-      hora: formattedTime,
-    });
-  }, []);
-  // Função para enviar os dados para o Firestore
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    console.log("Form data:", formData);
-
-    if (selectedLojas.length === 0) {
-      alert("Selecione ao menos uma loja antes de enviar o formulário");
-      setIsLoading(false);
-      return;
-    }
-
     try {
-      let imageUrl = "";
-      if (formData.imagem) {
-        imageUrl = await handleImageUpload(formData.imagem);
+      if (!imageFile || !imageFile.name) {
+        throw new Error('Arquivo inválido');
       }
 
-      const queryData = {
+      const timestamp = new Date().getTime();
+      const fileName = `${timestamp}_${imageFile.name.replace(/\s+/g, '_')}`;
+      const storageRef = ref(storage, `solares/${fileName}`); // Mudado para pasta "solares"
+
+      console.log('Iniciando upload para:', `solares/${fileName}`);
+
+      const uploadTask = await uploadBytes(storageRef, imageFile);
+      console.log('Upload concluído');
+
+      const downloadURL = await getDownloadURL(storageRef);
+      console.log('URL obtida:', downloadURL);
+
+      return downloadURL;
+    } catch (error) {
+      console.error('Erro detalhado no upload:', error);
+      alert(`Erro ao fazer upload da imagem: ${error.message}`);
+      throw error;
+    }
+  };
+
+  // Estado para pré-visualização
+  const [previewUrl, setPreviewUrl] = useState(null);
+
+  // Função para enviar os dados para o Firestore
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    try {
+      if (!selectedLoja) {
+        throw new Error("Por favor, selecione uma loja antes de continuar.");
+      }
+
+      let imageUrl = null;
+
+      // Upload da imagem para o Firebase Storage
+      if (formData.imagem) {
+        console.log('Arquivo para upload:', formData.imagem);
+        imageUrl = await handleImageUpload(formData.imagem);
+        console.log('URL da imagem salva no Storage:', imageUrl);
+      }
+
+      // Preparar dados para salvar
+      const productData = {
         ...formData,
-        lojas: selectedLojas,
-        imagem: imageUrl,
-        categoria: formData.categoria || "solar",
-        avaria: formData.avaria || false,
+        imagem: imageUrl, // URL do Firebase Storage
+        data: new Date().toISOString(),
+        loja: selectedLoja,
+        subcategoria: "solar" // Garantir que a subcategoria seja definida como solar
       };
 
-      const docRef = doc(firestore, "temp_image", formData.codigo);
-      await setDoc(docRef, queryData);
+      // Salvar no Firestore - CAMINHO DIFERENTE PARA SOLARES
+      const docRef = doc(firestore, `estoque/${productData.loja}/solares/`, productData.codigo);
+      await setDoc(docRef, productData);
 
-      console.log("Dados enviados:", queryData);
+      console.log('Produto salvo no Firestore com sucesso');
 
-      router.push(
-        `/products_and_services/solar/confirm?formData=${encodeURIComponent(
-          JSON.stringify(queryData)
-        )}`
-      );
+      // Gerar QR Code
+      setQrCodeData(`${productData.codigo}`);
+
+      setShowSuccessPopup(true);
+      setTimeout(() => {
+        setShowSuccessPopup(false);
+        router.push('/products_and_services/solar/list-solares');
+      }, 2000);
     } catch (error) {
-      console.error("Erro ao enviar os dados:", error);
+      console.error('Erro ao salvar produto:', error);
+      alert(`Erro ao salvar produto: ${error.message}`);
     } finally {
       setIsLoading(false);
     }
@@ -500,847 +974,711 @@ export function FormularioLoja() {
   return (
     <div>
       <Layout>
-        <div className="relative flex items-center mt-4">
-          {/* Ícone na extrema esquerda */}
+        <div className="w-full max-w-5xl mx-auto rounded-sm">
+          <h2 className="text-3xl font-bold text-[#81059e] mb-8 mt-8 text-center">ADICIONAR ÓCULOS SOLAR</h2>
 
-          {/* Ícone de Configurações acima dos botões */}
-          {/* Ícone de Configurações acima dos botões */}
-          <img
-            src="/images/Settings.png" // Caminho para o ícone de configurações
-            alt="Ícone de Configurações"
-            className="cursor-pointer hover:opacity-80 transition mb-4" // Adiciona margem inferior e hover
-            style={{ width: "40px", height: "40px" }} // Define o tamanho do ícone
-            onClick={() => router.push("/products_and_services/solar/solar-ab")} // Redireciona para a rota desejada ao clicar
-          />
-
-          {/* Container para centralizar os botões e ajustar a responsividade */}
-          <div className="flex flex-col items-center justify-center space-y-2 mx-auto w-full md:w-auto">
-            {/* Botão "ÓCULOS SOLARES REGISTRADOS" */}
-            <button
-              className="bg-[#800080] text-white font-bold px-4 py-2 rounded-lg shadow hover:bg-[#660066] transition w-full max-w-xs md:max-w-sm lg:max-w-md"
-              onClick={() =>
-                router.push("/products_and_services/solar/list-solares")
-              } // Lógica para exibir SOLARES registradas
-            >
-              SOLARES REGISTRADAS
-            </button>
-
-            {/* Botão "LIMPAR SELEÇÃO" */}
-            <button
-              type="button"
-              className="bg-[#800080] text-white font-bold px-4 py-2 rounded-lg shadow hover:bg-[#660066] transition w-full max-w-xs md:max-w-sm lg:max-w-md"
-              onClick={handleClearSelection} // Chama a função para limpar a seleção
-            >
-              LIMPAR SELEÇÃO
-            </button>
-          </div>
-        </div>
-        <h2 className="text-3xl text-center font-semibold text-[#800080]">
-          ADICIONAR SOLAR
-        </h2>
-
-        {/* Campo para SKU */}
-        <div className="w-full">
-          <label
-            htmlFor="sku"
-            className="text-lg font-semibold text-[#800080] text-start"
-          >
-            SKU
-          </label>
-          <div className="flex items-center border border-[#800080] rounded-lg">
-            <input
-              type="text"
-              id="sku"
-              name="sku"
-              value={formData.sku}
-              onChange={handleChange}
-              placeholder="Insira o SKU do produto"
-              className="w-full px-2 py-2 text-black focus:outline-none focus:border-[#800080] focus:ring-1 focus:ring-[#800080] rounded-lg"
-            />
-          </div>
-        </div>
-
-        {/* Campo de Loja */}
-        <div className="flex-1 w-full sm:w-auto mt-4 sm:mt-0 sm:ml-0">
-          <label className="block text-md font-bold text-[#800080] mb-2 text-left">
-            Loja
-          </label>
-          <select
-            value={selectedLojas.length === 2 ? "Ambas" : selectedLojas}
-            onChange={(e) => {
-              const selectedValue = e.target.value;
-              if (selectedValue === "Ambas") {
-                setSelectedLojas(["Loja 1", "Loja 2"]);
-              } else {
-                setSelectedLojas([selectedValue]);
-              }
-            }}
-            className="bg-gray-100 w-full px-4 py-2 border rounded-lg text-black focus:outline-none focus:border-[#800080] focus:ring-1 focus:ring-[#800080]"
-          >
-            <option value="">Selecione uma loja</option>
-            <option value="Loja 1">LOJA 1</option>
-            <option value="Loja 2">LOJA 2</option>
-            <option value="Ambas">AMBAS AS LOJAS</option>
-          </select>
-
-          {/* Indica que ambas as lojas foram selecionadas */}
-          {selectedLojas.length === 2 && (
-            <p className="text-sm text-green-600 mt-2">
-              Ambas as lojas selecionadas
-            </p>
-          )}
-        </div>
-        {/* Data e Hora */}
-        <div className="flex space-x-4">
-          <div className="flex-1">
-            <label className="block text-md font-bold text-[#800080]">
-              Data:
-            </label>
-            <input
-              type="date"
-              name="data"
-              defaultValue={formData.data} // Inserido automaticamente com a data atual
-              onChange={handleChange}
-              className="bg-gray-100 px-4 py-2 rounded-lg text-black w-full mt-2"
-            />
-          </div>
-        </div>
-        {/* Campo de Hora */}
-        <div className="flex-1 w-full sm:w-auto mb-4 sm:mb-0">
-          <label className="block text-md font-bold text-[#800080]">
-            Hora:
-          </label>
-          <input
-            type="time"
-            name="hora"
-            value={formData.hora}
-            onChange={handleChange}
-            className="bg-gray-100 px-4 py-2 rounded-lg text-black w-full mt-2"
-          />
-        </div>
-
-        {/* Campo para Código de Barras */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-[#800080]">
-            Código de Barras:
-          </h3>
-          <input
-            type="text"
-            name="codigoBarras"
-            placeholder="Informe o código de barras"
-            value={formData.codigoBarras || ""}
-            onChange={(e) =>
-              setFormData({ ...formData, codigoBarras: e.target.value })
-            }
-            className="bg-gray-100 w-full px-4 py-2 border rounded-lg text-black focus:outline-none focus:border-[#800080] focus:ring-1 focus:ring-[#800080]"
-            required
-          />
-        </div>
-
-        {/* Campo para Código do Fabricante */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-[#800080]">
-            Código do Fabricante:
-          </h3>
-          <input
-            type="text"
-            name="codigoFabricante"
-            placeholder="Informe o código do fabricante"
-            value={formData.codigoFabricante || ""}
-            onChange={(e) =>
-              setFormData({ ...formData, codigoFabricante: e.target.value })
-            }
-            className="bg-gray-100 w-full px-4 py-2 border rounded-lg text-black focus:outline-none focus:border-[#800080] focus:ring-1 focus:ring-[#800080]"
-            required
-          />
-        </div>
-
-        {/* Seção para selecionar o Fabricante como um select */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-[#800080]">Fabricante:</h3>
-          <select
-            name="fabricante"
-            value={formData.fabricante || ""}
-            onChange={(e) =>
-              setFormData({ ...formData, fabricante: e.target.value })
-            }
-            className="bg-gray-100 w-full px-4 py-2 border rounded-lg text-black focus:outline-none focus:border-[#800080] focus:ring-1 focus:ring-[#800080]"
-            required
-          >
-            <option value="">Selecione o Fabricante</option>
-            {fabricantes.map((fabricante) => (
-              <option key={fabricante} value={fabricante}>
-                {fabricante ? fabricante.toUpperCase() : ""}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Seção para selecionar o Fornecedor */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-[#800080]">Fornecedor:</h3>
-          <select
-            name="fornecedor"
-            value={formData.fornecedor || ""}
-            onChange={(e) =>
-              setFormData({ ...formData, fornecedor: e.target.value })
-            }
-            className="bg-gray-100 w-full px-4 py-2 border rounded-lg text-black focus:outline-none focus:border-[#800080] focus:ring-1 focus:ring-[#800080]"
-            required
-          >
-            <option value="">Selecione o Fornecedor</option>
-            {fornecedores.map((fornecedor) => (
-              <option key={fornecedor} value={fornecedor}>
-                {fornecedor.toUpperCase()}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-6 z-100">
-          <div className="flex flex-wrap justify-between space-x-4">
-            {/* Campo de Código do Produto */}
-            <div className="flex-1">
-              <label className="block text-sm font-bold text-[#800080] mb-2">
-                Código do Produto{" "}
-                <span className="text-red-600">(Obrigatório)</span>
+          {/* Seletor de Loja para Admins */}
+          {userPermissions?.isAdmin && (
+            <div className="mb-6">
+              <label className="text-[#81059e] font-medium">
+                Selecionar Loja
               </label>
-              <input
-                type="text"
-                name="codigo"
-                placeholder="Informe o código do produto"
-                value={formData.codigo || ""}
-                onChange={(e) =>
-                  setFormData({ ...formData, codigo: e.target.value })
-                }
-                className="bg-gray-100 w-full px-4 py-2 border border-gray-300 rounded-lg text-black focus:outline-none focus:border-[#800080] focus:ring-1 focus:ring-[#800080]"
-                required
-              />
-
-              {/* Seção para selecionar a Marca */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-[#800080]">Marca:</h3>
-                <select
-                  name="marca"
-                  value={formData.marca || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, marca: e.target.value })
+              <select
+                value={selectedLoja || userPermissions.lojas[0] || ''}
+                onChange={(e) => {
+                  const lojaValue = e.target.value;
+                  setSelectedLoja(lojaValue);
+                  if (lojaValue === "ambas") {
+                    setSelectedLojas(["Loja 1 - Centro", "Loja 2 - Caramuru"]);
+                  } else if (lojaValue) {
+                    setSelectedLojas([renderLojaName(lojaValue)]);
+                  } else {
+                    setSelectedLojas([]);
                   }
-                  className="bg-gray-100 w-full px-4 py-2 border rounded-lg text-black focus:outline-none focus:border-[#800080] focus:ring-1 focus:ring-[#800080]"
-                  required
-                >
-                  <option value="">Selecione a Marca</option>
-                  {marcas.map((marca) => (
-                    <option key={marca} value={marca}>
-                      {marca.toUpperCase()}
-                    </option>
-                  ))}
-                </select>
-              </div>
+                }}
+                className="border-2 border-[#81059e] p-2 rounded-sm w-48 text-[#81059e] mt-1 ml-4"
+              >
+                {userPermissions.lojas.map((loja) => (
+                  <option key={loja} value={loja}>
+                    {renderLojaName(loja)}
+                  </option>
+                ))}
+                <option value="ambas">AMBAS AS LOJAS</option>
+              </select>
+            </div>
+          )}
 
-              {/* Seção para selecionar o Gênero */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-[#800080]">
-                  Gênero:
-                </h3>
-                <select
-                  name="genero"
-                  value={formData.genero || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, genero: e.target.value })
-                  }
-                  className="bg-gray-100 w-full px-4 py-2 border rounded-lg text-black focus:outline-none focus:border-[#800080] focus:ring-1 focus:ring-[#800080]"
-                  required
-                >
-                  <option value="">Selecione o Gênero</option>
-                  {["Masculino", "Feminino", "Unissex"].map((genero) => (
-                    <option key={genero} value={genero}>
-                      {genero.toUpperCase()}
-                    </option>
-                  ))}
-                </select>
-              </div>
+          <div className='space-x-2 mb-6'>
+            <Link href="/products_and_services/solar/list-solares">
+              <button className="bg-[#81059e] p-3 rounded-sm text-white">
+                SOLARES REGISTRADOS
+              </button>
+            </Link>
+            <button
+              onClick={handleClearSelection}
+              className="text-[#81059e] px-4 py-2 border-2 border-[#81059e] font-bold text-base rounded-sm"
+            >
+              Limpar
+            </button>
+          </div>
 
-              {/* Seção para selecionar o Material */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-[#800080]">
-                  Material:
-                </h3>
-                <select
-                  name="material"
-                  value={formData.material || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, material: e.target.value })
-                  }
-                  className="bg-gray-100 w-full px-4 py-2 border rounded-lg text-black focus:outline-none focus:border-[#800080] focus:ring-1 focus:ring-[#800080]"
-                  required
-                >
-                  <option value="">Selecione o Material</option>
-                  {materiais.map((material) => (
-                    <option key={material} value={material}>
-                      {material ? material.toUpperCase() : ""}
-                    </option>
-                  ))}
-                </select>
-              </div>
+          <form onSubmit={handleSubmit} className="mt-8 mb-20">
+            <div className="p-4 bg-gray-50 rounded-sm mb-6">
+              <h3 className="text-lg font-semibold text-[#81059e] mb-4">Informações Básicas</h3>
 
-              {/* Seção para selecionar o Aro */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-[#800080]">Aro:</h3>
-                <select
-                  name="aro"
-                  value={formData.aro || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, aro: e.target.value })
-                  }
-                  className="bg-gray-100 w-full px-4 py-2 border rounded-lg text-black focus:outline-none focus:border-[#800080] focus:ring-1 focus:ring-[#800080]"
-                  required
-                >
-                  <option value="">Selecione o Aro</option>
-                  {aros.map((aro) => (
-                    <option key={aro} value={aro}>
-                      {aro ? aro.toUpperCase() : ""}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Título do Produto - NOVO CAMPO */}
+                <div>
+                  <label className="text-[#81059e] font-medium">
+                    Título do Produto
+                    {formData.tituloAutomatico && (
+                      <span className="ml-2 text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
+                        Gerado automaticamente
+                      </span>
+                    )}
+                  </label>
+                  <input
+                    type="text"
+                    id="nome"
+                    name="nome"
+                    value={formData.nome || ""}
+                    onChange={handleChange}
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
+                    placeholder="Gerado automaticamente"
+                    disabled={formData.tituloAutomatico}
+                  />
+                </div>
 
-              {/* Seção para selecionar o Formato */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-[#800080]">
-                  Formato:
-                </h3>
-                <select
-                  name="formato"
-                  value={formData.formato || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, formato: e.target.value })
-                  }
-                  className="bg-gray-100 w-full px-4 py-2 border rounded-lg text-black focus:outline-none focus:border-[#800080] focus:ring-1 focus:ring-[#800080]"
-                  required
-                >
-                  <option value="">Selecione o Formato</option>
-                  {formatos.map((formato) => (
-                    <option key={formato} value={formato}>
-                      {formato ? formato.toUpperCase() : ""}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Seção para selecionar a Cor */}
-
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-[#800080]">Cor:</h3>
-                <select
-                  name="cor"
-                  value={formData.cor || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, cor: e.target.value })
-                  }
-                  className="bg-gray-100 w-full px-4 py-2 border rounded-lg text-black focus:outline-none focus:border-[#800080] focus:ring-1 focus:ring-[#800080]"
-                  required
-                >
-                  <option value="">Selecione a Cor</option>
-                  {cores.map((cor) => (
-                    <option key={cor} value={cor}>
-                      {cor ? cor.toUpperCase() : ""}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              {/* Seção para selecionar a largura da lente*/}
-
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-[#800080]">Lente:</h3>
-                <select
-                  name="lente"
-                  value={formData.lente || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, lente: e.target.value })
-                  }
-                  className="bg-gray-100 w-full px-4 py-2 border rounded-lg text-black focus:outline-none focus:border-[#800080] focus:ring-1 focus:ring-[#800080]"
-                  required
-                >
-                  <option value="">Selecione a Lente</option>
-                  {lentes.map((lente) => (
-                    <option key={lente} value={lente}>
-                      {lente}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Seção para selecionar a distancia da ponte*/}
-
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-[#800080]">Ponte:</h3>
-                <select
-                  name="ponte"
-                  value={formData.ponte || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, ponte: e.target.value })
-                  }
-                  className="bg-gray-100 w-full px-4 py-2 border rounded-lg text-black focus:outline-none focus:border-[#800080] focus:ring-1 focus:ring-[#800080]"
-                  required
-                >
-                  <option value="">Selecione a Ponte</option>
-                  {pontes.map((ponte) => (
-                    <option key={ponte} value={ponte}>
-                      {ponte}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Seção para selecionar a Haste como um select */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-[#800080]">Haste:</h3>
-                <select
-                  name="haste"
-                  value={formData.haste || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, haste: e.target.value })
-                  }
-                  className="bg-gray-100 w-full px-4 py-2 border rounded-lg text-black focus:outline-none focus:border-[#800080] focus:ring-1 focus:ring-[#800080]"
-                  required
-                >
-                  <option value="">Selecione a Haste</option>
-                  {hastes.map((haste) => (
-                    <option key={haste} value={haste}>
-                      {haste}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex justify-start space-x-8">
-                <div className="space-y-4 w-full">
-                  <div className="flex items-center w-full">
-                    {/* Campo de Custo - Aumentando a largura */}
-                    <div className="w-full">
-                      {" "}
-                      {/* Aumentei a largura de w-32 para w-48 */}
-                      <h3 className="text-lg font-semibold text-[#800080] text-start">
-                        Custo:
-                      </h3>
-                      <div className="flex items-center border border-[#800080] rounded-lg">
-                        <span className="px-2 text-gray-400">R$</span>
-                        <input
-                          type="number"
-                          name="custo"
-                          value={formData.custo}
-                          onChange={(e) => handleChange(e)} // Função handleChange
-                          placeholder="0,00"
-                          className="w-full px-2 py-2 text-black focus:outline-none focus:border-[#800080] focus:ring-1 focus:ring-[#800080] rounded-lg"
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    {/* Espaçamento manual ajustado */}
-                    <div className="w-14"></div>
-
-                    {/* Campo de Total - Aumentando a largura */}
-                    <div className="w-full">
-                      {" "}
-                      {/* Aumentei a largura de w-32 para w-48 */}
-                      <h3 className="text-lg font-semibold text-[#800080] text-start">
-                        Total:
-                      </h3>
-                      <div className="flex items-center border border-[#800080] rounded-lg">
-                        <span className="px-2 text-gray-400">R$</span>
-                        <input
-                          type="number"
-                          name="valor"
-                          value={formData.valor}
-                          onChange={(e) => handleChange(e)} // Função handleChange
-                          placeholder="0,00"
-                          className="w-full px-2 py-2 text-black focus:outline-none focus:border-[#800080] focus:ring-1 focus:ring-[#800080] rounded-lg"
-                          required
-                        />
-                      </div>
-                    </div>
-                  </div>
+                {/* SKU */}
+                <div>
+                  <label className="text-[#81059e] font-medium">SKU</label>
+                  <input
+                    type="text"
+                    id="sku"
+                    name="sku"
+                    value={formData.sku}
+                    readOnly
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black bg-gray-100"
+                  />
                 </div>
               </div>
-              <div className="space-y-4">
-                {/* Campo para Percentual de Lucro */}
-                <div className="w-full">
-                  <label
-                    htmlFor="percentual_lucro"
-                    className="text-lg font-semibold text-[#800080] text-start"
-                  >
-                    Percentual de Lucro (%)
-                  </label>
-                  <div className="flex items-center border border-[#800080] rounded-lg">
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                <div>
+                  <label className="text-[#81059e] font-medium">Data de Cadastro</label>
+                  <input
+                    type="text"
+                    value={dataExibicao}
+                    readOnly
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black bg-gray-100"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[#81059e] font-medium">Código do Produto</label>
+                  <input
+                    type="text"
+                    name="codigo"
+                    value={formData.codigo || ""}
+                    onChange={(e) => setFormData({ ...formData, codigo: e.target.value })}
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                {/* Código de Barras */}
+                <div>
+                  <label className="text-[#81059e] font-medium">Código de Barras</label>
+                  <input
+                    type="text"
+                    name="codigoBarras"
+                    value={formData.codigoBarras || ""}
+                    onChange={(e) => setFormData({ ...formData, codigoBarras: e.target.value })}
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
+                    required
+                  />
+                </div>
+
+                {/* Código do Fabricante */}
+                <div>
+                  <label className="text-[#81059e] font-medium">Código do Fabricante</label>
+                  <input
+                    type="text"
+                    name="codigoFabricante"
+                    value={formData.codigoFabricante || ""}
+                    onChange={(e) => setFormData({ ...formData, codigoFabricante: e.target.value })}
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Seção Características do Produto */}
+            <div className="p-4 bg-gray-50 rounded-sm mb-6">
+              <h3 className="text-lg font-semibold text-[#81059e] mb-4">Características do Produto</h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Fabricante com opção de adicionar */}
+                <SelectWithAddOption
+                  label="Fabricante"
+                  options={fabricantes}
+                  value={formData.fabricante}
+                  onChange={(value) => setFormData({ ...formData, fabricante: value })}
+                  addNewOption={(value) => addNewItem("armacoes_fabricantes", value)}
+                  selectedLoja={selectedLoja}
+                  setOptions={setFabricantes}
+                />
+
+                {/* Fornecedor - Agora sem opção de adicionar */}
+                <div className="space-y-2 relative">
+                  <label className="text-lg font-semibold text-[#81059e]">Fornecedor:</label>
+                  <div className="flex items-center">
                     <input
                       type="text"
+                      value={searchFornecedor}
+                      onChange={(e) => {
+                        setSearchFornecedor(e.target.value);
+                        setFormData(prev => ({ ...prev, fornecedor: e.target.value }));
+                      }}
+                      placeholder="Buscar fornecedor"
+                      className="bg-gray-100 w-full px-4 py-3 border-2 border-[#81059e] rounded-sm text-black"
+                    />
+                    {formData.fornecedor && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFormData(prev => ({ ...prev, fornecedor: "" }));
+                          setSearchFornecedor("");
+                        }}
+                        className="ml-2 bg-gray-100 border-2 border-[#81059e] text-[#81059e] p-2 rounded-sm"
+                      >
+                        <FiTrash2 />
+                      </button>
+                    )}
+                  </div>
+
+                  {searchFornecedor && listaFornecedores.length > 0 && (
+                    <ul className="absolute z-20 bg-white border border-gray-300 rounded-xl w-full max-h-60 overflow-y-auto shadow-md mt-2">
+                      {listaFornecedores.map((f) => (
+                        <li
+                          key={f.id}
+                          onClick={() => {
+                            setFormData(prev => ({ ...prev, fornecedor: f.nome }));
+                            setSearchFornecedor(f.nome);
+                            setListaFornecedores([]);
+                          }}
+                          className="px-4 py-2 hover:bg-[#f3e8fc] cursor-pointer text-gray-800 border-b last:border-none"
+                        >
+                          {f.nome}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+                  {isLoadingFornecedores && (
+                    <p className="text-sm text-gray-500 mt-1">Buscando fornecedores...</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                {/* Marca com opção de adicionar */}
+                <SelectWithAddOption
+                  label="Marca"
+                  options={marcas}
+                  value={formData.marca}
+                  onChange={(value) => setFormData({ ...formData, marca: value })}
+                  addNewOption={(value) => addNewItem("armacoes_marcas", value)}
+                  selectedLoja={selectedLoja}
+                  setOptions={setMarcas}
+                />
+
+                {/* Gênero */}
+                <div className="space-y-2">
+                  <h3 className="text-lg font-semibold text-[#81059e]">Gênero:</h3>
+                  <select
+                    name="genero"
+                    value={formData.genero || ""}
+                    onChange={(e) => setFormData({ ...formData, genero: e.target.value })}
+                    className="bg-gray-100 w-full px-4 py-3 border-2 border-[#81059e] rounded-sm text-black focus:outline-none focus:border-[#81059e] focus:ring-1 focus:ring-[#81059e]"
+                    required
+                  >
+                    <option value="">Selecione o Gênero</option>
+                    {["Masculino", "Feminino", "Unissex"].map((genero) => (
+                      <option key={genero} value={genero}>
+                        {genero.toUpperCase()}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                {/* Formato com opção de adicionar */}
+                <SelectWithAddOption
+                  label="Formato"
+                  options={formatos}
+                  value={formData.formato}
+                  onChange={(value) => setFormData({ ...formData, formato: value })}
+                  addNewOption={(value) => addNewItem("armacoes_formatos", value)}
+                  selectedLoja={selectedLoja}
+                  setOptions={setFormatos}
+                />
+
+                {/* Cor com opção de adicionar */}
+                <SelectWithAddOption
+                  label="Cor"
+                  options={cores}
+                  value={formData.cor}
+                  onChange={(value) => setFormData({ ...formData, cor: value })}
+                  addNewOption={(value) => addNewItem("armacoes_cores", value)}
+                  selectedLoja={selectedLoja}
+                  setOptions={setCores}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                {/* Material com opção de adicionar */}
+                <SelectWithAddOption
+                  label="Material"
+                  options={materiais}
+                  value={formData.material}
+                  onChange={(value) => setFormData({ ...formData, material: value })}
+                  addNewOption={(value) => addNewItem("armacoes_materiais", value)}
+                  selectedLoja={selectedLoja}
+                  setOptions={setMateriais}
+                />
+
+                {/* Aro com opção de adicionar */}
+                <SelectWithAddOption
+                  label="Aro"
+                  options={aros}
+                  value={formData.aro}
+                  onChange={(value) => setFormData({ ...formData, aro: value })}
+                  addNewOption={(value) => addNewItem("armacoes_aros", value)}
+                  selectedLoja={selectedLoja}
+                  setOptions={setAros}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                {/* Ponte com opção de adicionar */}
+                <SelectWithAddOption
+                  label="Ponte (mm)"
+                  options={pontes}
+                  value={formData.ponte}
+                  onChange={(value) => setFormData({ ...formData, ponte: value })}
+                  addNewOption={(value) => addNewValueItem("armacoes_pontes", value)}
+                  selectedLoja={selectedLoja}
+                  setOptions={setPontes}
+                />
+
+                {/* Haste com opção de adicionar */}
+                <SelectWithAddOption
+                  label="Hastes (mm)"
+                  options={hastes}
+                  value={formData.haste}
+                  onChange={(value) => setFormData({ ...formData, haste: value })}
+                  addNewOption={(value) => addNewValueItem("armacoes_hastes", value)}
+                  selectedLoja={selectedLoja}
+                  setOptions={setHastes}
+                />
+              </div>
+            </div>
+
+            {/* Seção Valores */}
+            <div className="p-4 bg-gray-50 rounded-sm mb-6">
+              <h3 className="text-lg font-semibold text-[#81059e] mb-4">Valores</h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* Custo */}
+                <div>
+                  <label className="text-[#81059e] font-medium">Custo (R$)</label>
+                  <div className="flex items-center border-2 border-[#81059e] rounded-sm">
+                    <input
+                      type="text"
+                      name="custo"
+                      value={formData.custo}
+                      onChange={handleCustoChange}
+                      placeholder="R$ 0,00"
+                      className="w-full px-2 py-3 text-black rounded-sm"
+                    />
+                  </div>
+                </div>
+
+                {/* Percentual de Lucro */}
+                <div>
+                  <label className="text-[#81059e] font-medium">Percentual de Lucro (%)</label>
+                  <div className="flex items-center border-2 border-[#81059e] rounded-sm">
+                    <input
+                      type="number"
                       id="percentual_lucro"
                       name="percentual_lucro"
                       value={formData.percentual_lucro}
-                      readOnly // Campo de leitura
-                      className="w-full px-2 py-2 text-black bg-gray-100 focus:outline-none focus:border-[#800080] focus:ring-1 focus:ring-[#800080] rounded-lg"
-                      placeholder="O percentual será calculado automaticamente"
+                      onChange={handleChange}
+                      placeholder="%0,00"
+                      className="w-full px-2 py-3 text-black focus:outline-none focus:border-[#81059e] focus:ring-1 focus:ring-[#81059e] rounded-sm"
+                      required
                     />
                   </div>
                 </div>
 
-                {/* Campo para Custo Médio */}
-                <div className="w-full">
-                  <label
-                    htmlFor="custo_medio"
-                    className="text-lg font-semibold text-[#800080] text-start"
-                  >
-                    Custo Médio
-                  </label>
-                  <div className="flex items-center border border-[#800080] rounded-lg">
+                {/* Valor de Venda */}
+                <div>
+                  <label className="text-[#81059e] font-medium">Valor de Venda (R$)</label>
+                  <div className="flex items-center border-2 border-[#81059e] rounded-sm">
                     <input
-                      type="text"
-                      id="custo_medio"
-                      name="custo_medio"
-                      value={
-                        formData.custo_medio ? `${formData.custo_medio} R$` : ""
-                      } // Adiciona "R$" depois do valor
-                      readOnly // Campo de leitura
-                      className="w-full px-2 py-2 text-black bg-gray-100 focus:outline-none focus:border-[#800080] focus:ring-1 focus:ring-[#800080] rounded-lg"
-                      placeholder="Calculado automaticamente"
+                      type="number"
+                      name="valor"
+                      value={formData.valor}
+                      onChange={handleChange}
+                      placeholder="0,00"
+                      className="w-full px-2 py-3 text-black focus:outline-none focus:border-[#81059e] focus:ring-1 focus:ring-[#81059e] rounded-sm"
+                      required
                     />
                   </div>
                 </div>
               </div>
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-[#800080]">
-                  Quantidade do Produto:
-                </h3>
-                <input
-                  type="number"
-                  name="quantidade"
-                  placeholder="Informe a quantidade"
-                  value={formData.quantidade || ""}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    if (value > 0) {
-                      // Verifica se o valor é maior que zero
-                      setFormData({ ...formData, quantidade: value });
-                    }
-                  }}
-                  min="1" // Garante que o campo só aceitará valores iguais ou maiores que 1
-                  className="bg-gray-100 w-full px-4 py-2 border rounded-lg text-black focus:outline-none focus:border-[#800080] focus:ring-1 focus:ring-[#800080]"
-                  required
-                />
-              </div>
 
-              {/*unidde*/}
-              <div className="space-y-4">
-                <label className="text-lg font-semibold text-[#800080]">
-                  Unidade:
-                </label>
-                <select
-                  name="unidade"
-                  value={formData.unidade || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, unidade: e.target.value })
-                  }
-                  className="bg-gray-100 px-4 py-2 rounded-lg text-black w-full"
-                >
-                  <option value="">Selecione a unidade</option>
-                  {unidades.map((unidade) => (
-                    <option key={unidade} value={unidade}>
-                      {unidade ? unidade.toUpperCase() : ""}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                {/* Custo Médio */}
+                <div>
+                  <label className="text-[#81059e] font-medium">Custo Médio (R$)</label>
+                  <input
+                    type="text"
+                    id="custo_medio"
+                    name="custo_medio"
+                    value={formData.custo_medio || ""}
+                    readOnly
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black bg-gray-100"
+                    placeholder="Calculado automaticamente"
+                  />
+                </div>
 
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-[#800080]">
-                  Imagem do Produto:
-                </h3>
-                <input
-                  type="file"
-                  name="imagem"
-                  accept="image/*"
-                  onChange={(e) =>
-                    setFormData({ ...formData, imagem: e.target.files[0] })
-                  } // Captura o arquivo de imagem
-                  className="w-full px-4 py-2 border  bg-gray-100 rounded-lg text-black focus:outline-none focus:border-[#800080] focus:ring-1 focus:ring-[#800080]"
-                  required
-                />
+                {/* Quantidade */}
+                <div>
+                  <label className="text-[#81059e] font-medium">Quantidade</label>
+                  <input
+                    type="number"
+                    name="quantidade"
+                    value={formData.quantidade || ""}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value > 0) {
+                        setFormData({ ...formData, quantidade: value });
+                      }
+                    }}
+                    min="1"
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
+                    required
+                  />
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Campo de CSOSN (Dados Fiscais) */}
-          <div>
-            <label className="block text-md font-bold text-[#800080]">
-              CSOSN (Dados Fiscais):
-            </label>
-            <input
-              type="text"
-              name="csosn"
-              value={formData.csosn || ""}
-              onChange={(e) =>
-                setFormData({ ...formData, csosn: e.target.value })
-              }
-              className="bg-gray-100 px-4 py-2 rounded-lg text-black w-full mt-2"
-              placeholder="Informe o CSOSN"
-            />
-          </div>
+            {/* Seção Fiscal */}
+            <div className="p-4 bg-gray-50 rounded-sm mb-6">
+              <h3 className="text-lg font-semibold text-[#81059e] mb-4">Informações Fiscais</h3>
 
-          {/* Campo de CEST */}
-          <div>
-            <label className="block text-md font-bold text-[#800080]">
-              CEST:
-            </label>
-            <input
-              type="text"
-              name="cest"
-              value={formData.cest || ""}
-              onChange={(e) =>
-                setFormData({ ...formData, cest: e.target.value })
-              }
-              className="bg-gray-100 px-4 py-2 rounded-lg text-black w-full mt-2"
-              placeholder="Informe o CEST"
-            />
-          </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* NCM */}
+                <div>
+                  <SelectWithAddOption
+                    label="NCM"
+                    options={ncm}
+                    value={formData.NCM}
+                    onChange={(value) => setFormData({ ...formData, NCM: value })}
+                    addNewOption={(value) => addNewItem("ncm", value)}
+                    selectedLoja={selectedLoja}
+                    setOptions={setNcm}
+                  />
+                </div>
 
-          {/* Campo de Alíquota do ICMS */}
-          <div>
-            <label className="block text-md font-bold text-[#800080]">
-              Alíquota do ICMS:
-            </label>
-            <input
-              type="text"
-              name="aliquotaICMS"
-              value={formData.aliquotaICMS || ""}
-              onChange={(e) =>
-                setFormData({ ...formData, aliquotaICMS: e.target.value })
-              }
-              className="bg-gray-100 px-4 py-2 rounded-lg text-black w-full mt-2"
-              placeholder="Informe a alíquota do ICMS"
-            />
-          </div>
+                {/* CEST */}
+                <div>
+                  <label className="text-[#81059e] font-medium">CEST</label>
+                  <input
+                    type="text"
+                    name="CEST"
+                    value={formData.CEST || ""}
+                    onChange={(e) => setFormData({ ...formData, CEST: e.target.value })}
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
+                    required
+                  />
+                </div>
 
-          {/* Campo de Base de Cálculo ICMS */}
-          <div>
-            <label className="block text-md font-bold text-[#800080]">
-              Base de Cálculo ICMS:
-            </label>
-            <input
-              type="text"
-              name="baseCalculoICMS"
-              value={formData.baseCalculoICMS || ""}
-              onChange={(e) =>
-                setFormData({ ...formData, baseCalculoICMS: e.target.value })
-              }
-              className="bg-gray-100 px-4 py-2 rounded-lg text-black w-full mt-2"
-              placeholder="Informe a base de cálculo do ICMS"
-            />
-          </div>
+                {/* CSOSN */}
+                <div>
+                  <label className="text-[#81059e] font-medium">CSOSN</label>
+                  <input
+                    type="text"
+                    name="csosn"
+                    value={formData.csosn || ""}
+                    onChange={(e) => setFormData({ ...formData, csosn: e.target.value })}
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
+                    required
+                  />
+                </div>
+              </div>
 
-          {/* Campo de NCM como select */}
-          <div className="w-1/2">
-            <h3 className="text-lg font-semibold text-[#800080]">NCM:</h3>
-            <select
-              name="NCM"
-              value={formData.NCM || ""}
-              onChange={(e) =>
-                setFormData({ ...formData, NCM: e.target.value })
-              }
-              className="bg-gray-100 w-full px-4 py-2 border rounded-lg text-black focus:outline-none focus:border-[#800080] focus:ring-1 focus:ring-[#800080]"
-              required
-            >
-              <option value="">Selecione o NCM</option>
-              {ncm.map((NCM) => (
-                <option key={NCM} value={NCM}>
-                  {NCM}
-                </option>
-              ))}
-            </select>
-          </div>
-          {/* Campo de Alíquota do IPI */}
-          <div>
-            <label className="block text-md font-bold text-[#800080]">
-              Alíquota do IPI:
-            </label>
-            <input
-              type="text"
-              name="aliquotaIPI"
-              value={formData.aliquotaIPI || ""}
-              onChange={(e) =>
-                setFormData({ ...formData, aliquotaIPI: e.target.value })
-              }
-              className="bg-gray-100 px-4 py-2 rounded-lg text-black w-full mt-2"
-              placeholder="Informe a alíquota do IPI"
-            />
-          </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                {/* CFOP */}
+                <div>
+                  <label className="text-[#81059e] font-medium">CFOP</label>
+                  <input
+                    type="text"
+                    name="cfop"
+                    value={formData.cfop || ""}
+                    onChange={(e) => setFormData({ ...formData, cfop: e.target.value })}
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
+                    required
+                  />
+                </div>
 
-          {/* Campo de CST IPI */}
-          <div>
-            <label className="block text-md font-bold text-[#800080]">
-              CST IPI:
-            </label>
-            <input
-              type="text"
-              name="cstIPI"
-              value={formData.cstIPI || ""}
-              onChange={(e) =>
-                setFormData({ ...formData, cstIPI: e.target.value })
-              }
-              className="bg-gray-100 px-4 py-2 rounded-lg text-black w-full mt-2"
-              placeholder="Informe o CST IPI"
-            />
-          </div>
+                {/* Origem do Produto */}
+                <div>
+                  <label className="text-[#81059e] font-medium">Origem do Produto</label>
+                  <input
+                    type="text"
+                    name="origem_produto"
+                    value={formData.origem_produto || ""}
+                    onChange={(e) => setFormData({ ...formData, origem_produto: e.target.value })}
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
+                    required
+                  />
+                </div>
+              </div>
 
-          {/* Campo de Base de Cálculo do IPI */}
-          <div>
-            <label className="block text-md font-bold text-[#800080]">
-              Base de Cálculo do IPI:
-            </label>
-            <input
-              type="text"
-              name="baseCalculoIPI"
-              value={formData.baseCalculoIPI || ""}
-              onChange={(e) =>
-                setFormData({ ...formData, baseCalculoIPI: e.target.value })
-              }
-              className="bg-gray-100 px-4 py-2 rounded-lg text-black w-full mt-2"
-              placeholder="Informe a base de cálculo do IPI"
-            />
-          </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
+                {/* Alíquota ICMS */}
+                <div>
+                  <label className="text-[#81059e] font-medium">Alíquota ICMS (%)</label>
+                  <input type="text"
+                   name="aliquota_icms"
+                   value={formData.aliquota_icms || ""}
+                   onChange={(e) => setFormData({ ...formData, aliquota_icms: e.target.value })}
+                   className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
+                   required
+                 />
+               </div>
 
-          {/* Campo de CST PIS */}
-          <div>
-            <label className="block text-md font-bold text-[#800080]">
-              CST PIS:
-            </label>
-            <input
-              type="text"
-              name="cstPIS"
-              value={formData.cstPIS || ""}
-              onChange={(e) =>
-                setFormData({ ...formData, cstPIS: e.target.value })
-              }
-              className="bg-gray-100 px-4 py-2 rounded-lg text-black w-full mt-2"
-              placeholder="Informe o CST PIS"
-            />
-          </div>
+               {/* Base de Cálculo ICMS */}
+               <div>
+                 <label className="text-[#81059e] font-medium">Base de Cálculo ICMS</label>
+                 <input
+                   type="text"
+                   name="base_calculo_icms"
+                   value={formData.base_calculo_icms || ""}
+                   onChange={(e) => setFormData({ ...formData, base_calculo_icms: e.target.value })}
+                   className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
+                   required
+                 />
+               </div>
 
-          {/* Campo de CST COFINS */}
-          <div>
-            <label className="block text-md font-bold text-[#800080]">
-              CST COFINS:
-            </label>
-            <input
-              type="text"
-              name="cstCOFINS"
-              value={formData.cstCOFINS || ""}
-              onChange={(e) =>
-                setFormData({ ...formData, cstCOFINS: e.target.value })
-              }
-              className="bg-gray-100 px-4 py-2 rounded-lg text-black w-full mt-2"
-              placeholder="Informe o CST COFINS"
-            />
-          </div>
+               {/* CST PIS */}
+               <div>
+                 <label className="text-[#81059e] font-medium">CST PIS</label>
+                 <input
+                   type="text"
+                   name="cst_pis"
+                   value={formData.cst_pis || ""}
+                   onChange={(e) => setFormData({ ...formData, cst_pis: e.target.value })}
+                   className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
+                   required
+                 />
+               </div>
+             </div>
 
-          {/* Campo de CFOP */}
-          <div>
-            <label className="block text-md font-bold text-[#800080]">
-              CFOP:
-            </label>
-            <input
-              type="text"
-              name="cfop"
-              value={formData.cfop || ""}
-              onChange={(e) =>
-                setFormData({ ...formData, cfop: e.target.value })
-              }
-              className="bg-gray-100 px-4 py-2 rounded-lg text-black w-full mt-2"
-              placeholder="Informe o CFOP"
-            />
-          </div>
+             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
+               {/* CST COFINS */}
+               <div>
+                 <label className="text-[#81059e] font-medium">CST COFINS</label>
+                 <input
+                   type="text"
+                   name="cst_cofins"
+                   value={formData.cst_cofins || ""}
+                   onChange={(e) => setFormData({ ...formData, cst_cofins: e.target.value })}
+                   className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
+                   required
+                 />
+               </div>
 
-          {/* Campo de Origem do Produto */}
-          <div>
-            <label className="block text-md font-bold text-[#800080]">
-              Origem do Produto:
-            </label>
-            <input
-              type="text"
-              name="origemProduto"
-              value={formData.origemProduto || ""}
-              onChange={(e) =>
-                setFormData({ ...formData, origemProduto: e.target.value })
-              }
-              className="bg-gray-100 px-4 py-2 rounded-lg text-black w-full mt-2"
-              placeholder="Informe a origem do produto"
-            />
-          </div>
+               {/* Alíquota IPI */}
+               <div>
+                 <label className="text-[#81059e] font-medium">Alíquota IPI (%)</label>
+                 <input
+                   type="text"
+                   name="aliquota_ipi"
+                   value={formData.aliquota_ipi || ""}
+                   onChange={(e) => setFormData({ ...formData, aliquota_ipi: e.target.value })}
+                   className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
+                   required
+                 />
+               </div>
 
-          {/* Campo de Peso Bruto */}
-          <div>
-            <label className="block text-md font-bold text-[#800080]">
-              Peso Bruto:
-            </label>
-            <input
-              type="text"
-              name="pesoBruto"
-              value={formData.pesoBruto || ""}
-              onChange={(e) =>
-                setFormData({ ...formData, pesoBruto: e.target.value })
-              }
-              className="bg-gray-100 px-4 py-2 rounded-lg text-black w-full mt-2"
-              placeholder="Informe o peso bruto"
-            />
-          </div>
+               {/* CST IPI */}
+               <div>
+                 <label className="text-[#81059e] font-medium">CST IPI</label>
+                 <input
+                   type="text"
+                   name="cst_ipi"
+                   value={formData.cst_ipi || ""}
+                   onChange={(e) => setFormData({ ...formData, cst_ipi: e.target.value })}
+                   className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
+                   required
+                 />
+               </div>
+             </div>
 
-          {/* Campo de Peso Líquido */}
-          <div>
-            <label className="block text-md font-bold text-[#800080]">
-              Peso Líquido:
-            </label>
-            <input
-              type="text"
-              name="pesoLiquido"
-              value={formData.pesoLiquido || ""}
-              onChange={(e) =>
-                setFormData({ ...formData, pesoLiquido: e.target.value })
-              }
-              className="bg-gray-100 px-4 py-2 rounded-lg text-black w-full mt-2"
-              placeholder="Informe o peso líquido"
-            />
-          </div>
+             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
+               {/* Base de Cálculo IPI */}
+               <div>
+                 <label className="text-[#81059e] font-medium">Base de Cálculo IPI</label>
+                 <input
+                   type="text"
+                   name="base_calculo_ipi"
+                   value={formData.base_calculo_ipi || ""}
+                   onChange={(e) => setFormData({ ...formData, base_calculo_ipi: e.target.value })}
+                   className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
+                   required
+                 />
+               </div>
 
-          {/* Botão de envio */}
-          <div className="flex justify-center mt-4">
-            <button
-              type="submit"
-              className={`bg-[#9f206b] text-white font-bold px-6 py-2 rounded-lg shadow hover:bg-[#850f56] transition ${isLoading ? "opacity-50 cursor-not-allowed" : ""
-                }`}
-              disabled={isLoading}
-            >
-              {loading ? (
-                <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-white"></div>
-              ) : (
-                "REGISTRAR SOLAR"
-              )}
-            </button>
-          </div>
+               {/* Peso Bruto */}
+               <div>
+                 <label className="text-[#81059e] font-medium">Peso Bruto</label>
+                 <input
+                   type="text"
+                   name="peso_bruto"
+                   value={formData.peso_bruto || ""}
+                   onChange={(e) => setFormData({ ...formData, peso_bruto: e.target.value })}
+                   className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
+                   required
+                 />
+               </div>
 
-          {showSuccessPopup && (
-            <div className="fixed bottom-4 right-4 bg-green-500 text-white p-4 rounded-lg shadow-lg">
-              <p>Produto enviado com sucesso!</p>
-            </div>
-          )}
-        </form>
-      </Layout>
-    </div>
-  );
+               {/* Peso Líquido */}
+               <div>
+                 <label className="text-[#81059e] font-medium">Peso Líquido</label>
+                 <input
+                   type="text"
+                   name="peso_liquido"
+                   value={formData.peso_liquido || ""}
+                   onChange={(e) => setFormData({ ...formData, peso_liquido: e.target.value })}
+                   className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
+                   required
+                 />
+               </div>
+             </div>
+           </div>
+
+           {/* Seção Imagem */}
+           <div className="p-4 bg-gray-50 rounded-sm mb-6">
+             <h3 className="text-lg font-semibold text-[#81059e] mb-4">Imagem do Produto</h3>
+
+             <div className="flex flex-col">
+               <input
+                 type="file"
+                 name="imagem"
+                 accept="image/*"
+                 ref={imageInputRef}
+                 onChange={(e) => {
+                   const file = e.target.files[0];
+                   if (file) {
+                     setFormData(prev => ({ ...prev, imagem: file }));
+                     setPreviewUrl(URL.createObjectURL(file));
+                   }
+                 }}
+                 className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black bg-gray-100"
+                 required
+               />
+
+               {/* Pré-visualização da imagem */}
+               {previewUrl && (
+                 <div className="mt-4 relative inline-block">
+                   <p className="text-sm text-gray-600 mb-2">Pré-visualização:</p>
+                   <img
+                     src={previewUrl}
+                     alt="Pré-visualização"
+                     className="max-w-xs h-auto object-contain border border-gray-300 rounded-md"
+                   />
+
+                   {/* Botão de fechar (X) */}
+                   <button
+                     type="button"
+                     onClick={() => {
+                       setPreviewUrl(null);
+                       setFormData(prev => ({ ...prev, imagem: null }));
+                       if (imageInputRef.current) {
+                         imageInputRef.current.value = null;
+                       }
+                     }}
+                     className="absolute top-0 right-0 bg-white border border-gray-300 rounded-full p-1 shadow hover:bg-red-100"
+                     title="Remover imagem"
+                   >
+                     <FiTrash2 className="text-red-600 text-lg" />
+                   </button>
+                 </div>
+               )}
+             </div>
+           </div>
+
+           {/* Botões de ação */}
+           <div className="flex justify-center gap-4 mt-8">
+             <button
+               type="submit"
+               className="bg-[#81059e] p-3 px-6 rounded-sm text-white flex items-center gap-2"
+               disabled={isLoading || !formData.imagem}
+             >
+               {isLoading ? 'PROCESSANDO...' : 'CONFIRMAR'}
+             </button>
+             <button
+               type="button"
+               onClick={handleClearSelection}
+               className="border-2 border-[#81059e] p-3 px-6 rounded-sm text-[#81059e] flex items-center gap-2"
+               disabled={isLoading}
+             >
+               CANCELAR
+             </button>
+           </div>
+         </form>
+       </div>
+
+       {showSuccessPopup && (
+         <div className="fixed bottom-4 right-4 bg-green-500 text-white p-4 rounded-sm shadow-lg">
+           <p>Produto enviado com sucesso!</p>
+           {qrCodeData && (
+             <div className="mt-4 p-4 bg-white rounded-sm">
+               <h3 className="text-lg font-semibold text-gray-800 mb-2">QR Code do Óculos Solar</h3>
+               <div className="flex justify-center">
+                 <QRCodeSVG value={qrCodeData} size={200} />
+               </div>
+               <p className="text-sm text-gray-600 mt-2">Imprima este QR code para identificação do óculos</p>
+             </div>
+           )}
+         </div>
+       )}
+
+       {showConfirmModal && (
+         <ProductConfirmModal
+           isOpen={showConfirmModal}
+           onClose={() => setShowConfirmModal(false)}
+           productData={productToConfirm}
+           setIsLoading={setIsLoading}
+         />
+       )}
+     </Layout>
+   </div>
+ );
 }
+
 export default function Page() {
-  return (
-    <Suspense fallback={<div>Carregando...</div>}>
-      <FormularioLoja />
-    </Suspense>
-  );
+ return (
+   <Suspense fallback={<div> <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#81059e]"></div></div>}>
+     <FormularioLoja />
+   </Suspense>
+ );
 }

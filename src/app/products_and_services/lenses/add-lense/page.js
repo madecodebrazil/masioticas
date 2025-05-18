@@ -3,7 +3,7 @@ import React, { Suspense, useEffect, useState, useRef } from "react";
 import Layout from "@/components/Layout";
 import { doc, setDoc, getDocs, getDoc, collection, addDoc, query, where } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { firestore, storage } from "../../../../lib/firebaseConfig";
+import { firestore, storage } from "@/lib/firebaseConfig";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
@@ -45,7 +45,7 @@ const SelectWithAddOption = ({ label, options, value, onChange, collectionName, 
                 onChange(e.target.value);
               }
             }}
-            className="bg-gray-100 w-full px-4 py-3 border-2 border-[#81059e] rounded-lg text-black focus:outline-none focus:border-[#81059e] focus:ring-1 focus:ring-[#81059e]"
+            className="bg-gray-100 w-full px-4 py-3 border-2 border-[#81059e] rounded-sm text-black focus:outline-none focus:border-[#81059e] focus:ring-1 focus:ring-[#81059e]"
           >
             <option value="">Selecione uma opção</option>
             {options.map((option) => (
@@ -62,20 +62,20 @@ const SelectWithAddOption = ({ label, options, value, onChange, collectionName, 
             type="text"
             value={newItemValue}
             onChange={(e) => setNewItemValue(e.target.value)}
-            className="bg-gray-100 w-full px-4 py-3 border-2 border-[#81059e] rounded-lg text-black focus:outline-none focus:border-[#81059e] focus:ring-1 focus:ring-[#81059e]"
+            className="bg-gray-100 w-full px-4 py-3 border-2 border-[#81059e] rounded-sm text-black focus:outline-none focus:border-[#81059e] focus:ring-1 focus:ring-[#81059e]"
             placeholder={`Adicionar novo ${label.toLowerCase()}`}
           />
           <button
             type="button"
             onClick={handleAddItem}
-            className="bg-[#81059e] text-white p-3 rounded-lg"
+            className="bg-[#81059e] text-white p-3 rounded-sm"
           >
             <FiPlus />
           </button>
           <button
             type="button"
             onClick={() => setShowAddInput(false)}
-            className="border-2 border-[#81059e] text-[#81059e] p-3 rounded-lg"
+            className="border-2 border-[#81059e] text-[#81059e] p-3 rounded-sm"
           >
             Cancelar
           </button>
@@ -123,7 +123,7 @@ const SelectWithAddNumericOption = ({ label, options, value, onChange, collectio
                 onChange(e.target.value);
               }
             }}
-            className="bg-gray-100 w-full px-4 py-3 border-2 border-[#81059e] rounded-lg text-black focus:outline-none focus:border-[#81059e] focus:ring-1 focus:ring-[#81059e]"
+            className="bg-gray-100 w-full px-4 py-3 border-2 border-[#81059e] rounded-sm text-black focus:outline-none focus:border-[#81059e] focus:ring-1 focus:ring-[#81059e]"
           >
             <option value="">Selecione uma opção</option>
             {options.map((option) => (
@@ -141,20 +141,20 @@ const SelectWithAddNumericOption = ({ label, options, value, onChange, collectio
             step="0.01"
             value={newItemValue}
             onChange={(e) => setNewItemValue(e.target.value)}
-            className="bg-gray-100 w-full px-4 py-3 border-2 border-[#81059e] rounded-lg text-black focus:outline-none focus:border-[#81059e] focus:ring-1 focus:ring-[#81059e]"
+            className="bg-gray-100 w-full px-4 py-3 border-2 border-[#81059e] rounded-sm text-black focus:outline-none focus:border-[#81059e] focus:ring-1 focus:ring-[#81059e]"
             placeholder={`Adicionar novo ${label.toLowerCase()}`}
           />
           <button
             type="button"
             onClick={handleAddItem}
-            className="bg-[#81059e] text-white p-3 rounded-lg"
+            className="bg-[#81059e] text-white p-3 rounded-sm"
           >
             <FiPlus />
           </button>
           <button
             type="button"
             onClick={() => setShowAddInput(false)}
-            className="border-2 border-[#81059e] text-[#81059e] p-3 rounded-lg"
+            className="border-2 border-[#81059e] text-[#81059e] p-3 rounded-sm"
           >
             Cancelar
           </button>
@@ -169,7 +169,7 @@ const ToggleButton = ({ label, isSelected, onToggle }) => (
   <button
     type="button"
     onClick={onToggle}
-    className={`px-4 py-2 rounded-lg border-2 ${isSelected
+    className={`px-4 py-2 rounded-sm border-2 ${isSelected
       ? "bg-[#81059e] text-white border-[#81059e]"
       : "bg-transparent text-[#81059e] border-[#81059e]"
       }`}
@@ -190,6 +190,25 @@ export function FormularioLentes() {
   const [listaFornecedores, setListaFornecedores] = useState([]);
   const [isLoadingFornecedores, setIsLoadingFornecedores] = useState(false);
   const imageInputRef = useRef(null);
+
+  // Arrays para valores dos selects de faixa - mesmos da Ordem de Serviço
+  const esfericos = [6.00, 5.75, 5.50, 5.25, 5.00, 4.75, 4.50, 4.25, 4.00, 3.75, 3.50, 3.25, 3.00, 2.75, 2.50, 2.25, 2.00, 1.75, 1.50, 1.25, 1.00, 0.75, 0.50, 0.25, 0.00, -0.25, -0.50, -0.75, -1.00, -1.25, -1.50, -1.75, -2.00, -2.25, -2.50, -2.75, -3.00, -3.25, -3.50, -3.75, -4.00, -4.25, -4.50, -4.75, -5.00, -5.25, -5.50, -5.75, -6.00];
+  const cilindricos = [-6.00, -5.75, -5.50, -5.25, -5.00, -4.75, -4.50, -4.25, -4.00, -3.75, -3.50, -3.25, -3.00, -2.75, -2.50, -2.25, -2.00, -1.75, -1.50, -1.25, -1.00, -0.75, -0.50, -0.25, 0.00];
+  const diametros = Array.from({ length: 21 }, (_, i) => i + 40); // 40 a 60mm
+  const adicoes = [0.75, 1.00, 1.25, 1.50, 1.75, 2.00, 2.25, 2.50, 2.75, 3.00, 3.25, 3.50];
+
+  // Função para formatação de números
+  const formatNumberForDisplay = (value) => {
+    if (typeof value === 'number') {
+      // Para valores inteiros, não mostra decimal
+      if (Number.isInteger(value)) {
+        return value.toString();
+      }
+      // Para valores com casas decimais
+      return value.toFixed(2).replace(/\.00$/, '');
+    }
+    return value;
+  };
 
   // Estados para listas de opções de lentes
   const [fornecedores, setFornecedores] = useState([]);
@@ -312,15 +331,26 @@ export function FormularioLentes() {
   const [previewUrl, setPreviewUrl] = useState(null);
 
   // Gerar produto título
-  const generateProductTitle = (familia, indice, tipo) => {
-    if (!familia || !indice || !tipo || (Array.isArray(tipo) && tipo.length === 0)) {
+  const generateLensTitle = (marca, tecnologia, tratamento, familia, subfamilia) => {
+    if (!marca || !tecnologia || !tratamento) {
       return "";
     }
 
-    // Usar o primeiro tipo selecionado para gerar o título
-    const tipoTexto = Array.isArray(tipo) ? tipo[0] : tipo;
+    const marcaFormatted = marca.trim().toUpperCase();
+    const tecnologiaFormatted = tecnologia.trim().charAt(0).toUpperCase() + tecnologia.trim().slice(1).toLowerCase();
+    const tratamentoFormatted = tratamento.trim().charAt(0).toUpperCase() + tratamento.trim().slice(1).toLowerCase();
 
-    return `Lente ${familia.trim().toUpperCase()} ${indice} ${tipoTexto}`;
+    let familiaFormatted = "";
+    if (familia) {
+      familiaFormatted = " " + familia.trim().charAt(0).toUpperCase() + familia.trim().slice(1).toLowerCase();
+    }
+
+    let subfamiliaFormatted = "";
+    if (subfamilia) {
+      subfamiliaFormatted = " " + subfamilia.trim().charAt(0).toUpperCase() + subfamilia.trim().slice(1).toLowerCase();
+    }
+
+    return `${marcaFormatted} ${tecnologiaFormatted} ${tratamentoFormatted}${familiaFormatted}${subfamiliaFormatted}`;
   };
 
   // Nome da loja legível
@@ -470,11 +500,13 @@ export function FormularioLentes() {
 
   // Gerar nome de produto automático
   useEffect(() => {
-    if (formData.nome === "" || formData.autoNome) {
-      const novoNome = generateProductTitle(
+    if (!formData.nome || formData.autoNome) {
+      const novoNome = generateLensTitle(
+        formData.marca,
+        formData.tecnologias[0],
+        formData.tratamentos[0],
         formData.familia,
-        formData.indice,
-        formData.tipo
+        formData.subfamilia
       );
 
       if (novoNome) {
@@ -485,7 +517,8 @@ export function FormularioLentes() {
         }));
       }
     }
-  }, [formData.familia, formData.indice, formData.tipo]);
+  }, [formData.marca, formData.tecnologias, formData.tratamentos, formData.familia, formData.subfamilia]);
+
 
   // Funções para adicionar novos itens às coleções
   const addNewItem = async (collectionName, value) => {
@@ -842,29 +875,21 @@ export function FormularioLentes() {
     const raw = e.target.value.replace(/\D/g, '');
 
     if (raw === '') {
-      setFormData(prev => ({ ...prev, custo: '', valor: '', custo_medio: '' }));
+      setFormData(prev => ({ ...prev, custo: '' }));
       return;
     }
 
-    const valorCusto = Number(raw) / 100;
-
-    const custoFormatado = valorCusto.toLocaleString('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    });
-
-    const percentual = parseFloat(formData.percentual_lucro?.toString().replace(',', '.')) || 0;
-
-    const valorVenda = valorCusto * (1 + percentual / 100);
-    const custoMedio = (valorCusto + valorVenda) / 2;
+    const valor = Number(raw) / 100;
 
     setFormData(prev => ({
       ...prev,
-      custo: custoFormatado,
-      valor: valorVenda.toFixed(2),
-      custo_medio: custoMedio.toFixed(2)
+      custo: valor.toLocaleString('pt-BR', {
+        style: 'currency',
+        currency: 'BRL'
+      })
     }));
   };
+
 
   // Toggle para campos de múltipla seleção
   const handleToggle = (field, value) => {
@@ -972,6 +997,7 @@ export function FormularioLentes() {
       return;
     }
 
+
     // Garantir que o SKU está presente antes de prosseguir
     let updatedFormData = { ...formData };
     if (!formData.sku) {
@@ -1050,7 +1076,7 @@ export function FormularioLentes() {
   return (
     <div>
       <Layout>
-        <div className="w-full max-w-5xl mx-auto rounded-lg">
+        <div className="w-full max-w-5xl mx-auto rounded-sm">
           <h2 className="text-3xl font-bold text-[#81059e] mb-8 mt-8 text-center">ADICIONAR LENTE</h2>
 
           {/* Seletor de Loja para Admins */}
@@ -1072,7 +1098,7 @@ export function FormularioLentes() {
                     setSelectedLojas([]);
                   }
                 }}
-                className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black mt-1"
+                className="border-2 border-[#81059e] p-2 rounded-sm w-48 text-[#81059e] mt-1 ml-4"
               >
                 {userPermissions.lojas.map((loja) => (
                   <option key={loja} value={loja}>
@@ -1100,7 +1126,7 @@ export function FormularioLentes() {
 
           <form onSubmit={handleSubmit} className="mt-8 mb-20">
             {/* Seção Identificação Básica */}
-            <div className="p-4 bg-gray-50 rounded-lg mb-6">
+            <div className="p-4 bg-gray-50 rounded-sm mb-6">
               <h3 className="text-lg font-semibold text-[#81059e] mb-4">Identificação Básica</h3>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1120,9 +1146,9 @@ export function FormularioLentes() {
                     name="nome"
                     value={formData.nome || ""}
                     onChange={handleChange}
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
-                    placeholder="Nome do produto"
-                    required
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black bg-gray-100"
+                    placeholder="Gerado automaticamente"
+                    disabled
                   />
                 </div>
 
@@ -1135,7 +1161,7 @@ export function FormularioLentes() {
                     name="sku"
                     value={formData.sku}
                     readOnly
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black bg-gray-100"
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black bg-gray-100"
                   />
                 </div>
               </div>
@@ -1188,7 +1214,7 @@ export function FormularioLentes() {
                     type="text"
                     value={dataExibicao}
                     readOnly
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black bg-gray-100"
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black bg-gray-100"
                   />
                 </div>
 
@@ -1200,68 +1226,7 @@ export function FormularioLentes() {
                     name="codigo"
                     value={formData.codigo || ""}
                     onChange={(e) => setFormData({ ...formData, codigo: e.target.value })}
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
-                    required
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Seção Informações de Loja e Preço */}
-            <div className="p-4 bg-gray-50 rounded-lg mb-6">
-              <h3 className="text-lg font-semibold text-[#81059e] mb-4">Informações de Loja e Preço</h3>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Preço */}
-                <div>
-                  <label className="text-[#81059e] font-medium">Preço*</label>
-                  <div className="flex items-center border-2 border-[#81059e] rounded-lg">
-                    <span className="px-2 text-gray-400">R$</span>
-                    <input
-                      type="number"
-                      step="0.01"
-                      name="valor"
-                      value={formData.valor || ""}
-                      onChange={handleChange}
-                      placeholder="0,00"
-                      className="w-full px-2 py-3 text-black focus:outline-none focus:border-[#81059e] focus:ring-1 focus:ring-[#81059e] rounded-lg"
-                      required
-                    />
-                  </div>
-                </div>
-
-                {/* Preço Promocional */}
-                <div>
-                  <label className="text-[#81059e] font-medium">Preço Promocional</label>
-                  <div className="flex items-center border-2 border-[#81059e] rounded-lg">
-                    <span className="px-2 text-gray-400">R$</span>
-                    <input
-                      type="number"
-                      step="0.01"
-                      name="precoPromocional"
-                      value={formData.precoPromocional || ""}
-                      onChange={handleChange}
-                      placeholder="0,00"
-                      className="w-full px-2 py-3 text-black focus:outline-none focus:border-[#81059e] focus:ring-1 focus:ring-[#81059e] rounded-lg"
-                    />
-                  </div>
-                </div>
-
-                {/* Estoque */}
-                <div>
-                  <label className="text-[#81059e] font-medium">Estoque*</label>
-                  <input
-                    type="number"
-                    name="quantidade"
-                    value={formData.quantidade || "1"}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      if (parseInt(value) >= 0) {
-                        setFormData({ ...formData, quantidade: value });
-                      }
-                    }}
-                    min="0"
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
                     required
                   />
                 </div>
@@ -1269,7 +1234,7 @@ export function FormularioLentes() {
             </div>
 
             {/* Seção Códigos e Fabricante */}
-            <div className="p-4 bg-gray-50 rounded-lg mb-6">
+            <div className="p-4 bg-gray-50 rounded-sm mb-6">
               <h3 className="text-lg font-semibold text-[#81059e] mb-4">Códigos e Fabricante</h3>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1281,7 +1246,7 @@ export function FormularioLentes() {
                     name="codigoBarras"
                     value={formData.codigoBarras || ""}
                     onChange={(e) => setFormData({ ...formData, codigoBarras: e.target.value })}
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
                   />
                 </div>
 
@@ -1293,7 +1258,7 @@ export function FormularioLentes() {
                     name="codigoFabricante"
                     value={formData.codigoFabricante || ""}
                     onChange={(e) => setFormData({ ...formData, codigoFabricante: e.target.value })}
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
                   />
                 </div>
               </div>
@@ -1319,7 +1284,7 @@ export function FormularioLentes() {
                       setFormData(prev => ({ ...prev, fornecedor: e.target.value }));
                     }}
                     placeholder="Buscar fornecedor"
-                    className="bg-gray-100 w-full px-4 py-3 border-2 border-[#81059e] rounded-lg text-black"
+                    className="bg-gray-100 w-full px-4 py-3 border-2 border-[#81059e] rounded-sm text-black"
                   />
 
                   {searchFornecedor && listaFornecedores.length > 0 && (
@@ -1348,7 +1313,7 @@ export function FormularioLentes() {
             </div>
 
             {/* Seção Características Técnicas */}
-            <div className="p-4 bg-gray-50 rounded-lg mb-6">
+            <div className="p-4 bg-gray-50 rounded-sm mb-6">
               <h3 className="text-lg font-semibold text-[#81059e] mb-4">Características Técnicas</h3>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1397,119 +1362,161 @@ export function FormularioLentes() {
                 </div>
               </div>
 
-              {/* Esférico */}
+              {/* Esférico com select */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
                 <div>
                   <label className="text-[#81059e] font-medium">Esférico De*:</label>
-                  <input
-                    type="number"
-                    step="0.01"
+                  <select
                     name="esfericoDe"
                     value={formData.esfericoDe || ""}
-                    onChange={handleChange}
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    onChange={(e) => setFormData({ ...formData, esfericoDe: e.target.value })}
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
                     required
-                  />
+                  >
+                    <option value="">Selecione</option>
+                    {esfericos.map((valor) => (
+                      <option key={`esf-de-${valor}`} value={valor}>
+                        {formatNumberForDisplay(valor)}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="text-[#81059e] font-medium">Esférico Para*:</label>
-                  <input
-                    type="number"
-                    step="0.01"
+                  <select
                     name="esfericoPara"
                     value={formData.esfericoPara || ""}
-                    onChange={handleChange}
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    onChange={(e) => setFormData({ ...formData, esfericoPara: e.target.value })}
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
                     required
-                  />
+                  >
+                    <option value="">Selecione</option>
+                    {esfericos.map((valor) => (
+                      <option key={`esf-para-${valor}`} value={valor}>
+                        {formatNumberForDisplay(valor)}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
-              {/* Cilindro */}
+              {/* Cilindro com select */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
                 <div>
                   <label className="text-[#81059e] font-medium">Cilindro De*:</label>
-                  <input
-                    type="number"
-                    step="0.01"
+                  <select
                     name="cilindroDe"
                     value={formData.cilindroDe || ""}
-                    onChange={handleChange}
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    onChange={(e) => setFormData({ ...formData, cilindroDe: e.target.value })}
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
                     required
-                  />
+                  >
+                    <option value="">Selecione</option>
+                    {cilindricos.map((valor) => (
+                      <option key={`cil-de-${valor}`} value={valor}>
+                        {formatNumberForDisplay(valor)}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="text-[#81059e] font-medium">Cilindro Para*:</label>
-                  <input
-                    type="number"
-                    step="0.01"
+                  <select
                     name="cilindroPara"
                     value={formData.cilindroPara || ""}
-                    onChange={handleChange}
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black" required
-                  />
+                    onChange={(e) => setFormData({ ...formData, cilindroPara: e.target.value })}
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
+                    required
+                  >
+                    <option value="">Selecione</option>
+                    <option value="">Selecione</option>
+                    {cilindricos.map((valor) => (
+                      <option key={`cil-para-${valor}`} value={valor}>
+                        {formatNumberForDisplay(valor)}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
-              {/* Diâmetro */}
+              {/* Diâmetro com select */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
                 <div>
                   <label className="text-[#81059e] font-medium">Diâmetro De*:</label>
-                  <input
-                    type="number"
-                    step="0.01"
+                  <select
                     name="diametroDe"
                     value={formData.diametroDe || ""}
-                    onChange={handleChange}
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    onChange={(e) => setFormData({ ...formData, diametroDe: e.target.value })}
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
                     required
-                  />
+                  >
+                    <option value="">Selecione</option>
+                    {diametros.map((valor) => (
+                      <option key={`diam-de-${valor}`} value={valor}>
+                        {valor} mm
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="text-[#81059e] font-medium">Diâmetro Para*:</label>
-                  <input
-                    type="number"
-                    step="0.01"
+                  <select
                     name="diametroPara"
                     value={formData.diametroPara || ""}
-                    onChange={handleChange}
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    onChange={(e) => setFormData({ ...formData, diametroPara: e.target.value })}
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
                     required
-                  />
+                  >
+                    <option value="">Selecione</option>
+                    {diametros.map((valor) => (
+                      <option key={`diam-para-${valor}`} value={valor}>
+                        {valor} mm
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
-              {/* Adição */}
+              {/* Adição com select */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
                 <div>
                   <label className="text-[#81059e] font-medium">Adição De:</label>
-                  <input
-                    type="number"
-                    step="0.01"
+                  <select
                     name="adicaoDe"
                     value={formData.adicaoDe || ""}
-                    onChange={handleChange}
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
-                  />
+                    onChange={(e) => setFormData({ ...formData, adicaoDe: e.target.value })}
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
+                  >
+                    <option value="">Selecione</option>
+                    {adicoes.map((valor) => (
+                      <option key={`adic-de-${valor}`} value={valor}>
+                        {formatNumberForDisplay(valor)}
+                      </option>
+                    ))}
+                  </select>
                   <small className="text-gray-500">Em caso de Visão Simples, não preencher.</small>
                 </div>
                 <div>
                   <label className="text-[#81059e] font-medium">Adição Para:</label>
-                  <input
-                    type="number"
-                    step="0.01"
+                  <select
                     name="adicaoPara"
                     value={formData.adicaoPara || ""}
-                    onChange={handleChange}
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
-                  />
+                    onChange={(e) => setFormData({ ...formData, adicaoPara: e.target.value })}
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
+                  >
+                    <option value="">Selecione</option>
+                    {adicoes.map((valor) => (
+                      <option key={`adic-para-${valor}`} value={valor}>
+                        {formatNumberForDisplay(valor)}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
             </div>
 
             {/* Seção Tecnologias e Tratamentos */}
-            <div className="p-4 bg-gray-50 rounded-lg mb-6">
+            <div className="p-4 bg-gray-50 rounded-sm mb-6">
               <h3 className="text-lg font-semibold text-[#81059e] mb-4">Tecnologias e Tratamentos</h3>
 
               {/* Corredor (multiselect) */}
@@ -1560,22 +1567,21 @@ export function FormularioLentes() {
             </div>
 
             {/* Seção Valores */}
-            <div className="p-4 bg-gray-50 rounded-lg mb-6">
+            <div className="p-4 bg-gray-50 rounded-sm mb-6">
               <h3 className="text-lg font-semibold text-[#81059e] mb-4">Valores</h3>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {/* Custo */}
                 <div>
                   <label className="text-[#81059e] font-medium">Custo (R$)</label>
-                  <div className="flex items-center border-2 border-[#81059e] rounded-lg">
-                    <span className="px-2 text-gray-400">R$</span>
+                  <div className="flex items-center border-2 border-[#81059e] rounded-sm">
                     <input
                       type="text"
                       name="custo"
                       value={formData.custo}
                       onChange={handleCustoChange}
                       placeholder="R$ 0,00"
-                      className="w-full px-2 py-3 text-black rounded-lg"
+                      className="w-full px-2 py-3 text-black rounded-sm"
                     />
                   </div>
                 </div>
@@ -1583,17 +1589,16 @@ export function FormularioLentes() {
                 {/* Percentual de Lucro */}
                 <div>
                   <label className="text-[#81059e] font-medium">Percentual de Lucro (%)</label>
-                  <div className="flex items-center border-2 border-[#81059e] rounded-lg">
+                  <div className="flex items-center border-2 border-[#81059e] rounded-sm">
                     <input
                       type="number"
                       id="percentual_lucro"
                       name="percentual_lucro"
                       value={formData.percentual_lucro}
                       onChange={handleChange}
-                      placeholder="0,00"
-                      className="w-full px-2 py-3 text-black focus:outline-none focus:border-[#81059e] focus:ring-1 focus:ring-[#81059e] rounded-lg"
+                      placeholder="%0,00"
+                      className="w-full px-2 py-3 text-black focus:outline-none focus:border-[#81059e] focus:ring-1 focus:ring-[#81059e] rounded-sm"
                     />
-                    <span className="px-2 text-gray-400">%</span>
                   </div>
                 </div>
 
@@ -1606,7 +1611,7 @@ export function FormularioLentes() {
                     name="custo_medio"
                     value={formData.custo_medio || ""}
                     readOnly
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black bg-gray-100"
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black bg-gray-100"
                     placeholder="Calculado automaticamente"
                   />
                 </div>
@@ -1614,7 +1619,7 @@ export function FormularioLentes() {
             </div>
 
             {/* Seção Fiscal */}
-            <div className="p-4 bg-gray-50 rounded-lg mb-6">
+            <div className="p-4 bg-gray-50 rounded-sm mb-6">
               <h3 className="text-lg font-semibold text-[#81059e] mb-4">Informações Fiscais</h3>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -1625,7 +1630,7 @@ export function FormularioLentes() {
                     name="NCM"
                     value={formData.NCM || ""}
                     onChange={(e) => setFormData({ ...formData, NCM: e.target.value })}
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
                   >
                     <option value="">Selecione o NCM</option>
                     {ncm.map((item) => (
@@ -1644,7 +1649,7 @@ export function FormularioLentes() {
                     name="CEST"
                     value={formData.CEST || ""}
                     onChange={(e) => setFormData({ ...formData, CEST: e.target.value })}
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
                   />
                 </div>
 
@@ -1656,7 +1661,7 @@ export function FormularioLentes() {
                     name="csosn"
                     value={formData.csosn || ""}
                     onChange={(e) => setFormData({ ...formData, csosn: e.target.value })}
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
                   />
                 </div>
               </div>
@@ -1670,7 +1675,7 @@ export function FormularioLentes() {
                     name="cfop"
                     value={formData.cfop || ""}
                     onChange={(e) => setFormData({ ...formData, cfop: e.target.value })}
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
                   />
                 </div>
 
@@ -1682,7 +1687,7 @@ export function FormularioLentes() {
                     name="origem_produto"
                     value={formData.origem_produto || ""}
                     onChange={(e) => setFormData({ ...formData, origem_produto: e.target.value })}
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
                   />
                 </div>
               </div>
@@ -1696,7 +1701,7 @@ export function FormularioLentes() {
                     name="aliquota_icms"
                     value={formData.aliquota_icms || ""}
                     onChange={(e) => setFormData({ ...formData, aliquota_icms: e.target.value })}
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
                   />
                 </div>
 
@@ -1708,7 +1713,7 @@ export function FormularioLentes() {
                     name="base_calculo_icms"
                     value={formData.base_calculo_icms || ""}
                     onChange={(e) => setFormData({ ...formData, base_calculo_icms: e.target.value })}
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
                   />
                 </div>
 
@@ -1720,7 +1725,7 @@ export function FormularioLentes() {
                     name="cst_pis"
                     value={formData.cst_pis || ""}
                     onChange={(e) => setFormData({ ...formData, cst_pis: e.target.value })}
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
                   />
                 </div>
               </div>
@@ -1734,7 +1739,7 @@ export function FormularioLentes() {
                     name="cst_cofins"
                     value={formData.cst_cofins || ""}
                     onChange={(e) => setFormData({ ...formData, cst_cofins: e.target.value })}
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
                   />
                 </div>
 
@@ -1746,7 +1751,7 @@ export function FormularioLentes() {
                     name="aliquota_ipi"
                     value={formData.aliquota_ipi || ""}
                     onChange={(e) => setFormData({ ...formData, aliquota_ipi: e.target.value })}
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
                   />
                 </div>
 
@@ -1758,7 +1763,7 @@ export function FormularioLentes() {
                     name="cst_ipi"
                     value={formData.cst_ipi || ""}
                     onChange={(e) => setFormData({ ...formData, cst_ipi: e.target.value })}
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
                   />
                 </div>
               </div>
@@ -1772,7 +1777,7 @@ export function FormularioLentes() {
                     name="base_calculo_ipi"
                     value={formData.base_calculo_ipi || ""}
                     onChange={(e) => setFormData({ ...formData, base_calculo_ipi: e.target.value })}
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
                   />
                 </div>
 
@@ -1784,7 +1789,7 @@ export function FormularioLentes() {
                     name="peso_bruto"
                     value={formData.peso_bruto || ""}
                     onChange={(e) => setFormData({ ...formData, peso_bruto: e.target.value })}
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
                   />
                 </div>
 
@@ -1796,14 +1801,14 @@ export function FormularioLentes() {
                     name="peso_liquido"
                     value={formData.peso_liquido || ""}
                     onChange={(e) => setFormData({ ...formData, peso_liquido: e.target.value })}
-                    className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black"
+                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
                   />
                 </div>
               </div>
             </div>
 
             {/* Seção Imagem */}
-            <div className="p-4 bg-gray-50 rounded-lg mb-6">
+            <div className="p-4 bg-gray-50 rounded-sm mb-6">
               <h3 className="text-lg font-semibold text-[#81059e] mb-4">Imagem do Produto</h3>
 
               <div className="flex flex-col">
@@ -1819,7 +1824,7 @@ export function FormularioLentes() {
                       setPreviewUrl(URL.createObjectURL(file));
                     }
                   }}
-                  className="border-2 border-[#81059e] p-3 rounded-lg w-full text-black bg-gray-100"
+                  className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black bg-gray-100"
                   required
                 />
 
@@ -1875,7 +1880,7 @@ export function FormularioLentes() {
         </div>
 
         {showSuccessPopup && (
-          <div className="fixed bottom-4 right-4 bg-green-500 text-white p-4 rounded-lg shadow-lg">
+          <div className="fixed bottom-4 right-4 bg-green-500 text-white p-4 rounded-sm shadow-lg">
             <p>Produto enviado com sucesso!</p>
           </div>
         )}

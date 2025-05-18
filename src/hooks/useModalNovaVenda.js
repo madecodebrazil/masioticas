@@ -1,6 +1,6 @@
 // src/hooks/useModalNovaVenda.js
 import { useState, useEffect } from 'react';
-import { collection, doc, setDoc, getDocs, query, limit, orderBy, where } from 'firebase/firestore';
+import { collection, doc, setDoc, getDocs, query, limit, orderBy, where, addDoc } from 'firebase/firestore';
 import { firestore } from '../lib/firebaseConfig';
 
 const useModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
@@ -14,6 +14,7 @@ const useModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
     const [tipoTransacao, setTipoTransacao] = useState('venda');
     const [dataVenda, setDataVenda] = useState(new Date().toISOString().split('T')[0]);
     const [vendedor, setVendedor] = useState('Admin');
+    const [totalEditado, setTotalEditado] = useState(null);
 
 
     // Estados para gerenciamento de ID
@@ -254,8 +255,8 @@ const useModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
         // Verifica se todos os métodos de pagamento foram processados
         const todosProcessados = paymentMethods.every(method => method.processed);
 
-        // Verifica se o valor total pago é igual ao valor da venda
-        const total = calculateTotal();
+        // Usa o valor total editado se disponível, caso contrário usa o valor calculado
+        const total = totalEditado !== null ? totalEditado : calculateTotal();
         const totalPago = calculateTotalAllocated();
 
         return todosProcessados && Math.abs(total - totalPago) < 0.01;
@@ -404,7 +405,7 @@ const useModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
     };
 
     // Função para finalizar a venda ou orçamento
-    const finalizeSale = async () => {
+    const finalizeSale = async (valorTotalFinal) => {
         try {
             setLoading(true);
 
@@ -481,6 +482,7 @@ const useModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
             console.log(`Salvando ${tipoTransacao} na coleção:`, colecao);
 
             // Criar objeto com dados da transação
+            // Usar o valor total passado como parâmetro em vez de calculateTotal()
             const dadosTransacao = {
                 data_criacao: new Date(),
                 data_venda: dataVenda ? new Date(dataVenda) : new Date(),
@@ -501,7 +503,8 @@ const useModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
                 subtotal: calculateSubtotal(),
                 desconto: calculateDiscount(),
                 desconto_tipo: discountType,
-                valor_total: calculateTotal(),
+                valor_total: valorTotalFinal, // Aqui usamos o valor total passado como parâmetro
+                valor_editado: valorTotalFinal !== calculateTotal(), // Flag para indicar se o valor foi editado manualmente
                 observacoes: observation,
                 vendedor: vendedor || 'Admin',
                 status: tipoTransacao === 'venda' ? 'paga' : 'aguardando_aprovacao',
@@ -538,7 +541,7 @@ const useModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
         }
     };
 
-    // Função handleFinalizarClicked atualizada
+    // Função handleFinalizarClicked atualizada para usar o valor total editado
     const handleFinalizarClicked = async () => {
         // Resetar erro
         setError('');
@@ -596,6 +599,7 @@ const useModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
                 }
 
                 // Validações de pagamento para venda
+                // Aqui usamos o valor total editado, se disponível
                 if (!isPaymentComplete()) {
                     setError('O valor total dos pagamentos deve ser igual ao valor da venda');
                     setLoading(false);
@@ -604,7 +608,11 @@ const useModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
             }
 
             // Processar a finalização
-            const resultId = await finalizeSale();
+            // Obter o valor total, priorizando o valor editado se estiver disponível
+            const valorTotalFinal = totalEditado !== null ? totalEditado : calculateTotal();
+
+            // Passar o valor total final para a função de finalização
+            const resultId = await finalizeSale(valorTotalFinal);
             console.log(`${tipoTransacao} finalizado com ID: ${resultId}`);
 
         } catch (error) {
@@ -643,6 +651,8 @@ const useModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
         novaVendaRef,
         paymentMethods,
         valorPago,
+        totalEditado,
+        setTotalEditado,
         troco,
         currentPaymentIndex,
         valueDistribution,

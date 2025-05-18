@@ -1,4 +1,4 @@
-//add-frame
+//adicionar armação
 "use client";
 import React, { Suspense, useEffect, useState } from "react";
 import Layout from "@/components/Layout";
@@ -956,7 +956,7 @@ export function FormularioLoja() {
       };
 
       // Salvar no Firestore
-      const docRef = doc(firestore, `estoque/${productData.loja}/armacoes`, productData.codigo);
+      const docRef = doc(firestore, `estoque/${productData.loja}/armacoes/`, productData.codigo);
       await setDoc(docRef, productData);
 
       console.log('Produto salvo no Firestore com sucesso');
@@ -1158,7 +1158,7 @@ export function FormularioLoja() {
                         }}
                         className="ml-2 bg-gray-100 border-2 border-[#81059e] text-[#81059e] p-2 rounded-sm"
                       >
-                        <FiX />
+                        <FiTrash2 />
                       </button>
                     )}
                   </div>
@@ -1622,7 +1622,7 @@ export function FormularioLoja() {
                       className="absolute top-0 right-0 bg-white border border-gray-300 rounded-full p-1 shadow hover:bg-red-100"
                       title="Remover imagem"
                     >
-                      <FiX className="text-red-600 text-lg" />
+                      <FiTrash2 className="text-red-600 text-lg" />
                     </button>
                   </div>
                 )}

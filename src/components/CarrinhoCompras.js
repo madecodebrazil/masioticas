@@ -1,13 +1,12 @@
-// src/components/CarrinhoCompras.js
+"use client"
 import React, { useState, useEffect, useRef } from 'react';
-import { FiTrash2, FiPlus, FiMinus, FiSearch, FiLayers, FiShoppingBag, FiPlusCircle } from 'react-icons/fi';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faQrCode } from '@fortawesome/free-solid-svg-icons';
+import { FiTrash2, FiPlus, FiMinus, FiSearch, FiLayers, FiShoppingBag, FiPlusCircle, FiInfo, FiEdit2, FiX, FiImage } from 'react-icons/fi';
 import { collection, getDocs } from 'firebase/firestore';
 import { firestore } from '@/lib/firebaseConfig';
 import { useAuth } from '@/hooks/useAuth';
 import { Html5Qrcode } from 'html5-qrcode';
 
+// Componente para o scanner QR Code
 const QrCodeScanner = ({ onScan, onClose }) => {
   const qrRef = useRef(null);
   const [scanner, setScanner] = useState(null);
@@ -80,6 +79,236 @@ const QrCodeScanner = ({ onScan, onClose }) => {
   );
 };
 
+// Componente para o modal de informações do produto
+const ProductInfoModal = ({ product, onClose }) => {
+  if (!product) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+        <div className="flex justify-between items-center p-4 border-b bg-[#81059e]">
+          <h3 className="text-xl font-bold text-white">Informações do Produto</h3>
+          <button 
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-500"
+          >
+            <FiX size={24} />
+          </button>
+        </div>
+        
+        <div className="p-6 space-y-4">
+          <div>
+            <h4 className="text-sm font-semibold text-gray-500">Título</h4>
+            <p className="text-lg">{product.nome || product.titulo || "Sem nome"}</p>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <h4 className="text-sm font-semibold text-gray-500">Código</h4>
+              <p>{product.codigo || "N/A"}</p>
+            </div>
+            <div>
+              <h4 className="text-sm font-semibold text-gray-500">SKU</h4>
+              <p>{product.sku || "N/A"}</p>
+            </div>
+            <div>
+              <h4 className="text-sm font-semibold text-gray-500">Marca</h4>
+              <p>{product.marca || "N/A"}</p>
+            </div>
+            <div>
+              <h4 className="text-sm font-semibold text-gray-500">Categoria</h4>
+              <p className="capitalize">{product.categoria || "N/A"}</p>
+            </div>
+            <div>
+              <h4 className="text-sm font-semibold text-gray-500">Estoque</h4>
+              <p>{product.quantidade || "0"} unidades</p>
+            </div>
+            <div>
+              <h4 className="text-sm font-semibold text-gray-500">Preço</h4>
+              <p className="font-semibold text-[#81059e]">
+                {new Intl.NumberFormat('pt-BR', {
+                  style: 'currency',
+                  currency: 'BRL'
+                }).format(product.valor || product.preco || 0)}
+              </p>
+            </div>
+          </div>
+          
+          {/* Informações específicas baseadas na categoria */}
+          {product.categoria === 'armacoes' && (
+            <div className="border-t pt-4 mt-4">
+              <h4 className="text-sm font-semibold text-gray-500 mb-2">Especificações da Armação</h4>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <h5 className="text-xs text-gray-500">Material</h5>
+                  <p>{product.material || "N/A"}</p>
+                </div>
+                <div>
+                  <h5 className="text-xs text-gray-500">Formato</h5>
+                  <p>{product.formato || "N/A"}</p>
+                </div>
+                <div>
+                  <h5 className="text-xs text-gray-500">Tamanho</h5>
+                  <p>{product.tamanho || "N/A"}</p>
+                </div>
+                <div>
+                  <h5 className="text-xs text-gray-500">Cor</h5>
+                  <p>{product.cor || "N/A"}</p>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {product.categoria === 'lentes' && (
+            <div className="border-t pt-4 mt-4">
+              <h4 className="text-sm font-semibold text-gray-500 mb-2">Especificações da Lente</h4>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <h5 className="text-xs text-gray-500">Tipo</h5>
+                  <p>{product.tipo || "N/A"}</p>
+                </div>
+                <div>
+                  <h5 className="text-xs text-gray-500">Material</h5>
+                  <p>{product.material || "N/A"}</p>
+                </div>
+                <div>
+                  <h5 className="text-xs text-gray-500">Tratamento</h5>
+                  <p>{product.tratamento || "N/A"}</p>
+                </div>
+                <div>
+                  <h5 className="text-xs text-gray-500">Índice</h5>
+                  <p>{product.indice || "N/A"}</p>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {product.categoria === 'solares' && (
+            <div className="border-t pt-4 mt-4">
+              <h4 className="text-sm font-semibold text-gray-500 mb-2">Especificações do Óculos Solar</h4>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <h5 className="text-xs text-gray-500">Material</h5>
+                  <p>{product.material || "N/A"}</p>
+                </div>
+                <div>
+                  <h5 className="text-xs text-gray-500">Formato</h5>
+                  <p>{product.formato || "N/A"}</p>
+                </div>
+                <div>
+                  <h5 className="text-xs text-gray-500">Proteção UV</h5>
+                  <p>{product.protecao_uv ? "Sim" : "Não"}</p>
+                </div>
+                <div>
+                  <h5 className="text-xs text-gray-500">Com Grau</h5>
+                  <p>{product.info_geral?.tem_grau || product.info_adicional?.tem_grau ? "Sim" : "Não"}</p>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {/* Outras informações adicionais */}
+          {product.descricao && (
+            <div className="border-t pt-4 mt-4">
+              <h4 className="text-sm font-semibold text-gray-500 mb-2">Descrição</h4>
+              <p className="text-sm text-gray-700">{product.descricao}</p>
+            </div>
+          )}
+        </div>
+        
+        <div className="p-4 border-t flex justify-end">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-md"
+          >
+            Fechar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Componente para o modal de edição de preço
+const PriceEditModal = ({ product, onSave, onClose }) => {
+  const [priceValue, setPriceValue] = useState(product ? (product.valor || product.preco || 0) : 0);
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    // Focar no input quando o modal abrir
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, []);
+
+  const handlePriceChange = (e) => {
+    // Remove todos os caracteres não numéricos
+    const onlyNumbers = e.target.value.replace(/\D/g, '');
+    // Converte para número e divide por 100 para obter o valor em reais
+    const parsedValue = onlyNumbers ? Number(onlyNumbers) / 100 : 0;
+    setPriceValue(parsedValue);
+  };
+
+  const handleSave = () => {
+    onSave(priceValue);
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+        <div className="flex justify-between items-center p-4 border-b bg-[#81059e]">
+          <h3 className="text-xl font-bold text-white">Editar Preço</h3>
+          <button 
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-500"
+          >
+            <FiX size={24} />
+          </button>
+        </div>
+        
+        <div className="p-6">
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Produto: <span className="font-bold">{product?.nome || product?.titulo || "Produto"}</span>
+            </label>
+            <input
+              ref={inputRef}
+              type="text"
+              inputMode="numeric"
+              value={priceValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+              onChange={handlePriceChange}
+              className="border-2 border-[#81059e] p-3 rounded-md w-full text-lg"
+              placeholder="Valor em R$"
+            />
+            <p className="mt-2 text-sm text-gray-500">
+              Preço original: {new Intl.NumberFormat('pt-BR', {
+                style: 'currency',
+                currency: 'BRL'
+              }).format(product ? (product.valor_original || product.valor || product.preco || 0) : 0)}
+            </p>
+          </div>
+          
+          <div className="flex justify-end space-x-3">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 hover:bg-gray-50 text-[#81059e]"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleSave}
+              className="px-4 py-2 bg-[#81059e] hover:bg-[#6a0484] text-white rounded-sm"
+            >
+              Salvar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const CarrinhoCompras = ({
   cartItems = [],
   setCartItems,
@@ -99,6 +328,14 @@ const CarrinhoCompras = ({
   const [estoqueData, setEstoqueData] = useState([]);
   const [showQrScanner, setShowQrScanner] = useState(false);
   const searchInputRef = useRef(null);
+  
+  // Estados para os modais
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [showInfoModal, setShowInfoModal] = useState(false);
+  const [showPriceModal, setShowPriceModal] = useState(false);
+  
+  // Limitação de resultados da busca
+  const [maxResults, setMaxResults] = useState(20); // Limitando a 20 resultados por padrão
 
   // Estados para coleções
   const [collections, setCollections] = useState([
@@ -112,7 +349,6 @@ const CarrinhoCompras = ({
 
   const { userPermissions } = useAuth();
   const categorias = ['armacoes', 'lentes', 'solares'];
-  const [showQr, setShowQr] = useState(false);
 
   // Notificar o componente pai quando as coleções são alteradas
   useEffect(() => {
@@ -176,7 +412,8 @@ const CarrinhoCompras = ({
                 id: docProduto.id,
                 ...produtoData,
                 loja: loja,
-                categoria: categoria
+                categoria: categoria,
+                valor_original: produtoData.valor // Guardar o valor original para referência
               });
             });
           } catch (err) {
@@ -223,9 +460,11 @@ const CarrinhoCompras = ({
           marca.includes(searchTermLower) ||
           sku.includes(searchTermLower);
       });
-      setFilteredProducts(filtered);
+      
+      // Aplicar o limite de resultados
+      setFilteredProducts(filtered.slice(0, maxResults));
     }
-  }, [productSearchTerm, estoqueData]);
+  }, [productSearchTerm, estoqueData, maxResults]);
 
   // Formatar para moeda brasileira (R$)
   const formatCurrencyValue = (value) => {
@@ -243,7 +482,7 @@ const CarrinhoCompras = ({
   const precisaDeOS = (item) => {
     if (!item || !item.categoria) return false;
 
-    const categoriasComOS = ['armacoes', 'lentes', 'solares'];
+    const categoriasComOS = ['armacoes', 'lentes'];
 
     if (item.categoria === 'solares') {
       return item.info_geral?.tem_grau || item.info_adicional?.tem_grau || false;
@@ -366,9 +605,11 @@ const CarrinhoCompras = ({
         marca: product.marca || '',
         sku: product.sku || '',
         valor: parseFloat(product.valor) || 0,
+        valor_original: parseFloat(product.valor_original || product.valor) || 0,
         preco: parseFloat(product.valor) || 0, // Manter compatibilidade com ambos os campos
         quantity: newProductQty,
-        collectionId: activeCollectionId
+        collectionId: activeCollectionId,
+        imagem: product.imagem || null // Adicionar campo de imagem
       };
 
       setCartItems([...cartItems, produtoFormatado]);
@@ -440,6 +681,45 @@ const CarrinhoCompras = ({
     setCollections(updatedCollections);
   };
 
+  // Atualizar o preço de um produto no carrinho
+  const updateProductPrice = (productId, categoria, newPrice) => {
+    // Atualizar o preço no carrinho
+    const updatedCartItems = cartItems.map(item =>
+      (item.id === productId && item.categoria === categoria)
+        ? { ...item, valor: newPrice, preco: newPrice }
+        : item
+    );
+    setCartItems(updatedCartItems);
+
+    // Atualizar também o preço na coleção correspondente
+    const updatedCollections = collections.map(collection => {
+      const updatedItems = collection.items.map(item =>
+        (item.id === productId && item.categoria === categoria)
+          ? { ...item, valor: newPrice, preco: newPrice }
+          : item
+      );
+
+      return {
+        ...collection,
+        items: updatedItems
+      };
+    });
+
+    setCollections(updatedCollections);
+  };
+
+  // Abrir modal de informações do produto
+  const openInfoModal = (product) => {
+    setSelectedProduct(product);
+    setShowInfoModal(true);
+  };
+
+  // Abrir modal de edição de preço
+  const openPriceModal = (product) => {
+    setSelectedProduct(product);
+    setShowPriceModal(true);
+  };
+
   // Calcular total do carrinho
   const getTotal = () => {
     if (typeof calculateTotal === 'function') {
@@ -490,6 +770,11 @@ const CarrinhoCompras = ({
     }
   };
 
+// Carregar mais resultados na busca
+  const loadMoreResults = () => {
+    setMaxResults(prevMax => prevMax + 20);
+  };
+
   return (
     <div className="border-2 border-gray-200 rounded-sm bg-white overflow-hidden">
       {/* Mensagem de erro */}
@@ -503,7 +788,7 @@ const CarrinhoCompras = ({
       <div className="p-3 bg-gray-50 border-b border-gray-200">
         <div className="flex justify-between items-center mb-2">
           <h3 className="text-base font-medium text-gray-700 flex items-center">
-            <FiLayers className="mr-2 text-[#81059e]" /> Coleções de Produtos
+            <FiLayers className="mr-2 text-[#81059e]" /> Coleções
           </h3>
           <button
             onClick={addCollection}
@@ -563,7 +848,7 @@ const CarrinhoCompras = ({
               value={productSearchTerm}
               onChange={(e) => setProductSearchTerm(e.target.value)}
               className="border-2 rounded-md pl-10 p-2 w-full"
-              placeholder="Buscar produtos..."
+              placeholder="Buscar produtos por título ou código"
               ref={searchInputRef}
             />
           </div>
@@ -605,6 +890,16 @@ const CarrinhoCompras = ({
                 </div>
               </div>
             ))}
+            
+            {/* Botão para carregar mais resultados */}
+            {filteredProducts.length === maxResults && (
+              <button 
+                onClick={loadMoreResults}
+                className="w-full p-2 text-center text-[#81059e] bg-purple-50 hover:bg-purple-100"
+              >
+                Carregar mais resultados
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -646,55 +941,106 @@ const CarrinhoCompras = ({
             <h3 className="text-lg font-medium">Seu carrinho está vazio</h3>
             <p className="text-gray-500 mb-3">Busque produtos para adicionar à venda</p>
             <p className="text-sm text-gray-500">{estoqueData.length} produtos disponíveis para venda</p>
-            <button
-              onClick={() => setProductSearchTerm('a')}
-              className="text-[#81059e] text-sm underline"
-            >
-              Ver todos os produtos
-            </button>
           </div>
         ) : (
           <div className="space-y-3">
             {cartItems.map(item => (
               <div
                 key={`${item.id}-${item.categoria}`}
-                className={`p-3 border rounded-md flex justify-between items-center ${precisaDeOS(item) ? 'border-purple-200 bg-purple-50' : ''
-                  }`}
+                className={`p-3 border rounded-md ${precisaDeOS(item) ? 'border-purple-200 bg-purple-50' : ''}`}
               >
-                <div className="flex-1">
-                  <div className="font-medium flex items-center">
-                    {item.titulo || item.nome || "Produto sem título"}
-                    {precisaDeOS(item) && (
-                      <span className="ml-2 text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">
-                        OS
-                      </span>
+                <div className="flex gap-3">
+                  {/* Imagem do produto */}
+                  <div className="w-16 h-16 bg-gray-100 rounded-md overflow-hidden flex items-center justify-center border border-purple-300">
+                    {item.imagem ? (
+                      <img 
+                        src={item.imagem} 
+                        alt={item.nome || "Produto"} 
+                        className="object-contain w-full h-full"
+                      />
+                    ) : (
+                      <div className="text-gray-400 flex flex-col items-center justify-center text-xs">
+                        <FiImage size={20} />
+                        <span className="mt-1">{item.categoria === 'armacoes' ? 'Armação' : 
+                               item.categoria === 'lentes' ? 'Lente' : 
+                               item.categoria === 'solares' ? 'Solar' : 'Produto'}</span>
+                      </div>
                     )}
                   </div>
-                  <div className="text-sm text-gray-600">
-                    {formatCurrencyValue(item.valor || item.preco || 0)} x {item.quantity}
+                  
+                  <div className="flex-1">
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="font-medium flex items-center">
+                        {item.titulo || item.nome || "Produto sem título"}
+                        {precisaDeOS(item) && (
+                          <span className="ml-2 text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">
+                            OS
+                          </span>
+                        )}
+                      </div>
+                      
+                      {/* Botões de ação agrupados */}
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openInfoModal(item);
+                          }}
+                          className="p-1.5 text-gray-500 hover:text-[#81059e] hover:bg-purple-50 rounded-full"
+                          title="Ver informações"
+                        >
+                          <FiInfo size={18} />
+                        </button>
+                        
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openPriceModal(item);
+                          }}
+                          className="p-1.5 text-gray-500 hover:text-[#81059e] hover:bg-purple-50 rounded-full"
+                          title="Editar preço"
+                        >
+                          <FiEdit2 size={18} />
+                        </button>
+                        
+                        <button
+                          onClick={() => removeFromCart(item.id, item.categoria)}
+                          className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full"
+                          title="Remover item"
+                        >
+                          <FiTrash2 size={18} />
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <div className="text-sm text-gray-700 font-medium">
+                          {formatCurrencyValue(item.valor || item.preco || 0)}
+                        </div>
+                        <div className="text-xs text-purple-500">
+                          {item.marca && `${item.marca}`} {item.codigo && ` • ${item.codigo}`}
+                        </div>
+                      </div>
+                      
+                      {/* Controles de quantidade */}
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => updateQuantity(item.id, item.categoria, item.quantity - 1)}
+                          className="p-1.5 text-gray-500 hover:text-gray-700 bg-gray-100 rounded-full"
+                        >
+                          <FiMinus size={14} />
+                        </button>
+                        <span className="w-6 text-center font-medium">{item.quantity}</span>
+                        <button
+                          onClick={() => updateQuantity(item.id, item.categoria, item.quantity + 1)}
+                          className="p-1.5 text-gray-500 hover:text-gray-700 bg-gray-100 rounded-full"
+                        >
+                          <FiPlus size={14} />
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => updateQuantity(item.id, item.categoria, item.quantity - 1)}
-                    className="p-1 text-gray-500 hover:text-gray-700"
-                  >
-                    <FiMinus />
-                  </button>
-                  <span className="w-6 text-center">{item.quantity}</span>
-                  <button
-                    onClick={() => updateQuantity(item.id, item.categoria, item.quantity + 1)}
-                    className="p-1 text-gray-500 hover:text-gray-700"
-                  >
-                    <FiPlus />
-                  </button>
-                  <button
-                    onClick={() => removeFromCart(item.id, item.categoria)}
-                    className="p-1 text-red-500 hover:text-red-700"
-                  >
-                    <FiTrash2 />
-                  </button>
                 </div>
               </div>
             ))}
@@ -718,6 +1064,23 @@ const CarrinhoCompras = ({
             <span>= Produto requer Ordem de Serviço</span>
           </div>
         </div>
+      )}
+
+      {/* Modal de informações do produto */}
+      {showInfoModal && selectedProduct && (
+        <ProductInfoModal 
+          product={selectedProduct} 
+          onClose={() => setShowInfoModal(false)} 
+        />
+      )}
+
+      {/* Modal de edição de preço */}
+      {showPriceModal && selectedProduct && (
+        <PriceEditModal 
+          product={selectedProduct} 
+          onSave={(newPrice) => updateProductPrice(selectedProduct.id, selectedProduct.categoria, newPrice)}
+          onClose={() => setShowPriceModal(false)} 
+        />
       )}
     </div>
   );

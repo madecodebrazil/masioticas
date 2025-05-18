@@ -49,6 +49,13 @@ const formatCurrencyBR = (value) => {
     }).format(value || 0);
 };
 
+const formatLojaNome = (lojaId) => {
+    if (!lojaId) return '';
+    const numero = lojaId.replace('loja', '');
+    return `Loja ${numero}`;
+};
+
+
 // Componente principal simplificado
 const NovaVendaPage = () => {
     const router = useRouter();
@@ -60,6 +67,7 @@ const NovaVendaPage = () => {
     ]);
     const [activeCollection, setActiveCollection] = useState(1);
     const [osStatus, setOsStatus] = useState({ tipo: 'sem_os' });
+    const [totalEditado, setTotalEditado] = useState(null);
     const [dataVenda, setDataVenda] = useState(new Date().toISOString().split('T')[0]);
     const [vendedor, setVendedor] = useState('');
 
@@ -246,7 +254,7 @@ const NovaVendaPage = () => {
                 <div className="w-1/3 flex justify-end">
                     {selectedLoja && (
                         <div className="bg-purple-800 px-3 py-1 rounded-full text-sm">
-                            Loja: {selectedLoja}
+                            {formatLojaNome(selectedLoja)}
                         </div>
                     )}
                 </div>
@@ -352,9 +360,9 @@ const NovaVendaPage = () => {
                         </div>
 
                         {/* Seleção e Lista de Produtos */}
-                        <div className="bg-white p-4 rounded-lg shadow-sm mb-4">
-                            <label className="block text-[#81059e] text-xl font-medium mb-3 flex items-center gap-1">
-                                <FiShoppingCart /> Produtos
+                        <div className="bg-white rounded-lg shadow-sm mb-4">
+                            <label className="block text-[#81059e] text-xl font-medium mb-3 flex items-center gap-1 p-4">
+                                <FiShoppingCart /> Carrinho de Compras
                             </label>
 
                             <div>
@@ -444,19 +452,17 @@ const NovaVendaPage = () => {
                                 type="text"
                                 inputMode="numeric"
                                 value={
-                                    discount === 0
-                                        ? ''
-                                        : discountType === 'value'
-                                            ? (discount * 100).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, '.').replace(/(\d{2})$/, ',$1')
-                                            : discount.toString().replace('.', ',')
+                                    discountType === 'value'
+                                        ? discount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+                                        : discount === 0 ? '' : discount.toString().replace('.', ',')
                                 }
                                 onChange={(e) => {
-                                    const raw = e.target.value.replace(/\D/g, '');
-                                    const parsed = raw ? Number(raw) / 100 : 0;
-                                    setDiscount(parsed);
+                                    const onlyNumbers = e.target.value.replace(/\D/g, '');
+                                    const parsedValue = onlyNumbers ? Number(onlyNumbers) / 100 : 0;
+                                    setDiscount(parsedValue);
                                 }}
                                 className="border-2 border-[#81059e] p-2 rounded-sm w-full"
-                                placeholder={discountType === 'percentage' ? "Desconto em %" : "Desconto em R$"}
+                                placeholder={discountType === 'percentage' ? 'Desconto em %' : 'Desconto em R$'}
                             />
                         </div>
 
@@ -485,8 +491,35 @@ const NovaVendaPage = () => {
 
                                 <div className="flex justify-between font-bold text-lg pt-2 border-t border-gray-300">
                                     <span>Total:</span>
-                                    <span className="text-[#81059e]">{formatCurrencyFn(calculateTotal())}</span>
+                                    <div className="flex items-center">
+                                        <input
+                                            type="text"
+                                            value={formatCurrencyFn(totalEditado ?? calculateTotal())}
+                                            onChange={(e) => {
+                                                // Remove todos os caracteres não numéricos
+                                                const onlyNumbers = e.target.value.replace(/\D/g, '');
+                                                // Converte para número e divide por 100 para obter o valor em reais
+                                                const parsedValue = onlyNumbers ? Number(onlyNumbers) / 100 : 0;
+                                                setTotalEditado(parsedValue);
+                                            }}
+                                            className="text-[#81059e] font-bold text-lg w-32 text-right focus:outline-none focus:border-b-2 focus:border-[#81059e]"
+                                        />
+                                        <button
+                                            onClick={() => setTotalEditado(null)}
+                                            className="ml-2 text-gray-400 hover:text-gray-600"
+                                            title="Resetar para valor calculado"
+                                        >
+                                            <FiRefreshCw size={16} />
+                                        </button>
+                                    </div>
                                 </div>
+
+                                {totalEditado !== null && totalEditado !== calculateTotal() && (
+                                    <div className="text-xs text-orange-500 flex justify-end items-center gap-1">
+                                        <FiAlertTriangle size={14} />
+                                        <span>Valor ajustado manualmente</span>
+                                    </div>
+                                )}
                             </div>
                         </div>
 
@@ -526,7 +559,12 @@ const NovaVendaPage = () => {
                         <button
                             onClick={() => {
                                 setIsFinalizando(true);
-                                handleFinalizarClicked().finally(() => {
+                                // Aqui, passamos o valor total editado para a função de finalização
+                                const valorTotalFinal = totalEditado !== null ? totalEditado : calculateTotal();
+
+                                // Verificar se handleFinalizarClicked aceita parâmetros
+                                // Se não aceitar, você precisará modificar o hook useModalNovaVenda
+                                handleFinalizarClicked(valorTotalFinal).finally(() => {
                                     setIsFinalizando(false);
                                 });
                             }}

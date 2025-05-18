@@ -320,7 +320,7 @@ export default function ListaArmacoes() {
           const armacao = armacoes.find(a => a.id === armacaoId);
           if (armacao && armacao.loja) {
             // Excluir a armação
-            const armacaoRef = doc(firestore, `/estoque/${armacao.loja}/armacoes/items`, armacaoId);
+            const armacaoRef = doc(firestore, `/estoque/${armacao.loja}/armacoes/`, armacaoId);
             await deleteDoc(armacaoRef);
           }
         }
