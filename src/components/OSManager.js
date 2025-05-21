@@ -979,9 +979,7 @@ const OSManager = ({ cartItems, selectedClient, onOSChange, collections, activeC
                                             />
                                             <span className="ml-2 font-medium">Lente Esportiva</span>
                                         </div>
-                                        <p className="text-xs text-yellow-700 ml-6">Recomendado somente para coloração.</p>
                                     </div>
-                                    <span className="text-sm font-medium">+ R$ 5,00</span>
                                     </label>
                             </div>
                         </div>

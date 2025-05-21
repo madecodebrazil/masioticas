@@ -121,7 +121,7 @@ const ClienteSelecao = ({
               <div>
                 <h3 className="font-semibold text-[#81059e]">{selectedClient.nome}</h3>
                 {selectedClient.isTemp && (
-                  <p className="text-orange-500 text-sm">Cliente temporário (apenas nome)</p>
+                  <p className="text-gray-400 text-sm">Cliente só apresentou o nome.</p>
                 )}
                 {selectedClient.cpf && <p className="text-gray-600 text-sm">CPF: {selectedClient.cpf}</p>}
                 {selectedClient.telefone && <p className="text-gray-600 text-sm">Tel: {selectedClient.telefone}</p>}

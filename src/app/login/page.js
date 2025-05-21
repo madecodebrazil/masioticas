@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { FaEye, FaEyeSlash } from 'react-icons/fa'; // Importa os ícones de olho
+import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import { useRouter } from 'next/navigation';
 import { auth } from '../../lib/firebaseConfig';
 import { motion } from 'framer-motion';
+import Link from 'next/link';
 
 export default function Login() {
     const [email, setEmail] = useState('');
@@ -143,8 +144,10 @@ export default function Login() {
                             </div>
 
                             <div className='flex justify-between'>
-                                <a href='#' className='text-left text-purple-300 underline text-sm pl-1'>Cadastre-se</a>
-                                <a href='#' className='text-right text-purple-300 underline text-sm pr-1'>Esqueceu a senha?</a>
+                                <a href='#' className='text-left text-purple-300 underline text-sm pl-1'>Cliente? Cadastre-se</a>
+                                <Link href="/login/reset_password" className='text-right text-purple-300 underline text-sm pr-1'>
+                                    Esqueceu a senha?
+                                </Link>
                             </div>
 
                             <div className="btn flex justify-center mt-4">

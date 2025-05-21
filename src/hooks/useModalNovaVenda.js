@@ -1,4 +1,4 @@
-// src/hooks/useModalNovaVenda.js
+// src/hooks/useModalNovaVenda.js - Completo e corrigido
 import { useState, useEffect } from 'react';
 import { collection, doc, setDoc, getDocs, query, limit, orderBy, where, addDoc } from 'firebase/firestore';
 import { firestore } from '../lib/firebaseConfig';
@@ -16,6 +16,11 @@ const useModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
     const [vendedor, setVendedor] = useState('Admin');
     const [totalEditado, setTotalEditado] = useState(null);
 
+    // NOVO: Estado para armazenar coleções
+    const [collections, setCollections] = useState([
+        { id: 1, name: "Coleção 1", items: [] }
+    ]);
+    const [activeCollectionId, setActiveCollectionId] = useState(1);
 
     // Estados para gerenciamento de ID
     const [saleId, setSaleId] = useState('');
@@ -72,34 +77,7 @@ const useModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
     });
     const [osFormsCompleted, setOsFormsCompleted] = useState(true);
 
-    // Implementações das funções de cálculo
-    const calculateSubtotal = () => {
-        return cartItems.reduce((total, item) => total + (item.valor || 0) * (item.quantity || 1), 0);
-    };
-
-    const calculateDiscount = () => {
-        if (!discount) return 0;
-        if (discountType === 'percentage') {
-            return calculateSubtotal() * (discount / 100);
-        }
-        return discount;
-    };
-
-    const calculateTotal = () => {
-        const subtotal = calculateSubtotal();
-        const discountValue = calculateDiscount();
-        return subtotal - discountValue;
-    };
-
-    const calculateTotalAllocated = () => {
-        return paymentMethods.reduce((total, method) => total + (method.value || 0), 0);
-    };
-
-    const calculateRemainingValue = () => {
-        return calculateTotal() - calculateTotalAllocated();
-    };
-
-    // Função fetchClients melhorada para carregar e mostrar clientes corretamente
+    // AQUI: Implementação da função fetchClients corrigida
     const fetchClients = async () => {
         try {
             setLoading(true);
@@ -135,7 +113,7 @@ const useModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
         }
     };
 
-    // Função separada para filtrar clientes - mais eficiente
+    // AQUI: Implementação da função filterClients
     const filterClients = (term, clientsList = clients) => {
         if (!term || term.trim() === '') {
             setFilteredClients([]);
@@ -163,7 +141,7 @@ const useModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
         setFilteredClients(filtered);
     };
 
-    // useEffect atualizado para filtrar em tempo real
+    // useEffect para filtrar clientes quando o termo de busca muda
     useEffect(() => {
         // Se não houver termo de busca, não mostrar resultados
         if (!searchTerm || searchTerm.trim() === '') {
@@ -180,9 +158,10 @@ const useModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
         }
     }, [searchTerm]);
 
-    // Função para buscar produtos
+    // AQUI: Implementação corrigida da função fetchProducts
     const fetchProducts = async () => {
         try {
+            setLoading(true);
             // Buscar produtos do estoque
             const categorias = ['armacoes', 'lentes', 'solares', 'acessorios'];
             let todosOsProdutos = [];
@@ -199,10 +178,81 @@ const useModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
             }
 
             setProducts(todosOsProdutos);
+            setLoading(false);
         } catch (error) {
             console.error('Erro ao buscar produtos:', error);
             setError('Erro ao carregar lista de produtos');
+            setLoading(false);
         }
+    };
+
+    // MODIFICAÇÃO: Função calculateSubtotal atualizada para considerar todas as coleções
+    const calculateSubtotal = () => {
+        // Se temos coleções com itens, calcular baseado em todas as coleções
+        if (collections && collections.length > 0 && collections.some(c => c.items && c.items.length > 0)) {
+            return collections.reduce((total, collection) => {
+                if (!collection.items) return total;
+                
+                const collectionSubtotal = collection.items.reduce(
+                    (colTotal, item) => colTotal + ((item.valor || item.preco || 0) * (item.quantity || 1)), 
+                    0
+                );
+                return total + collectionSubtotal;
+            }, 0);
+        }
+        
+        // Fallback para o método original usando apenas cartItems
+        return cartItems.reduce(
+            (total, item) => total + ((item.valor || item.preco || 0) * (item.quantity || 1)), 
+            0
+        );
+    };
+
+    // Função calculateDiscount modificada para trabalhar com o novo calculateSubtotal
+    const calculateDiscount = () => {
+        if (!discount) return 0;
+        
+        const subtotal = calculateSubtotal();
+        
+        if (discountType === 'percentage') {
+            return subtotal * (discount / 100);
+        }
+        return discount;
+    };
+
+    // Função calculateTotal modificada 
+    const calculateTotal = () => {
+        const subtotal = calculateSubtotal();
+        const discountValue = calculateDiscount();
+        return subtotal - discountValue;
+    };
+
+    // Função para obter todos os itens de todas as coleções para a finalização da venda
+    const getAllItemsFromCollections = () => {
+        return collections.reduce((allItems, collection) => {
+            if (!collection.items) return allItems;
+            
+            // Adicionar id da coleção em cada item
+            const itemsWithCollectionId = collection.items.map(item => ({
+                ...item,
+                collectionId: collection.id,
+                collectionName: collection.name
+            }));
+            
+            return [...allItems, ...itemsWithCollectionId];
+        }, []);
+    };
+
+    // Função calculateTotalAllocated para pagamentos
+    const calculateTotalAllocated = () => {
+        return paymentMethods.reduce((total, method) => total + (method.value || 0), 0);
+    };
+
+    // Função calculateRemainingValue para pagamentos
+    const calculateRemainingValue = () => {
+        // Usar o total editado se disponível, caso contrário calcular
+        const total = totalEditado !== null ? totalEditado : calculateTotal();
+        return total - calculateTotalAllocated();
     };
 
     // Função para verificar se um item precisa de OS
@@ -223,20 +273,13 @@ const useModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
         return colecao.items.some(item => precisaDeOS(item));
     };
 
-    // Função auxiliar para remover valores undefined de um objeto
-    const removerValoresUndefined = (obj) => {
-        return Object.fromEntries(
-            Object.entries(obj).filter(([_, v]) => v !== undefined)
-        );
-    };
-
-    // Função para selecionar cliente
+    // AQUI: Implementação corrigida da função handleSelectClient
     const handleSelectClient = (client) => {
         setSelectedClient(client);
         setSearchTerm('');
     };
 
-    // Função para lidar com mudanças na OS
+    // Função handleOSChange
     const handleOSChange = (data) => {
         setOsStatus(data);
         setOsFormsCompleted(data.allCompleted);
@@ -248,6 +291,7 @@ const useModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
         return paymentMethods.every(p => p.processed);
     };
 
+    // Função isPaymentComplete atualizada para usar o valor total editado quando disponível
     const isPaymentComplete = () => {
         if (tipoTransacao !== 'venda') return true;
         if (paymentMethods.length === 0) return false;
@@ -255,23 +299,29 @@ const useModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
         // Verifica se todos os métodos de pagamento foram processados
         const todosProcessados = paymentMethods.every(method => method.processed);
 
-        // Usa o valor total editado se disponível, caso contrário usa o valor calculado
+        // Usa o valor total editado se disponível
         const total = totalEditado !== null ? totalEditado : calculateTotal();
         const totalPago = calculateTotalAllocated();
 
+        // Considerar um pequeno delta para evitar problemas de arredondamento
         return todosProcessados && Math.abs(total - totalPago) < 0.01;
     };
 
+    // Função canFinalizeSale
     const canFinalizeSale = () => {
         if (tipoTransacao === 'venda') {
-            return cartItems.length > 0 &&
+            // Para vendas, verificar pagamentos e OS
+            const hasItems = collections.some(c => c.items && c.items.length > 0);
+            
+            return hasItems && 
                 selectedClient &&
                 allPaymentsProcessed() &&
                 isPaymentComplete() &&
                 (osStatus.tipo === 'sem_os' || osFormsCompleted);
         } else {
-            // Para orçamentos, apenas verificamos se há itens e cliente selecionado
-            return cartItems.length > 0 && selectedClient;
+            // Para orçamentos, apenas verificar itens e cliente
+            const hasItems = collections.some(c => c.items && c.items.length > 0);
+            return hasItems && selectedClient;
         }
     };
 
@@ -333,6 +383,8 @@ const useModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
 
     // Função para adicionar item ao carrinho
     const addToCart = (product, quantity = 1) => {
+        if (!product) return;
+
         const existingItemIndex = cartItems.findIndex(item => item.id === product.id);
 
         if (existingItemIndex >= 0) {
@@ -342,13 +394,54 @@ const useModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
             setCartItems(updatedItems);
         } else {
             // Adicionar novo item ao carrinho
-            setCartItems([...cartItems, { ...product, quantity }]);
+            const newItem = {
+                ...product,
+                quantity,
+                collectionId: activeCollectionId
+            };
+            setCartItems([...cartItems, newItem]);
         }
+
+        // Atualizar também na coleção ativa
+        const updatedCollections = collections.map(c => {
+            if (c.id === activeCollectionId) {
+                const existingItem = c.items?.find(item => item.id === product.id);
+                if (existingItem) {
+                    // Atualizar quantidade do item existente
+                    return {
+                        ...c,
+                        items: c.items.map(item => 
+                            item.id === product.id 
+                                ? {...item, quantity: item.quantity + quantity}
+                                : item
+                        )
+                    };
+                } else {
+                    // Adicionar novo item à coleção
+                    return {
+                        ...c,
+                        items: [...(c.items || []), {...product, quantity, collectionId: activeCollectionId}]
+                    };
+                }
+            }
+            return c;
+        });
+        
+        setCollections(updatedCollections);
     };
 
     // Função para remover item do carrinho
     const removeFromCart = (itemId) => {
+        // Remover do cartItems
         setCartItems(cartItems.filter(item => item.id !== itemId));
+
+        // Remover também de todas as coleções
+        const updatedCollections = collections.map(collection => ({
+            ...collection,
+            items: collection.items?.filter(item => item.id !== itemId) || []
+        }));
+
+        setCollections(updatedCollections);
     };
 
     // Função para atualizar quantidade de um item no carrinho
@@ -358,11 +451,21 @@ const useModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
             return;
         }
 
-        const updatedItems = cartItems.map(item =>
+        // Atualizar em cartItems
+        const updatedCartItems = cartItems.map(item =>
             item.id === itemId ? { ...item, quantity: newQuantity } : item
         );
+        setCartItems(updatedCartItems);
 
-        setCartItems(updatedItems);
+        // Atualizar em todas as coleções
+        const updatedCollections = collections.map(collection => ({
+            ...collection,
+            items: collection.items?.map(item =>
+                item.id === itemId ? { ...item, quantity: newQuantity } : item
+            ) || []
+        }));
+
+        setCollections(updatedCollections);
     };
 
     // Função para formatar moeda
@@ -373,7 +476,7 @@ const useModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
         }).format(value);
     };
 
-    // Função para lidar com mudança no valor pago
+    // Função handleValorPagoChange para lidar com valor pago
     const handleValorPagoChange = (value) => {
         const valorNumerico = parseFloat(value);
         if (!isNaN(valorNumerico)) {
@@ -383,7 +486,7 @@ const useModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
         }
     };
 
-    // Função para lidar com submissão de dados de cartão de crédito
+    // Função handleCreditCardSubmit para processar cartão de crédito
     const handleCreditCardSubmit = (cardData) => {
         setDadosCartao(cardData);
         setShowCreditCardForm(false);
@@ -404,10 +507,96 @@ const useModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
         }
     };
 
-    // Função para finalizar a venda ou orçamento
+    // MODIFICAÇÃO: Função handleFinalizarClicked atualizada para aceitar valor total personalizado
+    const handleFinalizarClicked = async (valorTotalPersonalizado = null) => {
+        // Resetar erro
+        setError('');
+
+        // Verificar se há itens em qualquer coleção
+        const hasItems = collections.some(c => c.items && c.items.length > 0);
+        
+        // Validações básicas
+        if (!hasItems) {
+            setError('Adicione pelo menos um item ao carrinho');
+            return;
+        }
+
+        if (!selectedClient) {
+            setError('Selecione um cliente');
+            return;
+        }
+
+        try {
+            setLoading(true);
+
+            // Verificar se é um cliente temporário (apenas nome)
+            if (selectedClient.isTemp) {
+                try {
+                    // Criar o cliente na coleção com dados mínimos
+                    const clienteRef = doc(collection(firestore, `lojas/clientes/users`));
+
+                    await setDoc(clienteRef, {
+                        nome: selectedClient.nome,
+                        createdAt: new Date().toISOString(),
+                        isTemp: true,
+                        dataUltimaCompra: new Date().toISOString(),
+                        tipo: 'pessoa_fisica',
+                        status: 'ativo'
+                    });
+
+                    // Atualizar o cliente selecionado com o ID correto
+                    setSelectedClient({
+                        ...selectedClient,
+                        id: clienteRef.id,
+                    });
+
+                    console.log('Cliente temporário salvo com sucesso:', clienteRef.id);
+                } catch (error) {
+                    console.error('Erro ao salvar cliente temporário:', error);
+                    setError('Erro ao salvar informações do cliente');
+                    setLoading(false);
+                    return;
+                }
+            }
+
+            // Validações específicas para venda
+            if (tipoTransacao === 'venda') {
+                if (osStatus.tipo !== 'sem_os' && !osFormsCompleted) {
+                    setError('Preencha todos os formulários de OS antes de finalizar');
+                    setLoading(false);
+                    return;
+                }
+
+                // Validações de pagamento para venda
+                if (!isPaymentComplete()) {
+                    setError('O valor total dos pagamentos deve ser igual ao valor da venda');
+                    setLoading(false);
+                    return;
+                }
+            }
+
+            // Processar a finalização com o valor personalizado ou calculado
+            const valorTotalFinal = valorTotalPersonalizado !== null ? 
+                valorTotalPersonalizado : (totalEditado !== null ? totalEditado : calculateTotal());
+            
+            const resultId = await finalizeSale(valorTotalFinal);
+            console.log(`${tipoTransacao} finalizado com ID: ${resultId}`);
+
+        } catch (error) {
+            console.error(`Erro ao finalizar ${tipoTransacao}:`, error);
+            setError(`Erro ao finalizar ${tipoTransacao}: ${error.message}`);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // MODIFICAÇÃO: Função finalizeSale atualizada para usar itens de todas as coleções
     const finalizeSale = async (valorTotalFinal) => {
         try {
             setLoading(true);
+
+            // Obter TODOS os itens de TODAS as coleções
+            const todosOsItens = getAllItemsFromCollections();
 
             // Se for uma venda e tiver OS, processe as OS
             if (tipoTransacao === 'venda' && osStatus.tipo !== 'sem_os') {
@@ -468,7 +657,11 @@ const useModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
                         }
                     };
 
-                    const dadosOSLimpos = removerValoresUndefined(dadosOS);
+                    // Remover valores undefined
+                    const dadosOSLimpos = Object.fromEntries(
+                        Object.entries(dadosOS).filter(([_, v]) => v !== undefined)
+                    );
+                    
                     const osRef = collection(firestore, `lojas/${selectedLoja}/servicos/items/items`);
                     await addDoc(osRef, dadosOSLimpos);
                 }
@@ -482,7 +675,6 @@ const useModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
             console.log(`Salvando ${tipoTransacao} na coleção:`, colecao);
 
             // Criar objeto com dados da transação
-            // Usar o valor total passado como parâmetro em vez de calculateTotal()
             const dadosTransacao = {
                 data_criacao: new Date(),
                 data_venda: dataVenda ? new Date(dataVenda) : new Date(),
@@ -492,23 +684,32 @@ const useModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
                     cpf: selectedClient.cpf || '',
                     telefone: selectedClient.telefone || ''
                 } : null,
-                itens: cartItems.map(item => ({
+                itens: todosOsItens.map(item => ({
                     id: item.id,
                     nome: item.nome || item.titulo || '',
                     quantidade: item.quantity || 1,
                     valor_unitario: item.valor || 0,
                     valor_total: (item.valor || 0) * (item.quantity || 1),
-                    categoria: item.categoria || ''
+                    categoria: item.categoria || '',
+                    // Informações da coleção para rastreabilidade
+                    colecao_id: item.collectionId,
+                    colecao_nome: item.collectionName
                 })),
                 subtotal: calculateSubtotal(),
                 desconto: calculateDiscount(),
                 desconto_tipo: discountType,
-                valor_total: valorTotalFinal, // Aqui usamos o valor total passado como parâmetro
+                valor_total: valorTotalFinal, // Usar o valor total final passado como parâmetro
                 valor_editado: valorTotalFinal !== calculateTotal(), // Flag para indicar se o valor foi editado manualmente
                 observacoes: observation,
                 vendedor: vendedor || 'Admin',
                 status: tipoTransacao === 'venda' ? 'paga' : 'aguardando_aprovacao',
-                metodos_pagamento: tipoTransacao === 'venda' ? paymentMethods : []
+                metodos_pagamento: tipoTransacao === 'venda' ? paymentMethods : [],
+                // Salvar informações sobre as coleções
+                colecoes: collections.map(c => ({
+                    id: c.id,
+                    nome: c.name,
+                    quantidade_itens: c.items?.length || 0
+                }))
             };
 
             // Registrar no Firebase
@@ -541,91 +742,19 @@ const useModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
         }
     };
 
-    // Função handleFinalizarClicked atualizada para usar o valor total editado
-    const handleFinalizarClicked = async () => {
-        // Resetar erro
-        setError('');
-
-        // Validações básicas
-        if (cartItems.length === 0) {
-            setError('Adicione pelo menos um item ao carrinho');
-            return;
-        }
-
-        if (!selectedClient) {
-            setError('Selecione um cliente');
-            return;
-        }
-
-        try {
-            setLoading(true);
-
-            // Verificar se é um cliente temporário (apenas nome)
-            if (selectedClient.isTemp) {
-                try {
-                    // Criar o cliente na coleção com dados mínimos - Caminho correto
-                    const clienteRef = doc(collection(firestore, `lojas/clientes/users`));
-
-                    await setDoc(clienteRef, {
-                        nome: selectedClient.nome,
-                        createdAt: new Date().toISOString(),
-                        isTemp: true, // Marcar como cliente temporário para futuras referências
-                        dataUltimaCompra: new Date().toISOString(),
-                        tipo: 'pessoa_fisica',
-                        status: 'ativo'
-                    });
-
-                    // Atualizar o cliente selecionado com o ID correto do banco de dados
-                    setSelectedClient({
-                        ...selectedClient,
-                        id: clienteRef.id,
-                    });
-
-                    console.log('Cliente temporário salvo com sucesso:', clienteRef.id);
-                } catch (error) {
-                    console.error('Erro ao salvar cliente temporário:', error);
-                    setError('Erro ao salvar informações do cliente');
-                    setLoading(false);
-                    return;
-                }
-            }
-
-            // Validações específicas para venda
-            if (tipoTransacao === 'venda') {
-                if (osStatus.tipo !== 'sem_os' && !osFormsCompleted) {
-                    setError('Preencha todos os formulários de OS antes de finalizar');
-                    setLoading(false);
-                    return;
-                }
-
-                // Validações de pagamento para venda
-                // Aqui usamos o valor total editado, se disponível
-                if (!isPaymentComplete()) {
-                    setError('O valor total dos pagamentos deve ser igual ao valor da venda');
-                    setLoading(false);
-                    return;
-                }
-            }
-
-            // Processar a finalização
-            // Obter o valor total, priorizando o valor editado se estiver disponível
-            const valorTotalFinal = totalEditado !== null ? totalEditado : calculateTotal();
-
-            // Passar o valor total final para a função de finalização
-            const resultId = await finalizeSale(valorTotalFinal);
-            console.log(`${tipoTransacao} finalizado com ID: ${resultId}`);
-
-        } catch (error) {
-            console.error(`Erro ao finalizar ${tipoTransacao}:`, error);
-            setError(`Erro ao finalizar ${tipoTransacao}: ${error.message}`);
-        } finally {
-            setLoading(false);
-        }
+    // ADICIONADO: Função para atualizar as coleções a partir do componente filho
+    const updateCollections = (newCollections) => {
+        setCollections(newCollections);
     };
 
-    // ATENÇÃO: Este return deve ser adicionado ao final da função useModalNovaVenda (antes do último }):
+    // ADICIONADO: Função para atualizar a coleção ativa a partir do componente filho
+    const setActiveCollection = (collectionId) => {
+        setActiveCollectionId(collectionId);
+    };
+
+    // MODIFICAÇÃO: Return com os estados e funções adicionais para coleções
     return {
-        // Estados
+        // Estados originais
         cartItems,
         selectedClient,
         tipoTransacao,
@@ -652,7 +781,6 @@ const useModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
         paymentMethods,
         valorPago,
         totalEditado,
-        setTotalEditado,
         troco,
         currentPaymentIndex,
         valueDistribution,
@@ -674,7 +802,11 @@ const useModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
         osStatus,
         osFormsCompleted,
 
-        // Setters
+        // NOVO: Estados para coleções
+        collections,
+        activeCollectionId,
+
+        // Setters originais
         setCartItems,
         setSelectedClient,
         setTipoTransacao,
@@ -700,6 +832,7 @@ const useModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
         setNovaVendaRef,
         setPaymentMethods,
         setValorPago,
+        setTotalEditado,
         setTroco,
         setCurrentPaymentIndex,
         setValueDistribution,
@@ -721,7 +854,11 @@ const useModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
         setOsStatus,
         setOsFormsCompleted,
 
-        // Funções
+        // NOVO: Setters para coleções
+        setCollections,
+        setActiveCollectionId,
+
+        // Funções originais
         handleOSChange,
         precisaDeOS,
         colecaoPrecisaDeOS,
@@ -732,9 +869,9 @@ const useModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
         finalizeSale,
         processPaymentMethod,
         handleClose: onClose,
-        fetchClients,
-        fetchProducts,
-        handleSelectClient,
+        fetchClients,  // Esta é a função que estava causando o erro
+        fetchProducts, // Agora está implementada corretamente
+        handleSelectClient, // Agora está implementada corretamente
         calculateSubtotal,
         calculateDiscount,
         calculateTotal,
@@ -749,7 +886,12 @@ const useModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
         updateQuantity,
         formatCurrency,
         handleValorPagoChange,
-        handleCreditCardSubmit
+        handleCreditCardSubmit,
+        
+        // NOVO: Funções para coleções
+        updateCollections,
+        setActiveCollection,
+        getAllItemsFromCollections
     };
 };
 

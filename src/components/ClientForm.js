@@ -4,7 +4,7 @@ import { getDoc, setDoc, doc, serverTimestamp, collection, addDoc, getDocs, quer
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { firestore } from '@/lib/firebaseConfig';
 import InputMask from 'react-input-mask';
-import { FiUser, FiMail, FiPhone, FiCalendar, FiMapPin, FiHash, FiHome, FiImage, FiFileText, FiCamera, FiCheckCircle, FiX, FiFile, FiSearch } from 'react-icons/fi';
+import { FiUser, FiMail, FiPhone, FiCalendar, FiMapPin, FiHash, FiHome, FiImage, FiFileText, FiCamera, FiCheckCircle, FiX, FiFile, FiSearch, FiUsers } from 'react-icons/fi';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUsers } from "@fortawesome/free-solid-svg-icons";
 
@@ -18,6 +18,11 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
         genero: '',
         observacoes: '',
         parentesco: '',
+        contatoAlternativo: {
+            nome: '',
+            telefone: '',
+            relacao: ''
+        },
         endereco: {
             cep: '',
             logradouro: '',
@@ -193,7 +198,7 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
             setSelectedFile(files[0]);
             setSelectedFileName(files[0].name);
         } else if (name.includes('.')) {
-            // Tratamento para campos aninhados como endereco.cep
+            // Tratamento para campos aninhados como endereco.cep ou contatoAlternativo.nome
             const [parent, child] = name.split('.');
 
             setFormData((prevData) => ({
@@ -215,6 +220,20 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
             setFormData((prevData) => ({ ...prevData, [name]: value }));
         }
     };
+
+    // 4. Adicione as seguintes opções para o campo de relação do contato alternativo:
+    const relacoesContatoAlternativo = [
+        'Amigo(a)',
+        'Cônjuge',
+        'Filho(a)',
+        'Pai/Mãe',
+        'Irmão/Irmã',
+        'Tio(a)',
+        'Sobrinho(a)',
+        'Vizinho(a)',
+        'Colega de trabalho',
+        'Outro'
+    ];
 
     const handleImageChange = (e) => {
         const file = e.target.files[0];
@@ -279,7 +298,7 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
 
     // Função para selecionar um cliente dos resultados da busca - estilo add-receive
     const handleSelectCliente = (cliente) => {
-       setSelectedTitular(cliente); 
+        setSelectedTitular(cliente);
         setSearchTerm(cliente.nome);
         setFormData(prev => ({
             ...prev,
@@ -458,7 +477,7 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
                 const usersCollection = collection(firestore, 'lojas/clientes/users');
                 const docRef = await addDoc(usersCollection, clienteData);
 
-                 // Se for dependente, atualizar titular para indicar que possui dependentes
+                // Se for dependente, atualizar titular para indicar que possui dependentes
                 if (!isTitular && selectedTitular) {
                     const titularRef = doc(firestore, 'lojas/clientes/users', selectedTitular);
                     await updateDoc(titularRef, {
@@ -477,6 +496,11 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
                     genero: '',
                     observacoes: '',
                     parentesco: '',
+                    contatoAlternativo: {
+                        nome: '',
+                        telefone: '',
+                        relacao: ''
+                    },
                     endereco: {
                         cep: '',
                         logradouro: '',
@@ -903,6 +927,66 @@ const ClientForm = ({ selectedLoja, onSuccessRedirect, userId, userName }) => {
                     </div>
                 </div>
             </div>
+
+
+
+            {/* Adicione esta seção logo após a seção de Endereço e antes da seção de Observações */}
+
+            <div className="mt-6">
+                <h3 className="text-sm font-medium text-[#81059e] flex items-center gap-1">
+                    <FiPhone /> Contato Alternativo (Opcional)
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
+                    <div>
+                        <label className="flex text-[#81059e] font-medium items-center gap-1">
+                            <FiUser /> Nome
+                        </label>
+                        <input
+                            type="text"
+                            name="contatoAlternativo.nome"
+                            value={formData.contatoAlternativo.nome}
+                            onChange={handleChange}
+                            placeholder="Nome do contato alternativo"
+                            className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="flex text-[#81059e] font-medium items-center gap-1">
+                            <FiPhone /> Telefone
+                        </label>
+                        <InputMask
+                            mask="(99) 99999-9999"
+                            type="tel"
+                            name="contatoAlternativo.telefone"
+                            value={formData.contatoAlternativo.telefone}
+                            onChange={handleChange}
+                            placeholder="(00) 00000-0000"
+                            className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="flex text-[#81059e] font-medium items-center gap-1">
+                            <FiUsers /> Relação
+                        </label>
+                        <select
+                            name="contatoAlternativo.relacao"
+                            value={formData.contatoAlternativo.relacao}
+                            onChange={handleChange}
+                            className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
+                        >
+                            <option value="">Selecione a relação</option>
+                            {relacoesContatoAlternativo.map((opcao) => (
+                                <option key={opcao} value={opcao}>
+                                    {opcao}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                </div>
+            </div>
+
 
             <div className="mt-6">
                 <label className="flex text-[#81059e] font-medium items-center gap-1">

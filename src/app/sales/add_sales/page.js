@@ -380,7 +380,7 @@ const NovaVendaPage = () => {
 
                         {/* Gerenciamento de OS */}
                         {cartItems?.length > 0 && (
-                            <div className="bg-white p-4 rounded-lg shadow-sm mb-4">
+                            <div className="bg-white rounded-lg shadow-sm mb-4">
                                 <OSManager
                                     cartItems={cartItems}
                                     selectedClient={selectedClient}

@@ -5,6 +5,8 @@ import { collection, getDocs } from 'firebase/firestore';
 import { firestore } from '@/lib/firebaseConfig';
 import { useAuth } from '@/hooks/useAuth';
 import { Html5Qrcode } from 'html5-qrcode';
+import ProductInfoModal from '@/components/venda/ProductInfoModal';
+import PriceEditModal from '@/components/venda/PriceEditModal';
 
 // Componente para o scanner QR Code
 const QrCodeScanner = ({ onScan, onClose }) => {
@@ -79,236 +81,6 @@ const QrCodeScanner = ({ onScan, onClose }) => {
   );
 };
 
-// Componente para o modal de informações do produto
-const ProductInfoModal = ({ product, onClose }) => {
-  if (!product) return null;
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center p-4 border-b bg-[#81059e]">
-          <h3 className="text-xl font-bold text-white">Informações do Produto</h3>
-          <button 
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-500"
-          >
-            <FiX size={24} />
-          </button>
-        </div>
-        
-        <div className="p-6 space-y-4">
-          <div>
-            <h4 className="text-sm font-semibold text-gray-500">Título</h4>
-            <p className="text-lg">{product.nome || product.titulo || "Sem nome"}</p>
-          </div>
-          
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <h4 className="text-sm font-semibold text-gray-500">Código</h4>
-              <p>{product.codigo || "N/A"}</p>
-            </div>
-            <div>
-              <h4 className="text-sm font-semibold text-gray-500">SKU</h4>
-              <p>{product.sku || "N/A"}</p>
-            </div>
-            <div>
-              <h4 className="text-sm font-semibold text-gray-500">Marca</h4>
-              <p>{product.marca || "N/A"}</p>
-            </div>
-            <div>
-              <h4 className="text-sm font-semibold text-gray-500">Categoria</h4>
-              <p className="capitalize">{product.categoria || "N/A"}</p>
-            </div>
-            <div>
-              <h4 className="text-sm font-semibold text-gray-500">Estoque</h4>
-              <p>{product.quantidade || "0"} unidades</p>
-            </div>
-            <div>
-              <h4 className="text-sm font-semibold text-gray-500">Preço</h4>
-              <p className="font-semibold text-[#81059e]">
-                {new Intl.NumberFormat('pt-BR', {
-                  style: 'currency',
-                  currency: 'BRL'
-                }).format(product.valor || product.preco || 0)}
-              </p>
-            </div>
-          </div>
-          
-          {/* Informações específicas baseadas na categoria */}
-          {product.categoria === 'armacoes' && (
-            <div className="border-t pt-4 mt-4">
-              <h4 className="text-sm font-semibold text-gray-500 mb-2">Especificações da Armação</h4>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <h5 className="text-xs text-gray-500">Material</h5>
-                  <p>{product.material || "N/A"}</p>
-                </div>
-                <div>
-                  <h5 className="text-xs text-gray-500">Formato</h5>
-                  <p>{product.formato || "N/A"}</p>
-                </div>
-                <div>
-                  <h5 className="text-xs text-gray-500">Tamanho</h5>
-                  <p>{product.tamanho || "N/A"}</p>
-                </div>
-                <div>
-                  <h5 className="text-xs text-gray-500">Cor</h5>
-                  <p>{product.cor || "N/A"}</p>
-                </div>
-              </div>
-            </div>
-          )}
-          
-          {product.categoria === 'lentes' && (
-            <div className="border-t pt-4 mt-4">
-              <h4 className="text-sm font-semibold text-gray-500 mb-2">Especificações da Lente</h4>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <h5 className="text-xs text-gray-500">Tipo</h5>
-                  <p>{product.tipo || "N/A"}</p>
-                </div>
-                <div>
-                  <h5 className="text-xs text-gray-500">Material</h5>
-                  <p>{product.material || "N/A"}</p>
-                </div>
-                <div>
-                  <h5 className="text-xs text-gray-500">Tratamento</h5>
-                  <p>{product.tratamento || "N/A"}</p>
-                </div>
-                <div>
-                  <h5 className="text-xs text-gray-500">Índice</h5>
-                  <p>{product.indice || "N/A"}</p>
-                </div>
-              </div>
-            </div>
-          )}
-          
-          {product.categoria === 'solares' && (
-            <div className="border-t pt-4 mt-4">
-              <h4 className="text-sm font-semibold text-gray-500 mb-2">Especificações do Óculos Solar</h4>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <h5 className="text-xs text-gray-500">Material</h5>
-                  <p>{product.material || "N/A"}</p>
-                </div>
-                <div>
-                  <h5 className="text-xs text-gray-500">Formato</h5>
-                  <p>{product.formato || "N/A"}</p>
-                </div>
-                <div>
-                  <h5 className="text-xs text-gray-500">Proteção UV</h5>
-                  <p>{product.protecao_uv ? "Sim" : "Não"}</p>
-                </div>
-                <div>
-                  <h5 className="text-xs text-gray-500">Com Grau</h5>
-                  <p>{product.info_geral?.tem_grau || product.info_adicional?.tem_grau ? "Sim" : "Não"}</p>
-                </div>
-              </div>
-            </div>
-          )}
-          
-          {/* Outras informações adicionais */}
-          {product.descricao && (
-            <div className="border-t pt-4 mt-4">
-              <h4 className="text-sm font-semibold text-gray-500 mb-2">Descrição</h4>
-              <p className="text-sm text-gray-700">{product.descricao}</p>
-            </div>
-          )}
-        </div>
-        
-        <div className="p-4 border-t flex justify-end">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-md"
-          >
-            Fechar
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// Componente para o modal de edição de preço
-const PriceEditModal = ({ product, onSave, onClose }) => {
-  const [priceValue, setPriceValue] = useState(product ? (product.valor || product.preco || 0) : 0);
-  const inputRef = useRef(null);
-
-  useEffect(() => {
-    // Focar no input quando o modal abrir
-    if (inputRef.current) {
-      inputRef.current.focus();
-    }
-  }, []);
-
-  const handlePriceChange = (e) => {
-    // Remove todos os caracteres não numéricos
-    const onlyNumbers = e.target.value.replace(/\D/g, '');
-    // Converte para número e divide por 100 para obter o valor em reais
-    const parsedValue = onlyNumbers ? Number(onlyNumbers) / 100 : 0;
-    setPriceValue(parsedValue);
-  };
-
-  const handleSave = () => {
-    onSave(priceValue);
-    onClose();
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
-        <div className="flex justify-between items-center p-4 border-b bg-[#81059e]">
-          <h3 className="text-xl font-bold text-white">Editar Preço</h3>
-          <button 
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-500"
-          >
-            <FiX size={24} />
-          </button>
-        </div>
-        
-        <div className="p-6">
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Produto: <span className="font-bold">{product?.nome || product?.titulo || "Produto"}</span>
-            </label>
-            <input
-              ref={inputRef}
-              type="text"
-              inputMode="numeric"
-              value={priceValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-              onChange={handlePriceChange}
-              className="border-2 border-[#81059e] p-3 rounded-md w-full text-lg"
-              placeholder="Valor em R$"
-            />
-            <p className="mt-2 text-sm text-gray-500">
-              Preço original: {new Intl.NumberFormat('pt-BR', {
-                style: 'currency',
-                currency: 'BRL'
-              }).format(product ? (product.valor_original || product.valor || product.preco || 0) : 0)}
-            </p>
-          </div>
-          
-          <div className="flex justify-end space-x-3">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 hover:bg-gray-50 text-[#81059e]"
-            >
-              Cancelar
-            </button>
-            <button
-              onClick={handleSave}
-              className="px-4 py-2 bg-[#81059e] hover:bg-[#6a0484] text-white rounded-sm"
-            >
-              Salvar
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
 const CarrinhoCompras = ({
   cartItems = [],
   setCartItems,
@@ -325,15 +97,16 @@ const CarrinhoCompras = ({
   const [newProductQty, setNewProductQty] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [categoriaFiltro, setCategoriaFiltro] = useState('todas');
   const [estoqueData, setEstoqueData] = useState([]);
   const [showQrScanner, setShowQrScanner] = useState(false);
   const searchInputRef = useRef(null);
-  
+
   // Estados para os modais
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [showPriceModal, setShowPriceModal] = useState(false);
-  
+
   // Limitação de resultados da busca
   const [maxResults, setMaxResults] = useState(20); // Limitando a 20 resultados por padrão
 
@@ -371,13 +144,22 @@ const CarrinhoCompras = ({
     }
   }, [selectedLoja, userPermissions]);
 
-  // Atualizar o componente pai quando o carrinho mudar
+  // MODIFICAÇÃO IMPORTANTE: Atualizar o componente pai com TODOS os itens de TODAS as coleções
   useEffect(() => {
     if (typeof updateCartValue === 'function') {
-      const subtotal = cartItems.reduce((total, item) =>
-        total + ((item.valor || item.preco || 0) * item.quantity), 0
-      );
-      updateCartValue(subtotal, collections);
+      // Calcular o subtotal baseado em TODOS os itens de TODAS as coleções
+      const subtotalGlobal = collections.reduce((total, collection) => {
+        if (!collection.items) return total;
+        
+        const collectionSubtotal = collection.items.reduce(
+          (colTotal, item) => colTotal + ((item.valor || item.preco || 0) * (item.quantity || 1)), 
+          0
+        );
+        return total + collectionSubtotal;
+      }, 0);
+      
+      // Enviar o subtotal global e as coleções para o componente pai
+      updateCartValue(subtotalGlobal, collections);
     }
   }, [cartItems, collections, updateCartValue]);
 
@@ -455,16 +237,21 @@ const CarrinhoCompras = ({
         const marca = (product.marca || '').toLowerCase();
         const sku = (product.sku || '').toLowerCase();
 
-        return nome.includes(searchTermLower) ||
+        const matchesSearch =
+          nome.includes(searchTermLower) ||
           codigo.includes(searchTermLower) ||
           marca.includes(searchTermLower) ||
           sku.includes(searchTermLower);
+
+        const matchesCategoria = categoriaFiltro === 'todas' || product.categoria === categoriaFiltro;
+
+        return matchesSearch && matchesCategoria;
       });
-      
+
       // Aplicar o limite de resultados
       setFilteredProducts(filtered.slice(0, maxResults));
     }
-  }, [productSearchTerm, estoqueData, maxResults]);
+  }, [productSearchTerm, estoqueData, categoriaFiltro, maxResults]);
 
   // Formatar para moeda brasileira (R$)
   const formatCurrencyValue = (value) => {
@@ -528,15 +315,30 @@ const CarrinhoCompras = ({
 
     // Se a coleção sendo removida for a ativa, mudar para a primeira coleção
     if (collectionId === activeCollectionId) {
-      setActiveCollectionId(collections[0].id);
+      // Encontrar a primeira coleção que não está sendo removida
+      const firstRemainingCollection = collections.find(c => c.id !== collectionId);
+      if (firstRemainingCollection) {
+        setActiveCollectionId(firstRemainingCollection.id);
+      }
     }
 
     // Remover a coleção
     const updatedCollections = collections.filter(c => c.id !== collectionId);
     setCollections(updatedCollections);
 
-    // Remover itens do carrinho que pertenciam à coleção removida
-    setCartItems(cartItems.filter(item => item.collectionId !== collectionId));
+    // Atualizar cartItems se a coleção ativa mudou
+    if (collectionId === activeCollectionId) {
+      const newActiveCollection = updatedCollections[0];
+      if (newActiveCollection) {
+        const newCartItems = newActiveCollection.items.map(item => ({
+          ...item,
+          collectionId: newActiveCollection.id
+        }));
+        setCartItems(newCartItems);
+      } else {
+        setCartItems([]);
+      }
+    }
   };
 
   // Adicionar produto ao carrinho
@@ -720,12 +522,18 @@ const CarrinhoCompras = ({
     setShowPriceModal(true);
   };
 
-  // Calcular total do carrinho
+  // Calcular total do carrinho considerando TODAS as coleções
   const getTotal = () => {
     if (typeof calculateTotal === 'function') {
       return calculateTotal();
     } else {
-      return cartItems.reduce((acc, item) => acc + (item.preco || item.valor || 0) * (item.quantity || 1), 0);
+      // Calcular o total baseado em TODOS os itens de TODAS as coleções
+      return collections.reduce((total, collection) => {
+        const collectionTotal = collection.items ? collection.items.reduce(
+          (subTotal, item) => subTotal + ((item.valor || item.preco || 0) * (item.quantity || 1)), 0
+        ) : 0;
+        return total + collectionTotal;
+      }, 0);
     }
   };
 
@@ -770,7 +578,7 @@ const CarrinhoCompras = ({
     }
   };
 
-// Carregar mais resultados na busca
+  // Carregar mais resultados na busca
   const loadMoreResults = () => {
     setMaxResults(prevMax => prevMax + 20);
   };
@@ -813,7 +621,7 @@ const CarrinhoCompras = ({
                   ? 'bg-white text-[#81059e]'
                   : 'bg-gray-600 text-white'
                   }`}>
-                  {collection.items.length}
+                  {collection.items?.length || 0}
                 </span>
                 {collection.items && collection.items.some(item => precisaDeOS(item)) && (
                   <span className="ml-1 w-2 h-2 rounded-full bg-purple-500"></span>
@@ -853,6 +661,18 @@ const CarrinhoCompras = ({
             />
           </div>
 
+          <select
+            className="border rounded-sm p-1 text-sm text-gray-700"
+            value={categoriaFiltro}
+            onChange={(e) => setCategoriaFiltro(e.target.value)}
+          >
+            <option value="todas">Todos</option>
+            <option value="armacoes">Armações</option>
+            <option value="lentes">Lentes</option>
+            <option value="solares">Solares</option>
+          </select>
+
+
           {/* Botão de QR Code */}
           <button
             onClick={() => setShowQrScanner(!showQrScanner)}
@@ -882,7 +702,7 @@ const CarrinhoCompras = ({
                 <div className="text-xs text-gray-500">
                   {product.codigo && `Código: ${product.codigo}`} {product.marca && `- Marca: ${product.marca}`}
                   <span className="ml-2 inline-block px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">
-                    {product.categoria === 'armacoes' ? 'Armação' :
+{product.categoria === 'armacoes' ? 'Armação' :
                       product.categoria === 'lentes' ? 'Lente' :
                         product.categoria === 'solares' ? 'Óculos Solar' :
                           'Categoria não definida'}
@@ -890,10 +710,10 @@ const CarrinhoCompras = ({
                 </div>
               </div>
             ))}
-            
+
             {/* Botão para carregar mais resultados */}
             {filteredProducts.length === maxResults && (
-              <button 
+              <button
                 onClick={loadMoreResults}
                 className="w-full p-2 text-center text-[#81059e] bg-purple-50 hover:bg-purple-100"
               >
@@ -953,32 +773,27 @@ const CarrinhoCompras = ({
                   {/* Imagem do produto */}
                   <div className="w-16 h-16 bg-gray-100 rounded-md overflow-hidden flex items-center justify-center border border-purple-300">
                     {item.imagem ? (
-                      <img 
-                        src={item.imagem} 
-                        alt={item.nome || "Produto"} 
+                      <img
+                        src={item.imagem}
+                        alt={item.nome || "Produto"}
                         className="object-contain w-full h-full"
                       />
                     ) : (
                       <div className="text-gray-400 flex flex-col items-center justify-center text-xs">
                         <FiImage size={20} />
-                        <span className="mt-1">{item.categoria === 'armacoes' ? 'Armação' : 
-                               item.categoria === 'lentes' ? 'Lente' : 
-                               item.categoria === 'solares' ? 'Solar' : 'Produto'}</span>
+                        <span className="mt-1">{item.categoria === 'armacoes' ? 'Armação' :
+                          item.categoria === 'lentes' ? 'Lente' :
+                            item.categoria === 'solares' ? 'Solar' : 'Produto'}</span>
                       </div>
                     )}
                   </div>
-                  
+
                   <div className="flex-1">
                     <div className="flex justify-between items-start mb-2">
                       <div className="font-medium flex items-center">
                         {item.titulo || item.nome || "Produto sem título"}
-                        {precisaDeOS(item) && (
-                          <span className="ml-2 text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">
-                            OS
-                          </span>
-                        )}
                       </div>
-                      
+
                       {/* Botões de ação agrupados */}
                       <div className="flex items-center gap-1">
                         <button
@@ -991,7 +806,7 @@ const CarrinhoCompras = ({
                         >
                           <FiInfo size={18} />
                         </button>
-                        
+
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -1002,7 +817,7 @@ const CarrinhoCompras = ({
                         >
                           <FiEdit2 size={18} />
                         </button>
-                        
+
                         <button
                           onClick={() => removeFromCart(item.id, item.categoria)}
                           className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full"
@@ -1012,7 +827,7 @@ const CarrinhoCompras = ({
                         </button>
                       </div>
                     </div>
-                    
+
                     <div className="flex justify-between items-center">
                       <div>
                         <div className="text-sm text-gray-700 font-medium">
@@ -1022,7 +837,7 @@ const CarrinhoCompras = ({
                           {item.marca && `${item.marca}`} {item.codigo && ` • ${item.codigo}`}
                         </div>
                       </div>
-                      
+
                       {/* Controles de quantidade */}
                       <div className="flex items-center gap-2">
                         <button
@@ -1052,34 +867,48 @@ const CarrinhoCompras = ({
       {cartItems.length > 0 && (
         <div className="p-3 bg-gray-50 border-t border-gray-200">
           <div className="flex justify-between items-center mb-2">
-            <span className="font-medium">Total:</span>
+            <span className="font-semibold text-lg">Total desta coleção:</span>
             <span className="font-medium text-lg text-[#81059e]">
+              {formatCurrencyValue(cartItems.reduce((total, item) => 
+                total + ((item.valor || item.preco || 0) * (item.quantity || 1)), 0)
+              )}
+            </span>
+          </div>
+          
+          {/* NOVO: Mostrar o total global considerando todas as coleções */}
+          <div className="flex justify-between items-center pt-2 border-t border-gray-300">
+            <span className="font-semibold text-lg">Total geral (todas as coleções):</span>
+            <span className="font-bold text-lg text-[#81059e]">
               {formatCurrencyValue(getTotal())}
             </span>
           </div>
-
-          {/* Legenda */}
-          <div className="mt-2 text-xs text-gray-600 flex items-center gap-1">
-            <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full">OS</span>
-            <span>= Produto requer Ordem de Serviço</span>
+          
+          {/* Exibir contagem de itens por coleção */}
+          <div className="mt-2 text-xs text-gray-500">
+            {collections.map(collection => (
+              <div key={collection.id} className="flex justify-between">
+                <span>{collection.name}:</span>
+                <span>{collection.items?.length || 0} item(s)</span>
+              </div>
+            ))}
           </div>
         </div>
       )}
 
       {/* Modal de informações do produto */}
       {showInfoModal && selectedProduct && (
-        <ProductInfoModal 
-          product={selectedProduct} 
-          onClose={() => setShowInfoModal(false)} 
+        <ProductInfoModal
+          product={selectedProduct}
+          onClose={() => setShowInfoModal(false)}
         />
       )}
 
       {/* Modal de edição de preço */}
       {showPriceModal && selectedProduct && (
-        <PriceEditModal 
-          product={selectedProduct} 
+        <PriceEditModal
+          product={selectedProduct}
           onSave={(newPrice) => updateProductPrice(selectedProduct.id, selectedProduct.categoria, newPrice)}
-          onClose={() => setShowPriceModal(false)} 
+          onClose={() => setShowPriceModal(false)}
         />
       )}
     </div>
@@ -1087,3 +916,4 @@ const CarrinhoCompras = ({
 };
 
 export default CarrinhoCompras;
+                      
