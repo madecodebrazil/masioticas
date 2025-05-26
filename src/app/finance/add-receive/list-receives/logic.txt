@@ -1,0 +1,26 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && 
+             get(/databases/$(database)/documents/colaboradores/$(request.auth.uid)).data.level_perm == "3";
+    }
+
+    match /colaboradores/{userId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin() || request.auth.uid == userId;
+    }
+
+    match /loja1/users/{userId}/{document=**} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /loja2/users/{userId}/{document=**} {
+      allow read, write: if isAuthenticated();
+    }
+  }
+}
