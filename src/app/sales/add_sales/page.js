@@ -55,7 +55,6 @@ const formatLojaNome = (lojaId) => {
     return `Loja ${numero}`;
 };
 
-
 // Componente principal simplificado
 const NovaVendaPage = () => {
     const router = useRouter();
@@ -418,7 +417,7 @@ const NovaVendaPage = () => {
 
                     {/* Coluna da direita: Pagamento e Totais */}
                     <div>
-                        {/* Desconto */}
+                        {/* ✅ DESCONTO COM LÓGICA SIMPLES - IGUAL AO R$ */}
                         <div className="bg-white p-4 rounded-lg shadow-sm mb-4">
                             <div className="flex justify-between items-center mb-2">
                                 <label className="block text-[#81059e] font-medium flex text-xl items-center gap-1">
@@ -448,21 +447,34 @@ const NovaVendaPage = () => {
                                 </div>
                             </div>
 
+                            {/* ✅ USANDO EXATAMENTE A MESMA LÓGICA PARA AMBOS */}
                             <input
                                 type="text"
                                 inputMode="numeric"
                                 value={
                                     discountType === 'value'
                                         ? discount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-                                        : discount === 0 ? '' : discount.toString().replace('.', ',')
+                                        : '% ' + discount.toLocaleString('pt-BR', { 
+                                            style: 'decimal', 
+                                            minimumFractionDigits: 2, 
+                                            maximumFractionDigits: 2 
+                                        })
+
                                 }
                                 onChange={(e) => {
+                                    // ✅ MESMA LÓGICA PARA AMBOS OS TIPOS
                                     const onlyNumbers = e.target.value.replace(/\D/g, '');
                                     const parsedValue = onlyNumbers ? Number(onlyNumbers) / 100 : 0;
+                                    
+                                    // Para porcentagem, limita a 100%
+                                    if (discountType === 'percentage' && parsedValue > 100) {
+                                        return; // Não atualiza se for maior que 100%
+                                    }
+                                    
                                     setDiscount(parsedValue);
                                 }}
                                 className="border-2 border-[#81059e] p-2 rounded-sm w-full"
-                                placeholder={discountType === 'percentage' ? 'Desconto em %' : 'Desconto em R$'}
+                                placeholder={discountType === 'percentage' ? 'Desconto em % (digite 050 para 0,50%)' : 'Desconto em R$'}
                             />
                         </div>
 
@@ -481,7 +493,11 @@ const NovaVendaPage = () => {
                                         <span>
                                             Desconto
                                             {discountType === 'percentage'
-                                                ? ` (${discount.toFixed(2).replace('.', ',')}%)`
+                                                ? ` (${discount.toLocaleString('pt-BR', { 
+                                                    style: 'decimal', 
+                                                    minimumFractionDigits: 2, 
+                                                    maximumFractionDigits: 2 
+                                                  })}%)`
                                                 : ''}
                                             :
                                         </span>

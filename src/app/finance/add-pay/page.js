@@ -7,7 +7,8 @@ import { firestore } from '../../../lib/firebaseConfig';
 import { useAuth } from '@/hooks/useAuth';
 import BackButton from '@/components/BackButton';
 import Link from 'next/link';
-import ConfirmationModal from '../../../components/ConfirmationModalPay.js';
+import ConfirmationModal from './confirm/confirmModal';
+import SuccessModal from './confirm/sucessModal';
 import { FiCalendar, FiDollarSign, FiTag, FiFileText, FiUser, FiCreditCard, FiMapPin, FiLayers, FiTrendingUp, FiHome, FiPlus, FiX, FiTrash2 } from 'react-icons/fi';
 
 export default function ContasPagar() {
@@ -17,6 +18,7 @@ export default function ContasPagar() {
   const [categoriasDespesa, setCategoriasDespesa] = useState([]);
   const [showAddCategoriaInput, setShowAddCategoriaInput] = useState(false);
   const [newCategoria, setNewCategoria] = useState("");
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   // Estado do formulário com todos os campos necessários para contas a pagar
   const [formData, setFormData] = useState({
@@ -397,7 +399,7 @@ export default function ContasPagar() {
       const contaData = {
         credor: formData.credor,
         cpfCredor: formData.documentoCredor,
-        tipoCredor: formData.tipoCredor || 'outro', // 'fornecedor', 'funcionario' ou 'outro'
+        tipoCredor: formData.tipoCredor || 'outro',
         documento: formData.documento || '',
         parcela: formatoParcela,
         tipoCobranca: formData.tipoCobranca || '',
@@ -440,9 +442,11 @@ export default function ContasPagar() {
       const itemsCollectionRef = collection(contasPagarDocRef, 'items');
       await addDoc(itemsCollectionRef, contaData);
 
-      alert("Conta a pagar registrada com sucesso!");
-      handleClear();
-      setIsModalOpen(false);
+      // TROCAR O ALERT POR ESTES 3 COMANDOS:
+      setIsModalOpen(false);        // Fecha modal de confirmação
+      setShowSuccessModal(true);    // Abre modal de sucesso
+      handleClear();                // Limpa formulário
+
     } catch (error) {
       console.error("Erro ao registrar conta a pagar:", error);
       alert("Erro ao registrar a conta. Tente novamente.");
@@ -957,6 +961,14 @@ export default function ContasPagar() {
         onClose={() => setIsModalOpen(false)}
         data={{ ...formData, loja: selectedLoja }}
         onConfirm={handleConfirm}
+      />
+
+      <SuccessModal
+        isOpen={showSuccessModal}
+        onClose={() => setShowSuccessModal(false)}
+        message="Conta a pagar registrada com sucesso!"
+        autoClose={false}
+        autoCloseTime={4000}
       />
     </Layout>
   );

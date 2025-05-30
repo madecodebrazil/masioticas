@@ -896,3 +896,5 @@ const useModalNovaVenda = ({ isOpen, onClose, selectedLoja }) => {
 };
 
 export default useModalNovaVenda;
+
+

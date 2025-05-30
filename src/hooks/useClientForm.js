@@ -1,3 +1,4 @@
+// hooks/useClientForm.js
 import { useState, useEffect } from 'react';
 import { getDoc, setDoc, doc, serverTimestamp, collection, addDoc, getDocs, query, where, updateDoc, limit } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -12,9 +13,10 @@ export const useClientForm = ({ selectedLoja, onSuccessRedirect, userId, userNam
         cpf: '',
         dataNascimento: '',
         genero: '',
-        estadoCivil: '',      // <-- novo campo
-        escolaridade: '',     // <-- novo campo
-        profissao: '',        // <-- novo campo
+        estadoCivil: '',      
+        escolaridade: '',     
+        profissao: '',        
+        instagram: '',        
         observacoes: '',
         parentesco: '',
         contatoAlternativo: {
@@ -33,7 +35,7 @@ export const useClientForm = ({ selectedLoja, onSuccessRedirect, userId, userNam
         }
     });
 
-    // Todos os outros estados
+    // Estados do arquivo e imagens
     const [selectedFile, setSelectedFile] = useState(null);
     const [selectedFileName, setSelectedFileName] = useState('');
     const [imagePreview, setImagePreview] = useState(null);
@@ -41,6 +43,8 @@ export const useClientForm = ({ selectedLoja, onSuccessRedirect, userId, userNam
     const [comprovanteFile, setComprovanteFile] = useState(null);
     const [documentoPreview, setDocumentoPreview] = useState(null);
     const [comprovantePreview, setComprovantePreview] = useState(null);
+    
+    // Estados de controle
     const [showSuccessPopup, setShowSuccessPopup] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -50,6 +54,9 @@ export const useClientForm = ({ selectedLoja, onSuccessRedirect, userId, userNam
     const [consumers, setConsumers] = useState([]);
     const [isSearching, setIsSearching] = useState(false);
     const [selectedTitular, setSelectedTitular] = useState('');
+    
+    // Estados para o modal de confirmação
+    const [showConfirmModal, setShowConfirmModal] = useState(false);
 
     const debounce = (func, wait) => {
         let timeout;
@@ -83,7 +90,6 @@ export const useClientForm = ({ selectedLoja, onSuccessRedirect, userId, userNam
         for (let i = 1; i <= 10; i++) {
             soma += parseInt(cpf.substring(i - 1, i)) * (12 - i);
         }
-
         resto = (soma * 10) % 11;
         if (resto === 10 || resto === 11) resto = 0;
         if (resto !== parseInt(cpf.substring(10, 11))) return false;
@@ -94,6 +100,15 @@ export const useClientForm = ({ selectedLoja, onSuccessRedirect, userId, userNam
     const validarEmail = (email) => {
         const regex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
         return regex.test(email);
+    };
+
+    const validarInstagram = (instagram) => {
+        if (!instagram) return true; // Campo opcional
+        // Remove @ se o usuário digitou
+        const cleanInstagram = instagram.replace('@', '');
+        // Valida se contém apenas letras, números, pontos e underscores
+        const regex = /^[a-zA-Z0-9._]+$/;
+        return regex.test(cleanInstagram);
     };
 
     const uploadImage = async (cpf) => {
@@ -182,7 +197,17 @@ export const useClientForm = ({ selectedLoja, onSuccessRedirect, userId, userNam
                 }
             }
         } else {
-            setFormData((prevData) => ({ ...prevData, [name]: value }));
+            // Tratamento especial para Instagram
+            if (name === 'instagram') {
+                // Remove @ se o usuário digitou e adiciona automaticamente
+                let instagramValue = value.replace('@', '');
+                if (instagramValue && !instagramValue.startsWith('@')) {
+                    instagramValue = instagramValue;
+                }
+                setFormData((prevData) => ({ ...prevData, [name]: instagramValue }));
+            } else {
+                setFormData((prevData) => ({ ...prevData, [name]: value }));
+            }
         }
     };
 
@@ -352,6 +377,11 @@ export const useClientForm = ({ selectedLoja, onSuccessRedirect, userId, userNam
             return false;
         }
 
+        if (formData.instagram && !validarInstagram(formData.instagram)) {
+            setError('Instagram inválido. Use apenas letras, números, pontos e underscores.');
+            return false;
+        }
+
         if (!isTitular && !selectedTitular) {
             setError('Selecione um cliente titular.');
             return false;
@@ -368,9 +398,10 @@ export const useClientForm = ({ selectedLoja, onSuccessRedirect, userId, userNam
             cpf: '',
             dataNascimento: '',
             genero: '',
-            estadoCivil: '',      // <-- novo campo
-            escolaridade: '',     // <-- novo campo
-            profissao: '',        // <-- novo campo
+            estadoCivil: '',      
+            escolaridade: '',     
+            profissao: '',        
+            instagram: '',
             observacoes: '',
             parentesco: '',
             contatoAlternativo: {
@@ -398,14 +429,11 @@ export const useClientForm = ({ selectedLoja, onSuccessRedirect, userId, userNam
         setIsTitular(true);
         setSelectedTitular('');
         setSearchTerm('');
+        setShowConfirmModal(false);
     };
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setError('');
-
-        if (!validateForm()) return;
-
+    // Função para salvar os dados do cliente (extraída do handleSubmit)
+    const saveClientData = async () => {
         setLoading(true);
 
         try {
@@ -418,6 +446,7 @@ export const useClientForm = ({ selectedLoja, onSuccessRedirect, userId, userNam
 
             if (!querySnapshot.empty) {
                 setError("Este CPF já está cadastrado no sistema.");
+                setLoading(false);
                 return;
             }
 
@@ -425,9 +454,13 @@ export const useClientForm = ({ selectedLoja, onSuccessRedirect, userId, userNam
             const documentoUrl = await uploadDocument(documentoFile, cpf, 'documento');
             const comprovanteUrl = await uploadDocument(comprovanteFile, cpf, 'comprovante');
 
+            // Formatar Instagram para salvar (sem @)
+            const instagramFormatted = formData.instagram ? formData.instagram.replace('@', '') : '';
+
             const clienteData = {
                 ...formData,
                 cpf,
+                instagram: instagramFormatted,
                 imagem: imageUrl || null,
                 documento: documentoUrl || null,
                 comprovante: comprovanteUrl || null,
@@ -467,12 +500,35 @@ export const useClientForm = ({ selectedLoja, onSuccessRedirect, userId, userNam
         }
     };
 
+    // HandleSubmit modificado - agora apenas abre o modal
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setError('');
+
+        if (!validateForm()) return;
+
+        // Abre o modal de confirmação ao invés de salvar diretamente
+        setShowConfirmModal(true);
+    };
+
+    // Função para confirmar o cadastro no modal
+    const handleConfirmSubmit = () => {
+        setShowConfirmModal(false);
+        saveClientData();
+    };
+
+    // Função para cancelar o modal
+    const handleCancelSubmit = () => {
+        setShowConfirmModal(false);
+    };
+
     useEffect(() => {
         fetchConsumers();
     }, [searchTerm]);
 
     return {
         formData,
+        setFormData,
         selectedFile,
         selectedFileName,
         imagePreview,
@@ -489,12 +545,15 @@ export const useClientForm = ({ selectedLoja, onSuccessRedirect, userId, userNam
         consumers,
         isSearching,
         selectedTitular,
+        showConfirmModal,
         handleChange,
         handleSubmit,
         handleImageChange,
         handleDocumentChange,
         handleCameraClick,
         handleSelectCliente,
+        handleConfirmSubmit,
+        handleCancelSubmit,
         setImagePreview,
         setSelectedFile,
         setSelectedFileName,
@@ -509,6 +568,7 @@ export const useClientForm = ({ selectedLoja, onSuccessRedirect, userId, userNam
         truncateFileName,
         validarCPF,
         validarEmail,
+        validarInstagram, 
         uploadImage,
         uploadDocument,
         fetchConsumers

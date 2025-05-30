@@ -103,15 +103,15 @@ export default function ProductsPage() {
 
     // Defina os ícones e rótulos dos products_and_services
     const productsItems = [
-        { icon: '/images/products_and_services/Armacoes.png', label: 'Armações', route: '/products_and_services/frames' },
-        { icon: '/images/products_and_services/lentes.png', label: 'Lentes', route: '/products_and_services/lenses' },
+        { icon: '/images/products_and_services/Armacoes.png', label: 'Armações', route: '/products_and_services/frames/add-frame' },
+        { icon: '/images/products_and_services/lentes.png', label: 'Lentes', route: '/products_and_services/lenses/add-lense' },
         { icon: '/images/products_and_services/solares.png', label: 'Solares', route: '/products_and_services/solar/list-solares' },
         { icon: '/images/products_and_services/garantia.png', label: 'Garantia', route: '/products_and_services/warranty' },
         { icon: '/images/products_and_services/Brindes.png', label: 'Brindes', route: '/products_and_services/giftes' },
         { icon: '/images/products_and_services/pedido.png', label: 'Pedidos', route: '/products_and_services/OS/list-os' },
         { icon: '/images/products_and_services/reparo.png', label: 'Reparos', route: '/products_and_services/repair/list-repairs' },
         { icon: '/images/products_and_services/malote.png', label: 'Malotes', route: '/products_and_services/pouch/list-pouches' },
-        { icon: '/images/products_and_services/distribuidor.png', label: 'Distribuidores', route: '/products_and_services/distribuidor' },
+        { icon: '/images/products_and_services/distribuidor.png', label: 'Distribuidores', route: '/products_and_services/service_provider' },
         { icon: '/images/products_and_services/prestador.png', label: 'Prestadores', route: '/products_and_services/service_provider' },
         { icon: '/images/products_and_services/laboratorio.png', label: 'Laboratórios', route: '/products_and_services/laboratory' },
         { icon: '/images/products_and_services/industria.png', label: 'Indústrias', route: '/products_and_services/industry' },

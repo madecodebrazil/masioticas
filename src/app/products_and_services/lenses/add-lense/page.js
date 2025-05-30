@@ -192,10 +192,10 @@ export function FormularioLentes() {
   const imageInputRef = useRef(null);
 
   // Arrays para valores dos selects de faixa - mesmos da Ordem de Serviço
-  const esfericos = [6.00, 5.75, 5.50, 5.25, 5.00, 4.75, 4.50, 4.25, 4.00, 3.75, 3.50, 3.25, 3.00, 2.75, 2.50, 2.25, 2.00, 1.75, 1.50, 1.25, 1.00, 0.75, 0.50, 0.25, 0.00, -0.25, -0.50, -0.75, -1.00, -1.25, -1.50, -1.75, -2.00, -2.25, -2.50, -2.75, -3.00, -3.25, -3.50, -3.75, -4.00, -4.25, -4.50, -4.75, -5.00, -5.25, -5.50, -5.75, -6.00];
-  const cilindricos = [-6.00, -5.75, -5.50, -5.25, -5.00, -4.75, -4.50, -4.25, -4.00, -3.75, -3.50, -3.25, -3.00, -2.75, -2.50, -2.25, -2.00, -1.75, -1.50, -1.25, -1.00, -0.75, -0.50, -0.25, 0.00];
-  const diametros = Array.from({ length: 21 }, (_, i) => i + 40); // 40 a 60mm
-  const adicoes = [0.75, 1.00, 1.25, 1.50, 1.75, 2.00, 2.25, 2.50, 2.75, 3.00, 3.25, 3.50];
+  const [esfericos, setEsfericos] = useState([]);
+  const [cilindricos, setCilindricos] = useState([]);
+  const [diametros, setDiametros] = useState([]);
+  const [adicoes, setAdicoes] = useState([]);
 
   // Função para formatação de números
   const formatNumberForDisplay = (value) => {
@@ -264,14 +264,10 @@ export function FormularioLentes() {
     design: "",
     material: "",
     unidade: "",
-    esfericoDe: "",
-    esfericoPara: "",
-    cilindroDe: "",
-    cilindroPara: "",
-    diametroDe: "",
-    diametroPara: "",
-    adicaoDe: "",
-    adicaoPara: "",
+    esferico: "",
+    cilindro: "",
+    diametro: "",
+    adicao: "",
 
     // Tecnologias e Tratamentos
     tipo: [],
@@ -651,6 +647,11 @@ export function FormularioLentes() {
     fetchTratamentos();
     fetchUnidades();
     fetchNcm();
+    fetchEsfericos();
+    fetchCilindricos();
+    fetchDiametros();
+    fetchAdicoes();
+    fetchCorredores(); // <- ADICIONE ESTA LINHA
   }, [selectedLoja]);
 
   // Funções para buscar dados
@@ -774,7 +775,6 @@ export function FormularioLentes() {
     }
   };
 
-  // Buscar fornecedores dinamicamente com filtro de busca
   const fetchFornecedoresDinamico = async () => {
     if (!searchFornecedor.trim()) {
       setListaFornecedores([]);
@@ -805,6 +805,64 @@ export function FormularioLentes() {
       setListaFornecedores([]);
     } finally {
       setIsLoadingFornecedores(false);
+    }
+  };
+
+  const fetchEsfericos = async () => {
+    try {
+      const loja = selectedLoja || "loja1";
+      const path = `estoque/${loja}/lentes/configuracoes/lentes_esfericos`;
+      const snapshot = await getDocs(collection(firestore, path));
+      const list = snapshot.docs.map(doc => doc.data().value);
+      setEsfericos(list.length > 0 ? list : esfericos);
+    } catch (error) {
+      console.error("Erro ao buscar esféricos:", error);
+    }
+  };
+  const fetchCilindricos = async () => {
+    try {
+      const loja = selectedLoja || "loja1";
+      const path = `estoque/${loja}/lentes/configuracoes/lentes_cilindricos`;
+      const snapshot = await getDocs(collection(firestore, path));
+      const list = snapshot.docs.map(doc => doc.data().value);
+      setCilindricos(list.length > 0 ? list : cilindricos);
+    } catch (error) {
+      console.error("Erro ao buscar cilindricos:", error);
+    }
+  };
+  const fetchDiametros = async () => {
+    try {
+      const loja = selectedLoja || "loja1";
+      const path = `estoque/${loja}/lentes/configuracoes/lentes_diametros`;
+      const snapshot = await getDocs(collection(firestore, path));
+      const list = snapshot.docs.map(doc => doc.data().value);
+      setDiametros(list.length > 0 ? list : diametros);
+    } catch (error) {
+      console.error("Erro ao buscar diametros:", error);
+    }
+  };
+  const fetchAdicoes = async () => {
+    try {
+      const loja = selectedLoja || "loja1";
+      const path = `estoque/${loja}/lentes/configuracoes/lentes_adicoes`;
+      const snapshot = await getDocs(collection(firestore, path));
+      const list = snapshot.docs.map(doc => doc.data().value);
+      setAdicoes(list.length > 0 ? list : adicoes);
+    } catch (error) {
+      console.error("Erro ao buscar adições:", error);
+    }
+  };
+
+  const fetchCorredores = async () => {
+    try {
+      const loja = selectedLoja || "loja1";
+      const path = `estoque/${loja}/lentes/configuracoes/lentes_corredores`;
+      const snapshot = await getDocs(collection(firestore, path));
+      const list = snapshot.docs.map(doc => doc.data().value || doc.data().name);
+      setCorredores(list.length > 0 ? list : ['14mm', '15mm', '16mm', '17mm', '18mm']);
+    } catch (error) {
+      console.error("Erro ao buscar corredores:", error);
+      setCorredores(['14mm', '15mm', '16mm', '17mm', '18mm']);
     }
   };
 
@@ -936,14 +994,10 @@ export function FormularioLentes() {
       design: "",
       material: "",
       unidade: "",
-      esfericoDe: "",
-      esfericoPara: "",
-      cilindroDe: "",
-      cilindroPara: "",
-      diametroDe: "",
-      diametroPara: "",
-      adicaoDe: "",
-      adicaoPara: "",
+      esferico: "",
+      cilindro: "",
+      diametro: "",
+      adicao: "",
       tipo: [],
       corredor: [],
       tecnologias: [],
@@ -1071,6 +1125,115 @@ export function FormularioLentes() {
       alert(`Erro ao processar o produto: ${error.message}`);
       setIsLoading(false);
     }
+  };
+
+  const addNewCorredor = async (value) => {
+    if (!selectedLoja && selectedLojas.length === 0) {
+      alert("Selecione uma loja antes de adicionar novos itens!");
+      return;
+    }
+  
+    try {
+      const lojaToUse = selectedLoja ||
+        (selectedLojas[0]?.includes("Loja 1") ? "loja1" :
+          selectedLojas[0]?.includes("Loja 2") ? "loja2" : "loja1");
+  
+      const lojaPath = `/estoque/${lojaToUse}/lentes/configuracoes/lentes_corredores`;
+      const lojaItemRef = doc(firestore, lojaPath, value.toString().replace(/\./g, '_'));
+  
+      await setDoc(lojaItemRef, {
+        value: value,
+        createdAt: new Date(),
+        addedBy: userData?.nome || 'Sistema'
+      });
+  
+      setCorredores([...corredores, value]);
+      alert(`${value} adicionado com sucesso!`);
+    } catch (error) {
+      console.error(`Erro ao adicionar ${value} à coleção lentes_corredores:`, error);
+      alert(`Erro ao adicionar ${value}`);
+    }
+  };
+
+  const CorredorSection = () => {
+    const [showAddInput, setShowAddInput] = useState(false);
+    const [newCorredorValue, setNewCorredorValue] = useState("");
+  
+    const handleAddCorredor = async () => {
+      if (!newCorredorValue.trim()) return;
+  
+      const formattedValue = newCorredorValue.includes('mm')
+        ? newCorredorValue
+        : `${newCorredorValue}mm`;
+  
+      try {
+        await addNewCorredor(formattedValue);
+        setNewCorredorValue("");
+        setShowAddInput(false);
+      } catch (error) {
+        console.error("Erro ao adicionar novo corredor:", error);
+      }
+    };
+  
+    return (
+      <div className="mb-4">
+        <h3 className="text-lg font-semibold text-[#81059e] mb-2">Corredor*:</h3>
+        <div className="flex flex-wrap gap-2 mb-3">
+          {corredores.map((corredor) => (
+            <ToggleButton
+              key={corredor}
+              label={corredor}
+              isSelected={Array.isArray(formData.corredor) && formData.corredor.includes(corredor)}
+              onToggle={() => handleToggle("corredor", corredor)}
+            />
+          ))}
+          {!showAddInput && (
+            <button
+              type="button"
+              onClick={() => setShowAddInput(true)}
+              className="px-4 py-2 rounded-sm border-2 border-dashed border-[#81059e] text-[#81059e] hover:bg-[#f3e8fc] transition-colors flex items-center gap-1"
+            >
+              <FiPlus size={16} />
+              Adicionar
+            </button>
+          )}
+        </div>
+        {showAddInput && (
+          <div className="flex items-center gap-2 mt-3 p-3 bg-white border-2 border-[#81059e] rounded-sm">
+            <input
+              type="text"
+              value={newCorredorValue}
+              onChange={(e) => setNewCorredorValue(e.target.value)}
+              placeholder="Ex: 19mm"
+              className="flex-1 px-3 py-2 border border-gray-300 rounded-sm text-black focus:outline-none focus:border-[#81059e]"
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  handleAddCorredor();
+                }
+              }}
+            />
+            <button
+              type="button"
+              onClick={handleAddCorredor}
+              className="bg-[#81059e] text-white px-4 py-2 rounded-sm hover:bg-[#6a0480] transition-colors"
+            >
+              <FiPlus size={16} />
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setShowAddInput(false);
+                setNewCorredorValue("");
+              }}
+              className="border-2 border-[#81059e] text-[#81059e] px-4 py-2 rounded-sm hover:bg-[#f3e8fc] transition-colors"
+            >
+              Cancelar
+            </button>
+          </div>
+        )}
+        <small className="text-gray-500">Selecione apenas se a lente for multifocal.</small>
+      </div>
+    );
   };
 
   return (
@@ -1361,157 +1524,44 @@ export function FormularioLentes() {
                   </div>
                 </div>
               </div>
+            </div>
 
-              {/* Esférico com select */}
+            {/* Disponibilidade */}
+            <div className="p-4 bg-gray-50 rounded-sm mb-6">
+              <h3 className="text-lg font-semibold text-[#81059e] mb-4">Disponibilidade</h3>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-                <div>
-                  <label className="text-[#81059e] font-medium">Esférico De*:</label>
-                  <select
-                    name="esfericoDe"
-                    value={formData.esfericoDe || ""}
-                    onChange={(e) => setFormData({ ...formData, esfericoDe: e.target.value })}
-                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
-                    required
-                  >
-                    <option value="">Selecione</option>
-                    {esfericos.map((valor) => (
-                      <option key={`esf-de-${valor}`} value={valor}>
-                        {formatNumberForDisplay(valor)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-[#81059e] font-medium">Esférico Para*:</label>
-                  <select
-                    name="esfericoPara"
-                    value={formData.esfericoPara || ""}
-                    onChange={(e) => setFormData({ ...formData, esfericoPara: e.target.value })}
-                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
-                    required
-                  >
-                    <option value="">Selecione</option>
-                    {esfericos.map((valor) => (
-                      <option key={`esf-para-${valor}`} value={valor}>
-                        {formatNumberForDisplay(valor)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <SelectWithAddNumericOption
+                  label="Esférico*"
+                  options={esfericos}
+                  value={formData.esferico}
+                  onChange={(value) => setFormData({ ...formData, esferico: value })}
+                  addNewOption={(value) => addNewValueItem("lentes_esfericos", value)}
+                />
+                <SelectWithAddNumericOption
+                  label="Cilíndrico*"
+                  options={cilindricos}
+                  value={formData.cilindro}
+                  onChange={(value) => setFormData({ ...formData, cilindro: value })}
+                  addNewOption={(value) => addNewValueItem("lentes_cilindricos", value)}
+                />
               </div>
 
-              {/* Cilindro com select */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-                <div>
-                  <label className="text-[#81059e] font-medium">Cilindro De*:</label>
-                  <select
-                    name="cilindroDe"
-                    value={formData.cilindroDe || ""}
-                    onChange={(e) => setFormData({ ...formData, cilindroDe: e.target.value })}
-                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
-                    required
-                  >
-                    <option value="">Selecione</option>
-                    {cilindricos.map((valor) => (
-                      <option key={`cil-de-${valor}`} value={valor}>
-                        {formatNumberForDisplay(valor)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-[#81059e] font-medium">Cilindro Para*:</label>
-                  <select
-                    name="cilindroPara"
-                    value={formData.cilindroPara || ""}
-                    onChange={(e) => setFormData({ ...formData, cilindroPara: e.target.value })}
-                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
-                    required
-                  >
-                    <option value="">Selecione</option>
-                    <option value="">Selecione</option>
-                    {cilindricos.map((valor) => (
-                      <option key={`cil-para-${valor}`} value={valor}>
-                        {formatNumberForDisplay(valor)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* Diâmetro com select */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-                <div>
-                  <label className="text-[#81059e] font-medium">Diâmetro De*:</label>
-                  <select
-                    name="diametroDe"
-                    value={formData.diametroDe || ""}
-                    onChange={(e) => setFormData({ ...formData, diametroDe: e.target.value })}
-                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
-                    required
-                  >
-                    <option value="">Selecione</option>
-                    {diametros.map((valor) => (
-                      <option key={`diam-de-${valor}`} value={valor}>
-                        {valor} mm
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-[#81059e] font-medium">Diâmetro Para*:</label>
-                  <select
-                    name="diametroPara"
-                    value={formData.diametroPara || ""}
-                    onChange={(e) => setFormData({ ...formData, diametroPara: e.target.value })}
-                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
-                    required
-                  >
-                    <option value="">Selecione</option>
-                    {diametros.map((valor) => (
-                      <option key={`diam-para-${valor}`} value={valor}>
-                        {valor} mm
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* Adição com select */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-                <div>
-                  <label className="text-[#81059e] font-medium">Adição De:</label>
-                  <select
-                    name="adicaoDe"
-                    value={formData.adicaoDe || ""}
-                    onChange={(e) => setFormData({ ...formData, adicaoDe: e.target.value })}
-                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
-                  >
-                    <option value="">Selecione</option>
-                    {adicoes.map((valor) => (
-                      <option key={`adic-de-${valor}`} value={valor}>
-                        {formatNumberForDisplay(valor)}
-                      </option>
-                    ))}
-                  </select>
-                  <small className="text-gray-500">Em caso de Visão Simples, não preencher.</small>
-                </div>
-                <div>
-                  <label className="text-[#81059e] font-medium">Adição Para:</label>
-                  <select
-                    name="adicaoPara"
-                    value={formData.adicaoPara || ""}
-                    onChange={(e) => setFormData({ ...formData, adicaoPara: e.target.value })}
-                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
-                  >
-                    <option value="">Selecione</option>
-                    {adicoes.map((valor) => (
-                      <option key={`adic-para-${valor}`} value={valor}>
-                        {formatNumberForDisplay(valor)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <SelectWithAddNumericOption
+                  label="Diâmetro*"
+                  options={diametros}
+                  value={formData.diametro}
+                  onChange={(value) => setFormData({ ...formData, diametro: value })}
+                  addNewOption={(value) => addNewValueItem("lentes_diametros", value)}
+                />
+                <SelectWithAddNumericOption
+                  label="Adição"
+                  options={adicoes}
+                  value={formData.adicao}
+                  onChange={(value) => setFormData({ ...formData, adicao: value })}
+                  addNewOption={(value) => addNewValueItem("lentes_adicoes", value)}
+                />
               </div>
             </div>
 
@@ -1519,25 +1569,27 @@ export function FormularioLentes() {
             <div className="p-4 bg-gray-50 rounded-sm mb-6">
               <h3 className="text-lg font-semibold text-[#81059e] mb-4">Tecnologias e Tratamentos</h3>
 
-              {/* Corredor (multiselect) */}
-              <div className="mb-4">
-                <h3 className="text-lg font-semibold text-[#81059e] mb-2">Corredor*:</h3>
-                <div className="flex flex-wrap gap-2">
-                  {corredores.map((corredor) => (
+              {/* Corredor (multiselect com adição dinâmica) */}
+              <CorredorSection />
+
+              {/* Tecnologias (multiselect) */}
+              <div>
+                <h3 className="text-lg font-semibold text-[#81059e] mt-2">Tecnologias*:</h3>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {tratamentos.map((tratamento) => (
                     <ToggleButton
-                      key={corredor}
-                      label={corredor}
-                      isSelected={Array.isArray(formData.corredor) && formData.corredor.includes(corredor)}
-                      onToggle={() => handleToggle("corredor", corredor)}
+                      key={tratamento}
+                      label={tratamento}
+                      isSelected={Array.isArray(formData.tratamentos) && formData.tratamentos.includes(tratamento)}
+                      onToggle={() => handleToggle("tratamentos", tratamento)}
                     />
                   ))}
                 </div>
-                <small className="text-gray-500">Selecione apenas se a lente for multifocal.</small>
               </div>
 
-              {/* Tecnologias (multiselect) */}
-              <div className="mb-4">
-                <h3 className="text-lg font-semibold text-[#81059e] mb-2">Tecnologias*:</h3>
+              {/* Tratamentos (multiselect) */}
+              <div className="mt-4">
+                <h3 className="text-lg font-semibold text-[#81059e] mb-2">Tratamentos:</h3>
                 <div className="flex flex-wrap gap-2 mt-2">
                   {tecnologias.map((tecnologia) => (
                     <ToggleButton
@@ -1550,20 +1602,7 @@ export function FormularioLentes() {
                 </div>
               </div>
 
-              {/* Tratamentos (multiselect) */}
-              <div>
-                <h3 className="text-lg font-semibold text-[#81059e] mb-2">Tratamentos*:</h3>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {tratamentos.map((tratamento) => (
-                    <ToggleButton
-                      key={tratamento}
-                      label={tratamento}
-                      isSelected={Array.isArray(formData.tratamentos) && formData.tratamentos.includes(tratamento)}
-                      onToggle={() => handleToggle("tratamentos", tratamento)}
-                    />
-                  ))}
-                </div>
-              </div>
+              
             </div>
 
             {/* Seção Valores */}
@@ -1835,7 +1874,7 @@ export function FormularioLentes() {
                     <img
                       src={previewUrl}
                       alt="Pré-visualização"
-                      className="max-w-xs h-auto object-contain border border-gray-300 rounded-md"
+                      className="w-32 h-32 object-cover rounded-sm border-2 border-[#81059e]"
                     />
 
                     {/* Botão de fechar (X) */}

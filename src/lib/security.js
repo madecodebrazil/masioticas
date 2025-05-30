@@ -25,17 +25,44 @@ const securityConfig = {
         'X-DNS-Prefetch-Control': 'on',
         'Strict-Transport-Security': 'max-age=63072000; includeSubDomains; preload',
         'X-XSS-Protection': '1; mode=block',
-        'X-Frame-Options': 'DENY',
+        'X-Frame-Options': 'SAMEORIGIN', // Mudado de DENY para SAMEORIGIN
         'X-Content-Type-Options': 'nosniff',
         'Referrer-Policy': 'origin-when-cross-origin',
         'Content-Security-Policy': [
             "default-src 'self';",
-            "script-src 'self' 'unsafe-inline' 'unsafe-eval';",
-            "style-src 'self' 'unsafe-inline' fonts.googleapis.com;",
-            "font-src 'self' fonts.gstatic.com data:;",
-            "img-src 'self' data: blob: https: http: *;",  // Permite todas as fontes de imagens
-            "connect-src 'self' https://identitytoolkit.googleapis.com https://firebasestorage.googleapis.com https://firestore.googleapis.com https://*.googleapis.com https://firebase.googleapis.com https://*.firebaseio.com https://viacep.com.br;",
-            "frame-src 'self';"
+            // Scripts - permite Firebase e Next.js
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://www.gstatic.com https://www.google.com https://firebaseapp.com https://*.firebaseapp.com;",
+            // Estilos - permite Google Fonts e CSS inline
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://www.gstatic.com;",
+            // Fontes - permite Google Fonts
+            "font-src 'self' https://fonts.gstatic.com https://fonts.googleapis.com data:;",
+            // Imagens - permite todas as fontes necessárias
+            "img-src 'self' data: blob: https: http: *;",
+            // Conexões - inclui todos os domínios Firebase e APIs necessárias
+            "connect-src 'self' " +
+            "https://identitytoolkit.googleapis.com " +
+            "https://firebasestorage.googleapis.com " +
+            "https://firestore.googleapis.com " +
+            "https://firebase.googleapis.com " +
+            "https://www.googleapis.com " +
+            "https://securetoken.googleapis.com " +
+            "https://apis.google.com " +
+            "https://*.firebaseio.com " +
+            "https://*.cloudfunctions.net " +
+            "https://*.firebaseapp.com " +
+            "https://viacep.com.br " +
+            "wss://*.firebaseio.com " +
+            "blob: data:;",
+            // Frames - permite Firebase Auth
+            "frame-src 'self' https://firebase.google.com https://www.google.com https://apis.google.com https://*.firebaseapp.com;",
+            // Workers - para PWA e service workers
+            "worker-src 'self' blob:;",
+            // Objetos - para uploads e downloads
+            "object-src 'none';",
+            // Base URI
+            "base-uri 'self';",
+            // Formulários
+            "form-action 'self';"
         ].join(' ')
     }
 };
@@ -80,6 +107,24 @@ const sanitizeInput = (input) => {
 const generateCsrfToken = () => {
     return crypto.randomBytes(32).toString('hex');
 };
+
+// CSP para desenvolvimento (menos restritiva)
+const developmentCSP = [
+    "default-src 'self';",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' *;",
+    "style-src 'self' 'unsafe-inline' *;",
+    "font-src 'self' data: *;",
+    "img-src 'self' data: blob: *;",
+    "connect-src 'self' *;",
+    "frame-src 'self' *;",
+    "worker-src 'self' blob: *;",
+    "object-src 'none';"
+].join(' ');
+
+// Use a CSP de desenvolvimento se estiver em modo de desenvolvimento
+if (process.env.NODE_ENV === 'development') {
+    securityConfig.securityHeaders['Content-Security-Policy'] = developmentCSP;
+}
 
 module.exports = {
     securityConfig,

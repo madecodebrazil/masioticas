@@ -16,6 +16,7 @@ import "react-datepicker/dist/react-datepicker.css";
 import { FiPlus, FiTrash, FiTrash2 } from 'react-icons/fi';
 import ProductConfirmModal from '@/components/ProductConfirmModal';
 import { QRCodeSVG } from 'qrcode.react';
+import InputMask from 'react-input-mask';
 
 const SelectWithAddOption = ({
   label,
@@ -1114,7 +1115,6 @@ export function FormularioLoja() {
                     value={formData.codigoFabricante || ""}
                     onChange={(e) => setFormData({ ...formData, codigoFabricante: e.target.value })}
                     className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
-                    required
                   />
                 </div>
               </div>
@@ -1362,17 +1362,13 @@ export function FormularioLoja() {
                 {/* Quantidade */}
                 <div>
                   <label className="text-[#81059e] font-medium">Quantidade</label>
-                  <input
-                    type="number"
+                  <InputMask
+                    mask="99999"
+                    maskChar=""
+                    type="text"
                     name="quantidade"
                     value={formData.quantidade || ""}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      if (value > 0) {
-                        setFormData({ ...formData, quantidade: value });
-                      }
-                    }}
-                    min="1"
+                    onChange={(e) => setFormData({ ...formData, quantidade: e.target.value.replace(/\D/g, '') })}
                     className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
                     required
                   />
@@ -1407,7 +1403,6 @@ export function FormularioLoja() {
                     value={formData.CEST || ""}
                     onChange={(e) => setFormData({ ...formData, CEST: e.target.value })}
                     className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
-                    required
                   />
                 </div>
 
@@ -1420,7 +1415,6 @@ export function FormularioLoja() {
                     value={formData.csosn || ""}
                     onChange={(e) => setFormData({ ...formData, csosn: e.target.value })}
                     className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
-                    required
                   />
                 </div>
               </div>
@@ -1435,7 +1429,6 @@ export function FormularioLoja() {
                     value={formData.cfop || ""}
                     onChange={(e) => setFormData({ ...formData, cfop: e.target.value })}
                     className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
-                    required
                   />
                 </div>
 
@@ -1448,7 +1441,6 @@ export function FormularioLoja() {
                     value={formData.origem_produto || ""}
                     onChange={(e) => setFormData({ ...formData, origem_produto: e.target.value })}
                     className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
-                    required
                   />
                 </div>
               </div>
@@ -1463,7 +1455,6 @@ export function FormularioLoja() {
                     value={formData.aliquota_icms || ""}
                     onChange={(e) => setFormData({ ...formData, aliquota_icms: e.target.value })}
                     className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
-                    required
                   />
                 </div>
 
@@ -1476,7 +1467,6 @@ export function FormularioLoja() {
                     value={formData.base_calculo_icms || ""}
                     onChange={(e) => setFormData({ ...formData, base_calculo_icms: e.target.value })}
                     className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
-                    required
                   />
                 </div>
 
@@ -1489,7 +1479,6 @@ export function FormularioLoja() {
                     value={formData.cst_pis || ""}
                     onChange={(e) => setFormData({ ...formData, cst_pis: e.target.value })}
                     className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
-                    required
                   />
                 </div>
               </div>
@@ -1504,7 +1493,6 @@ export function FormularioLoja() {
                     value={formData.cst_cofins || ""}
                     onChange={(e) => setFormData({ ...formData, cst_cofins: e.target.value })}
                     className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
-                    required
                   />
                 </div>
 
@@ -1517,7 +1505,6 @@ export function FormularioLoja() {
                     value={formData.aliquota_ipi || ""}
                     onChange={(e) => setFormData({ ...formData, aliquota_ipi: e.target.value })}
                     className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
-                    required
                   />
                 </div>
 
@@ -1530,7 +1517,6 @@ export function FormularioLoja() {
                     value={formData.cst_ipi || ""}
                     onChange={(e) => setFormData({ ...formData, cst_ipi: e.target.value })}
                     className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
-                    required
                   />
                 </div>
               </div>
@@ -1545,7 +1531,6 @@ export function FormularioLoja() {
                     value={formData.base_calculo_ipi || ""}
                     onChange={(e) => setFormData({ ...formData, base_calculo_ipi: e.target.value })}
                     className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
-                    required
                   />
                 </div>
 
@@ -1558,7 +1543,6 @@ export function FormularioLoja() {
                     value={formData.peso_bruto || ""}
                     onChange={(e) => setFormData({ ...formData, peso_bruto: e.target.value })}
                     className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
-                    required
                   />
                 </div>
 
@@ -1571,7 +1555,6 @@ export function FormularioLoja() {
                     value={formData.peso_liquido || ""}
                     onChange={(e) => setFormData({ ...formData, peso_liquido: e.target.value })}
                     className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
-                    required
                   />
                 </div>
               </div>
@@ -1586,7 +1569,7 @@ export function FormularioLoja() {
                   type="file"
                   name="imagem"
                   accept="image/*"
-                  ref={imageInputRef} // 👈 aqui
+                  ref={imageInputRef} 
                   onChange={(e) => {
                     const file = e.target.files[0];
                     if (file) {
@@ -1606,7 +1589,7 @@ export function FormularioLoja() {
                     <img
                       src={previewUrl}
                       alt="Pré-visualização"
-                      className="max-w-xs h-auto object-contain border border-gray-300 rounded-md"
+                      className="w-32 h-32 object-cover rounded-sm border-2 border-[#81059e]"
                     />
 
                     {/* Botão de fechar (X) */}
@@ -1616,7 +1599,7 @@ export function FormularioLoja() {
                         setPreviewUrl(null);
                         setFormData(prev => ({ ...prev, imagem: null }));
                         if (imageInputRef.current) {
-                          imageInputRef.current.value = null; // 👈 força reset do input
+                          imageInputRef.current.value = null; 
                         }
                       }}
                       className="absolute top-0 right-0 bg-white border border-gray-300 rounded-full p-1 shadow hover:bg-red-100"

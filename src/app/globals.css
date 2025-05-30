@@ -2,10 +2,24 @@
 @tailwind components;
 @tailwind utilities;
 
-
 * {
   font-family: 'Inter';
   font-weight: 500;
+}
+
+input:focus {
+  border-color: #bb98c2 !important; /* Cor roxa ao focar */
+  outline: none; /* Remove o contorno azul padrão */
+}
+
+select:focus {
+  border-color: #bb98c2 !important; /* Cor roxa ao focar */
+  outline: none; /* Remove o contorno azul padrão */
+}
+
+textarea:focus {
+  border-color: #bb98c2 !important; /* Cor roxa ao focar */
+  outline: none; /* Remove o contorno azul padrão */
 }
 
 /* Personalizando a scrollbar */
@@ -30,7 +44,6 @@
   background-color: #c45ce0; /* Cor mais clara ao passar o mouse */
 }
 
-
 body {
   font-family: Arial, Helvetica, sans-serif;
 }
@@ -40,7 +53,6 @@ body {
     text-wrap: balance;
   }
 }
-
 
 /* Estilo customizado para o select com a seta */
 .custom-select {
@@ -70,22 +82,23 @@ body {
   font-size: 1em;
 }
 
-
-
 input.custom-input,
-select.custom-input {
+select.custom-input,
+textarea.custom-input {
   width: 100%;
   padding: 10px;
   border: 1px solid #81059e; /* Borda roxa */
-  border-radius: 8px; /* Bordas arredondadas *//* Cor de fundo */
+  border-radius: 8px; /* Bordas arredondadas */
   color: black; /* Cor do texto */
   font-size: 16px;
   text-align: left; /* Texto alinhado à esquerda */
 }
 
 input.custom-input:focus,
-select.custom-input:focus {
-  outline: none; /* Remove o outline azul padrão *//* Adiciona um leve brilho ao redor */
+select.custom-input:focus,
+textarea.custom-input:focus {
+  outline: none; /* Remove o outline azul padrão */
+  border-color: #bb98c2 !important; /* Cor roxa ao focar */
 }
 
 @layer base {
