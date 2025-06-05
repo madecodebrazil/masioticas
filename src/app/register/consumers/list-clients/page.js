@@ -18,11 +18,12 @@ import {
   faGlasses,
   faTrash,
   faIdCard,
-  faPhone
+  // faPhone removido pois não é mais usado
 } from "@fortawesome/free-solid-svg-icons";
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 import ClientDetailsModal from "./ClientDetailsModal";
+import Image from "next/image";
 
 // Função auxiliar para debug do Storage
 const debugStoragePath = async (path) => {
@@ -586,13 +587,25 @@ const ClientsTable = () => {
                                       target="_blank"
                                       rel="noopener noreferrer"
                                       onClick={(e) => e.stopPropagation()}
-                                      className="inline-block p-2 bg-green-500 text-green-600 hover:text-green-100 hover:bg-green-500 rounded-full transition-all"
+                                      className="inline-block p-2 hover:scale-110 transition-all"
                                     >
-                                      <FontAwesomeIcon icon={faPhone} className="h-5 w-5" />
+                                      <Image
+                                        src="/images/icons/icone_whatsapp.png"
+                                        alt="WhatsApp"
+                                        width={20}
+                                        height={20}
+                                        className="h-5 w-5"
+                                      />
                                     </a>
                                   ) : (
-                                    <span className="inline-block p-2 text-gray-400">
-                                      <FontAwesomeIcon icon={faPhone} className="h-5 w-5" />
+                                    <span className="inline-block p-2">
+                                      <Image
+                                        src="/images/icons/icone_whatsapp.png"
+                                        alt="WhatsApp"
+                                        width={20}
+                                        height={20}
+                                        className="h-5 w-5"
+                                      />
                                     </span>
                                   )}
                                 </td>
@@ -665,13 +678,25 @@ const ClientsTable = () => {
                                           target="_blank"
                                           rel="noopener noreferrer"
                                           onClick={(e) => e.stopPropagation()}
-                                          className="inline-block p-2 bg-green-500 text-green-600 hover:text-green-100 hover:bg-green-500 rounded-full transition-all"
+                                          className="inline-block p-2 hover:scale-110 transition-all"
                                         >
-                                          <FontAwesomeIcon icon={faPhone} className="h-5 w-5" />
+                                          <Image
+                                            src="/images/icons/icone_whatsapp.png"
+                                            alt="WhatsApp"
+                                            width={20}
+                                            height={20}
+                                            className="h-5 w-5"
+                                          />
                                         </a>
                                       ) : (
-                                        <span className="inline-block p-2 text-gray-400">
-                                          <FontAwesomeIcon icon={faPhone} className="h-5 w-5" />
+                                        <span className="inline-block p-2">
+                                          <Image
+                                            src="/images/icons/icone_whatsapp.png"
+                                            alt="WhatsApp"
+                                            width={20}
+                                            height={20}
+                                            className="h-5 w-5 opacity-50"
+                                          />
                                         </span>
                                       )}
                                     </td>

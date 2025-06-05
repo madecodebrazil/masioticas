@@ -120,6 +120,9 @@ const CarrinhoCompras = ({
   ]);
   const [activeCollectionId, setActiveCollectionId] = useState(1);
 
+  // CONSTANTE PARA LIMITE MÁXIMO DE COLEÇÕES
+  const MAX_COLLECTIONS = 10;
+
   const { userPermissions } = useAuth();
   const categorias = ['armacoes', 'lentes', 'solares'];
 
@@ -278,8 +281,15 @@ const CarrinhoCompras = ({
     return categoriasComOS.includes(item.categoria);
   };
 
-  // Adicionar uma nova coleção
+  // FUNÇÃO MODIFICADA: Adicionar uma nova coleção COM LIMITE
   const addCollection = () => {
+    // Verificar se já atingiu o limite máximo
+    if (collections.length >= MAX_COLLECTIONS) {
+      setError(`Limite máximo de ${MAX_COLLECTIONS} coleções atingido!`);
+      setTimeout(() => setError(''), 3000);
+      return;
+    }
+
     const newCollectionId = collections.length + 1;
     setCollections([
       ...collections,
@@ -292,6 +302,9 @@ const CarrinhoCompras = ({
     setActiveCollectionId(newCollectionId);
     setCartItems([]);
   };
+
+  // Verificar se pode adicionar mais coleções
+  const canAddMoreCollections = collections.length < MAX_COLLECTIONS;
 
   // Modificar setActiveCollection para filtrar cartItems por coleção ativa
   const handleSetActiveCollection = (collectionId) => {
@@ -524,17 +537,13 @@ const CarrinhoCompras = ({
 
   // Calcular total do carrinho considerando TODAS as coleções
   const getTotal = () => {
-    if (typeof calculateTotal === 'function') {
-      return calculateTotal();
-    } else {
-      // Calcular o total baseado em TODOS os itens de TODAS as coleções
-      return collections.reduce((total, collection) => {
-        const collectionTotal = collection.items ? collection.items.reduce(
-          (subTotal, item) => subTotal + ((item.valor || item.preco || 0) * (item.quantity || 1)), 0
-        ) : 0;
-        return total + collectionTotal;
-      }, 0);
-    }
+    // Sempre calcular o total baseado em TODOS os itens de TODAS as coleções
+    return collections.reduce((total, collection) => {
+      const collectionTotal = collection.items ? collection.items.reduce(
+        (subTotal, item) => subTotal + ((item.valor || item.preco || 0) * (item.quantity || 1)), 0
+      ) : 0;
+      return total + collectionTotal;
+    }, 0);
   };
 
   // Função para processar o QR code lido
@@ -596,13 +605,22 @@ const CarrinhoCompras = ({
       <div className="p-3 bg-gray-50 border-b border-gray-200">
         <div className="flex justify-between items-center mb-2">
           <h3 className="text-base font-medium text-gray-700 flex items-center">
-            <FiLayers className="mr-2 text-[#81059e]" /> Coleções
+            <FiLayers className="mr-2 text-[#81059e]" /> Coleções ({collections.length}/{MAX_COLLECTIONS})
           </h3>
           <button
             onClick={addCollection}
-            className="text-xs bg-[#81059e] opacity-70 text-white px-3 py-1 rounded-sm flex items-center transition-colors"
+            disabled={!canAddMoreCollections}
+            className={`text-xs px-3 py-1 rounded-sm flex items-center transition-colors ${
+              canAddMoreCollections
+                ? 'bg-[#81059e] opacity-70 text-white hover:opacity-90'
+                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            }`}
+            title={!canAddMoreCollections ? `Limite máximo de ${MAX_COLLECTIONS} coleções atingido` : 'Adicionar nova coleção'}
           >
-            <FiPlusCircle className="mr-1 text-lg" /> <p className='text-sm'>Nova Coleção</p>
+            <FiPlusCircle className="mr-1 text-lg" /> 
+            <p className='text-sm'>
+              {canAddMoreCollections ? 'Nova Coleção' : 'Nova Coleção'}
+            </p>
           </button>
         </div>
 
@@ -672,7 +690,6 @@ const CarrinhoCompras = ({
             <option value="solares">Solares</option>
           </select>
 
-
           {/* Botão de QR Code */}
           <button
             onClick={() => setShowQrScanner(!showQrScanner)}
@@ -702,7 +719,7 @@ const CarrinhoCompras = ({
                 <div className="text-xs text-gray-500">
                   {product.codigo && `Código: ${product.codigo}`} {product.marca && `- Marca: ${product.marca}`}
                   <span className="ml-2 inline-block px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">
-{product.categoria === 'armacoes' ? 'Armação' :
+                    {product.categoria === 'armacoes' ? 'Armação' :
                       product.categoria === 'lentes' ? 'Lente' :
                         product.categoria === 'solares' ? 'Óculos Solar' :
                           'Categoria não definida'}
@@ -867,7 +884,7 @@ const CarrinhoCompras = ({
       {cartItems.length > 0 && (
         <div className="p-3 bg-gray-50 border-t border-gray-200">
           <div className="flex justify-between items-center mb-2">
-            <span className="font-semibold text-lg">Total desta coleção:</span>
+            <span className=" text-base">Total desta coleção:</span>
             <span className="font-medium text-lg text-[#81059e]">
               {formatCurrencyValue(cartItems.reduce((total, item) => 
                 total + ((item.valor || item.preco || 0) * (item.quantity || 1)), 0)
@@ -877,7 +894,7 @@ const CarrinhoCompras = ({
           
           {/* NOVO: Mostrar o total global considerando todas as coleções */}
           <div className="flex justify-between items-center pt-2 border-t border-gray-300">
-            <span className="font-semibold text-lg">Total geral (todas as coleções):</span>
+            <span className="font-semiboald text-lg">Total geral (todas as coleções):</span>
             <span className="font-bold text-lg text-[#81059e]">
               {formatCurrencyValue(getTotal())}
             </span>
@@ -916,4 +933,3 @@ const CarrinhoCompras = ({
 };
 
 export default CarrinhoCompras;
-                      

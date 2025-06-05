@@ -69,6 +69,7 @@ const NovaVendaPage = () => {
     const [totalEditado, setTotalEditado] = useState(null);
     const [dataVenda, setDataVenda] = useState(new Date().toISOString().split('T')[0]);
     const [vendedor, setVendedor] = useState('');
+    const [subtotalGlobal, setSubtotalGlobal] = useState(0);
 
     // Definir a loja baseada apenas nas permissões do usuário
     useEffect(() => {
@@ -204,6 +205,22 @@ const NovaVendaPage = () => {
     // Função para voltar à página anterior
     const handleBack = () => {
         router.push('/sales');
+    };
+
+    // Função para calcular o desconto sobre o subtotal global
+    const calcularDescontoGlobal = () => {
+        if (discountType === 'value') {
+            return discount;
+        } else if (discountType === 'percentage') {
+            return (subtotalGlobal * discount) / 100;
+        }
+        return 0;
+    };
+
+    // Função para calcular o total final
+    const calcularTotalGlobal = () => {
+        const total = subtotalGlobal - calcularDescontoGlobal();
+        return total >= 0 ? total : 0;
     };
 
     if (!userPermissions || !selectedLoja) {
@@ -370,9 +387,10 @@ const NovaVendaPage = () => {
                                     setCartItems={setCartItems}
                                     selectedLoja={selectedLoja}
                                     formatCurrency={formatCurrencyFn}
-                                    calculateTotal={calculateTotal || (() => 0)}
+                                    calculateTotal={calcularTotalGlobal}
                                     updateCollections={(updatedCollections) => setCollections(updatedCollections)}
                                     setActiveCollection={(colectionId) => setActiveCollection(colectionId)}
+                                    updateCartValue={(subtotal, collections) => setSubtotalGlobal(subtotal)}
                                 />
                             </div>
                         </div>
@@ -485,7 +503,7 @@ const NovaVendaPage = () => {
                             <div className="space-y-2">
                                 <div className="flex justify-between">
                                     <span>Subtotal:</span>
-                                    <span>{formatCurrencyFn(calcSubtotal())}</span>
+                                    <span>{formatCurrencyFn(subtotalGlobal)}</span>
                                 </div>
 
                                 {discount > 0 && (
@@ -510,11 +528,9 @@ const NovaVendaPage = () => {
                                     <div className="flex items-center">
                                         <input
                                             type="text"
-                                            value={formatCurrencyFn(totalEditado ?? calculateTotal())}
+                                            value={formatCurrencyFn(totalEditado ?? calcularTotalGlobal())}
                                             onChange={(e) => {
-                                                // Remove todos os caracteres não numéricos
                                                 const onlyNumbers = e.target.value.replace(/\D/g, '');
-                                                // Converte para número e divide por 100 para obter o valor em reais
                                                 const parsedValue = onlyNumbers ? Number(onlyNumbers) / 100 : 0;
                                                 setTotalEditado(parsedValue);
                                             }}
@@ -549,7 +565,7 @@ const NovaVendaPage = () => {
                                     setCurrentPaymentIndex={setCurrentPaymentIndex}
                                     valueDistribution={valueDistribution}
                                     setValueDistribution={setValueDistribution}
-                                    calculateTotal={calculateTotal}
+                                    calculateTotal={calcularTotalGlobal}
                                     calculateTotalAllocated={calculateTotalAllocated}
                                     calculateRemainingValue={calculateRemainingValue}
                                     updatePaymentMethodValue={updatePaymentMethodValue}
@@ -609,16 +625,19 @@ const NovaVendaPage = () => {
             {showClientForm && (
                 <div className="fixed inset-0 z-[60] overflow-y-auto bg-black bg-opacity-50">
                     <div className="flex items-center justify-center min-h-screen">
-                        <div className="bg-white rounded-sm shadow-xl w-full max-w-4xl p-6">
-                            <div className="flex justify-between items-center mb-4">
-                                <h2 className="text-xl font-bold text-[#81059e]">Cadastrar Novo Cliente</h2>
+                        <div className="bg-white rounded-sm shadow-xl w-full max-w-4xl">
+                            <div className='bg-[#81059e] w-full p-4'>
+                            <div className="flex justify-between items-center mb-2">
+                                <h2 className="text-2xl font-bold text-white">Cadastrar Novo Cliente</h2>
                                 <button
                                     onClick={() => setShowClientForm(false)}
-                                    className="text-gray-400 hover:text-gray-600"
+                                    className="text-gray-400 hover:text-gray-300"
                                 >
                                     <FiX size={24} />
                                 </button>
                             </div>
+                            </div>
+                            <div className='p-6'>
                             <ClientForm
                                 selectedLoja={selectedLoja}
                                 onSuccessRedirect={() => {
@@ -626,6 +645,7 @@ const NovaVendaPage = () => {
                                     fetchClients(); // Atualizar a lista após adicionar
                                 }}
                             />
+                            </div>
                         </div>
                     </div>
                 </div>

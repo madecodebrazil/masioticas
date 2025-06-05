@@ -1,153 +1,310 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import {
-  collection,
-  getDocs,
-  doc,
-  deleteDoc,
-} from "firebase/firestore";
-import { firestore } from "@/lib/firebaseConfig";
-import Layout from "@/components/Layout";
-import { jsPDF } from "jspdf";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import React, { useEffect, useState } from 'react';
+import Layout from '@/components/Layout';
+import Link from 'next/link';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faBuilding,
+  faIndustry,
   faFileInvoice,
   faDollarSign,
+  faX,
+  faEdit,
   faTrash,
-  faIndustry
-} from "@fortawesome/free-solid-svg-icons";
-import Link from "next/link";
-import { useAuth } from "@/hooks/useAuth";
+  faPlus,
+  faMapMarkerAlt,
+  faPhone
+} from '@fortawesome/free-solid-svg-icons';
+import { collection, getDocs, doc, deleteDoc, setDoc } from 'firebase/firestore';
+import { useAuth } from '@/hooks/useAuth';
+import { firestore } from '@/lib/firebaseConfig';
+import jsPDF from 'jspdf';
 
-const SuppliersTable = () => {
-  const { userPermissions } = useAuth();
-  const [suppliers, setSuppliers] = useState([]);
-  const [filteredSuppliers, setFilteredSuppliers] = useState([]);
-  const [selectedSupplier, setSelectedSupplier] = useState(null);
-  const [showModal, setShowModal] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
+export default function ListaFornecedores() {
+  const { userPermissions, userData } = useAuth();
+  const [fornecedores, setFornecedores] = useState([]);
+  const [filteredFornecedores, setFilteredFornecedores] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedFornecedor, setSelectedFornecedor] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [totalFornecedores, setTotalFornecedores] = useState(0);
+  const [selectedForDeletion, setSelectedForDeletion] = useState([]);
+  const [sortField, setSortField] = useState('nomeFantasia');
+  const [sortDirection, setSortDirection] = useState('asc');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(15);
-  const [selectedForDeletion, setSelectedForDeletion] = useState([]);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingFornecedor, setEditingFornecedor] = useState(null);
+  
+  // Estados para estatísticas
+  const [fornecedoresRecentes, setFornecedoresRecentes] = useState(0);
+  const [cidadesUnicas, setCidadesUnicas] = useState(0);
+  const [comTelefone, setComTelefone] = useState(0);
 
   useEffect(() => {
-    const fetchSuppliers = async () => {
+    const fetchFornecedores = async () => {
       try {
         setLoading(true);
-        const fetchedSuppliers = [];
-
-        // Usar o caminho correto: lojas/fornecedores/users
-        const suppliersCollection = collection(firestore, 'lojas/fornecedores/users');
-        const snapshot = await getDocs(suppliersCollection);
-
-        snapshot.docs.forEach((doc) => {
-          fetchedSuppliers.push({
-            id: doc.id,
-            ...doc.data()
+        const fornecedoresRef = collection(firestore, 'lojas/fornecedores/users');
+        const fornecedoresSnapshot = await getDocs(fornecedoresRef);
+        
+        const fetchedFornecedores = [];
+        fornecedoresSnapshot.docs.forEach((docItem) => {
+          const fornecedorData = docItem.data();
+          fetchedFornecedores.push({
+            id: docItem.id,
+            ...fornecedorData
           });
         });
 
-        setSuppliers(fetchedSuppliers);
-        setFilteredSuppliers(fetchedSuppliers);
+        // Aplicar ordenação inicial
+        const sortedFornecedores = sortFornecedores(fetchedFornecedores, sortField, sortDirection);
+        setFornecedores(sortedFornecedores);
+        setFilteredFornecedores(sortedFornecedores);
+        setTotalFornecedores(sortedFornecedores.length);
+        
+        // Calcular estatísticas
+        calcularEstatisticas(sortedFornecedores);
+        
         setLoading(false);
-      } catch (error) {
-        console.error("Erro ao buscar fornecedores:", error);
-        setError("Erro ao carregar os dados dos fornecedores: " + error.message);
+      } catch (err) {
+        console.error('Erro ao carregar fornecedores:', err);
+        setError(`Erro ao carregar os dados dos fornecedores: ${err.message}`);
         setLoading(false);
       }
     };
 
-    fetchSuppliers();
-  }, []);
+    fetchFornecedores();
+  }, [sortField, sortDirection]);
 
-  // Filtrar fornecedores com base na busca
+  // Função para calcular estatísticas
+  const calcularEstatisticas = (fornecedoresList) => {
+    // Fornecedores recentes (últimos 30 dias)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    const recentes = fornecedoresList.filter(fornecedor => {
+      if (!fornecedor.dataCadastro) return false;
+      const cadastroDate = typeof fornecedor.dataCadastro === 'string'
+        ? new Date(fornecedor.dataCadastro)
+        : fornecedor.dataCadastro.seconds
+          ? new Date(fornecedor.dataCadastro.seconds * 1000)
+          : null;
+      return cadastroDate && cadastroDate >= thirtyDaysAgo;
+    }).length;
+    
+    setFornecedoresRecentes(recentes);
+
+    // Cidades únicas
+    const cidades = new Set();
+    fornecedoresList.forEach(fornecedor => {
+      const cidade = fornecedor.endereco?.cidade;
+      if (cidade) {
+        cidades.add(cidade);
+      }
+    });
+    setCidadesUnicas(cidades.size);
+
+    // Com telefone
+    const telefones = fornecedoresList.filter(f => f.telefone || f.celular).length;
+    setComTelefone(telefones);
+  };
+
+  // Função para filtrar fornecedores com base na busca
   useEffect(() => {
-    if (searchQuery === "") {
-      setFilteredSuppliers(suppliers);
-    } else {
-      const filtered = suppliers.filter(
-        (supplier) =>
-          (supplier.razaoSocial?.toLowerCase().includes(searchQuery.toLowerCase()) || "") ||
-          (supplier.nomeFantasia?.toLowerCase().includes(searchQuery.toLowerCase()) || "") ||
-          (supplier.cnpj?.includes(searchQuery) || "")
-      );
-      setFilteredSuppliers(filtered);
+    const filterBySearch = () => {
+      let filtered = fornecedores;
+
+      if (searchQuery !== '') {
+        filtered = filtered.filter(
+          (fornecedor) =>
+            (fornecedor.razaoSocial?.toLowerCase().includes(searchQuery.toLowerCase()) || '') ||
+            (fornecedor.nomeFantasia?.toLowerCase().includes(searchQuery.toLowerCase()) || '') ||
+            (fornecedor.cnpj?.includes(searchQuery.replace(/\D/g, '')) || '') ||
+            (fornecedor.email?.toLowerCase().includes(searchQuery.toLowerCase()) || '') ||
+            (fornecedor.endereco?.cidade?.toLowerCase().includes(searchQuery.toLowerCase()) || '') ||
+            (fornecedor.representante?.toLowerCase().includes(searchQuery.toLowerCase()) || '')
+        );
+      }
+
+      // Aplicar ordenação
+      filtered = sortFornecedores(filtered, sortField, sortDirection);
+      setFilteredFornecedores(filtered);
+      setCurrentPage(1); // Reset para primeira página ao filtrar
+    };
+
+    filterBySearch();
+  }, [searchQuery, fornecedores, sortField, sortDirection]);
+
+  // Função para ordenar fornecedores
+  const sortFornecedores = (fornecedoresToSort, field, direction) => {
+    return [...fornecedoresToSort].sort((a, b) => {
+      let aValue = a[field];
+      let bValue = b[field];
+
+      // Tratar campos aninhados
+      if (field.includes('.')) {
+        const keys = field.split('.');
+        aValue = keys.reduce((obj, key) => obj?.[key], a);
+        bValue = keys.reduce((obj, key) => obj?.[key], b);
+      }
+
+      // Tratar datas
+      if (field === 'dataCadastro') {
+        aValue = convertToDate(aValue);
+        bValue = convertToDate(bValue);
+      }
+      // Tratar strings
+      else {
+        aValue = String(aValue || '').toLowerCase();
+        bValue = String(bValue || '').toLowerCase();
+      }
+
+      // Comparação
+      if (aValue < bValue) return direction === 'asc' ? -1 : 1;
+      if (aValue > bValue) return direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+  };
+
+  // Função para converter diferentes formatos de data para objeto Date
+  const convertToDate = (date) => {
+    if (!date) return new Date(0);
+    if (typeof date === 'object' && date.seconds) {
+      return new Date(date.seconds * 1000);
     }
-  }, [searchQuery, suppliers]);
-
-  const handleModalOpen = (supplier) => {
-    setSelectedSupplier(supplier);
-    setShowModal(true);
+    return new Date(date);
   };
 
-  const handleModalClose = () => {
-    setShowModal(false);
-    setSelectedSupplier(null);
+  // Função para alternar a ordenação
+  const handleSort = (field) => {
+    const direction = field === sortField && sortDirection === 'asc' ? 'desc' : 'asc';
+    setSortField(field);
+    setSortDirection(direction);
   };
 
-  const handleDownloadPDF = () => {
-    if (!selectedSupplier) return;
+  // Renderizar seta de ordenação
+  const renderSortArrow = (field) => {
+    if (sortField !== field) return null;
+    return sortDirection === 'asc' ?
+      <span className="ml-1">↑</span> :
+      <span className="ml-1">↓</span>;
+  };
 
-    const docPDF = new jsPDF();
-    docPDF.text(`Razão Social: ${selectedSupplier.razaoSocial}`, 10, 10);
-    docPDF.text(`Nome Fantasia: ${selectedSupplier.nomeFantasia}`, 10, 20);
-    docPDF.text(`CNPJ: ${selectedSupplier.cnpj}`, 10, 30);
-    docPDF.text(`Email: ${selectedSupplier.email || 'N/A'}`, 10, 40);
-    docPDF.text(`Telefone: ${selectedSupplier.telefone || 'N/A'}`, 10, 50);
-    docPDF.text(`Representante: ${selectedSupplier.representante || 'N/A'}`, 10, 60);
-
-    if (selectedSupplier.endereco) {
-      docPDF.text(`Endereço:`, 10, 70);
-      docPDF.text(`CEP: ${selectedSupplier.endereco.cep || 'N/A'}`, 15, 80);
-      docPDF.text(`Logradouro: ${selectedSupplier.endereco.logradouro || 'N/A'}`, 15, 90);
-      docPDF.text(`Número: ${selectedSupplier.endereco.numero || 'N/A'}`, 15, 100);
-      docPDF.text(`Cidade: ${selectedSupplier.endereco.cidade || 'N/A'}`, 15, 110);
-      docPDF.text(`Estado: ${selectedSupplier.endereco.estado || 'N/A'}`, 15, 120);
+  // Formatar CNPJ
+  const formatCNPJ = (cnpj) => {
+    if (!cnpj) return 'N/A';
+    const numericCNPJ = cnpj.replace(/\D/g, '');
+    if (numericCNPJ.length === 14) {
+      return numericCNPJ.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
     }
-
-    docPDF.save(`${selectedSupplier.nomeFantasia}-dados.pdf`);
+    return cnpj;
   };
 
+  // Formatar telefone
+  const formatPhone = (phone) => {
+    if (!phone) return 'N/A';
+    const numericPhone = phone.replace(/\D/g, '');
+    if (numericPhone.length === 11) {
+      return numericPhone.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+    } else if (numericPhone.length === 10) {
+      return numericPhone.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
+    }
+    return phone;
+  };
+
+  // Formatar data
+  const formatDate = (date) => {
+    if (!date) return 'N/A';
+    if (typeof date === 'object' && date.seconds) {
+      return new Date(date.seconds * 1000).toLocaleDateString('pt-BR');
+    }
+    return new Date(date).toLocaleDateString('pt-BR');
+  };
+
+  // Função para abrir o modal de detalhes
+  const openModal = (fornecedor) => {
+    setSelectedFornecedor(fornecedor);
+    setIsModalOpen(true);
+  };
+
+  // Função para fechar o modal
+  const closeModal = () => {
+    setSelectedFornecedor(null);
+    setIsModalOpen(false);
+  };
+
+  // Função para gerar PDF
+  const generatePDF = () => {
+    if (!selectedFornecedor) return;
+
+    const doc = new jsPDF();
+    doc.text(`Detalhes do Fornecedor`, 10, 10);
+    doc.text(`Razão Social: ${selectedFornecedor.razaoSocial || 'N/A'}`, 10, 20);
+    doc.text(`Nome Fantasia: ${selectedFornecedor.nomeFantasia || 'N/A'}`, 10, 30);
+    doc.text(`CNPJ: ${formatCNPJ(selectedFornecedor.cnpj)}`, 10, 40);
+    doc.text(`Email: ${selectedFornecedor.email || 'N/A'}`, 10, 50);
+    doc.text(`Telefone: ${formatPhone(selectedFornecedor.telefone)}`, 10, 60);
+    doc.text(`Representante: ${selectedFornecedor.representante || 'N/A'}`, 10, 70);
+    
+    if (selectedFornecedor.endereco) {
+      doc.text(`Endereço:`, 10, 80);
+      doc.text(`${selectedFornecedor.endereco.logradouro || ''} ${selectedFornecedor.endereco.numero || ''}`, 10, 90);
+      doc.text(`${selectedFornecedor.endereco.bairro || ''} - ${selectedFornecedor.endereco.cidade || ''}`, 10, 100);
+      doc.text(`${selectedFornecedor.endereco.estado || ''} - CEP: ${selectedFornecedor.endereco.cep || ''}`, 10, 110);
+    }
+    
+    doc.text(`Cadastrado em: ${formatDate(selectedFornecedor.dataCadastro)}`, 10, 120);
+
+    doc.save(`Fornecedor_${selectedFornecedor.nomeFantasia || selectedFornecedor.id}.pdf`);
+  };
+
+  // Função para lidar com a impressão
   const handlePrint = () => {
     window.print();
   };
 
   // Função para marcar ou desmarcar fornecedor para exclusão
-  const toggleDeletion = (e, supplierId) => {
-    e.stopPropagation(); // Evitar abrir o modal
-
+  const toggleDeletion = (e, fornecedorId) => {
+    e.stopPropagation();
     setSelectedForDeletion(prev => {
-      if (prev.includes(supplierId)) {
-        return prev.filter(id => id !== supplierId);
+      if (prev.includes(fornecedorId)) {
+        return prev.filter(id => id !== fornecedorId);
       } else {
-        return [...prev, supplierId];
+        return [...prev, fornecedorId];
       }
     });
   };
 
-  // Função para excluir os fornecedores selecionados
+  // Função para excluir fornecedores selecionados
   const handleDeleteSelected = async () => {
     if (selectedForDeletion.length === 0) {
       alert('Selecione pelo menos um fornecedor para excluir.');
       return;
     }
 
-    if (confirm(`Deseja realmente excluir ${selectedForDeletion.length} fornecedores selecionados?`)) {
+    if (confirm(`Deseja realmente excluir ${selectedForDeletion.length} fornecedor(es) selecionado(s)?`)) {
       try {
-        for (const supplierId of selectedForDeletion) {
-          // Excluir o fornecedor da coleção correta: lojas/fornecedores/users
-          const supplierRef = doc(firestore, "lojas/fornecedores/users", supplierId);
-          await deleteDoc(supplierRef);
+        for (const fornecedorId of selectedForDeletion) {
+          const fornecedorRef = doc(firestore, 'lojas/fornecedores/users', fornecedorId);
+          await deleteDoc(fornecedorRef);
         }
 
-        // Atualizar as listas de fornecedores
-        const updatedSuppliers = suppliers.filter(supplier => !selectedForDeletion.includes(supplier.id));
-        setSuppliers(updatedSuppliers);
-        setFilteredSuppliers(updatedSuppliers);
+        const updatedFornecedores = fornecedores.filter(fornecedor => !selectedForDeletion.includes(fornecedor.id));
+        setFornecedores(updatedFornecedores);
+        setFilteredFornecedores(updatedFornecedores.filter(f =>
+          !searchQuery ||
+          f.razaoSocial?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          f.nomeFantasia?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          f.cnpj?.includes(searchQuery.replace(/\D/g, '')) ||
+          f.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          f.endereco?.cidade?.toLowerCase().includes(searchQuery.toLowerCase())
+        ));
+        setTotalFornecedores(updatedFornecedores.length);
+        calcularEstatisticas(updatedFornecedores);
         setSelectedForDeletion([]);
 
         alert('Fornecedores excluídos com sucesso!');
@@ -158,47 +315,102 @@ const SuppliersTable = () => {
     }
   };
 
+  // Função para abrir modal de edição
+  const openEditModal = () => {
+    if (selectedForDeletion.length !== 1) return;
+    const fornecedorToEdit = fornecedores.find(fornecedor => fornecedor.id === selectedForDeletion[0]);
+    if (fornecedorToEdit) {
+      setEditingFornecedor({ ...fornecedorToEdit });
+      setIsEditModalOpen(true);
+    }
+  };
+
+  // Função para salvar edição
+  const handleSaveEdit = async () => {
+    try {
+      const fornecedorRef = doc(firestore, 'lojas/fornecedores/users', editingFornecedor.id);
+      await setDoc(fornecedorRef, { ...editingFornecedor, dataAtualizacao: new Date() }, { merge: true });
+
+      setFornecedores(prevFornecedores =>
+        prevFornecedores.map(fornecedor => fornecedor.id === editingFornecedor.id ? editingFornecedor : fornecedor)
+      );
+
+      setFilteredFornecedores(prevFiltered =>
+        prevFiltered.map(fornecedor => fornecedor.id === editingFornecedor.id ? editingFornecedor : fornecedor)
+      );
+
+      setSelectedForDeletion([]);
+      setIsEditModalOpen(false);
+      alert('Fornecedor atualizado com sucesso!');
+    } catch (error) {
+      console.error('Erro ao atualizar fornecedor:', error);
+      alert('Erro ao atualizar o fornecedor.');
+    }
+  };
+
   // Calcular fornecedores para a página atual
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentSuppliers = filteredSuppliers.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(filteredSuppliers.length / itemsPerPage);
+  const currentFornecedores = filteredFornecedores.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredFornecedores.length / itemsPerPage);
 
   // Funções de navegação
   const goToPage = (pageNumber) => {
     setCurrentPage(Math.max(1, Math.min(pageNumber, totalPages)));
   };
 
-  // Estatísticas para os cards
-  const recentSuppliers = suppliers.filter(supplier => {
-    if (!supplier.dataCadastro) return false;
-
-    const cadastroDate = typeof supplier.dataCadastro === 'string'
-      ? new Date(supplier.dataCadastro)
-      : supplier.dataCadastro.seconds
-        ? new Date(supplier.dataCadastro.seconds * 1000)
-        : null;
-
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-    return cadastroDate && cadastroDate >= thirtyDaysAgo;
-  }).length;
+  // Renderizar fornecedores na tabela
+  const renderFornecedores = () => {
+    return currentFornecedores.map((fornecedor) => (
+      <tr
+        key={fornecedor.id}
+        className="text-black text-left hover:bg-gray-100 cursor-pointer"
+        onClick={() => openModal(fornecedor)}
+      >
+        <td className="border px-2 py-2 text-center" onClick={(e) => e.stopPropagation()}>
+          <input
+            type="checkbox"
+            checked={selectedForDeletion.includes(fornecedor.id)}
+            onChange={(e) => toggleDeletion(e, fornecedor.id)}
+            className="h-4 w-4 cursor-pointer"
+          />
+        </td>
+        <td className="border px-3 py-2 font-mono text-sm">
+          {formatCNPJ(fornecedor.cnpj)}
+        </td>
+        <td className="border px-3 py-2 max-w-[200px] truncate">
+          {fornecedor.nomeFantasia || 'N/A'}
+        </td>
+        <td className="border px-3 py-2 max-w-[200px] truncate">
+          {fornecedor.razaoSocial || 'N/A'}
+        </td>
+        <td className="border px-3 py-2 font-mono text-sm">
+          {formatPhone(fornecedor.telefone)}
+        </td>
+        <td className="border px-3 py-2 max-w-[180px] truncate">
+          {fornecedor.email || 'N/A'}
+        </td>
+        <td className="border px-3 py-2">
+          {fornecedor.endereco?.cidade || 'N/A'}
+        </td>
+        <td className="border px-3 py-2 text-center">
+          {fornecedor.endereco?.estado || 'N/A'}
+        </td>
+      </tr>
+    ));
+  };
 
   return (
     <Layout>
       <div className="min-h-screen p-0 md:p-2 mb-20">
         <div className="w-full max-w-5xl mx-auto rounded-lg">
           <div className="mb-4">
-            <h2
-              className="text-3xl font-bold mb-8 mt-8"
-              style={{ color: "#81059e" }}
-            >
+            <h2 className="text-3xl font-bold text-[#81059e] mb-8 mt-8">
               FORNECEDORES
             </h2>
           </div>
 
-          {/* Dashboard compacto com estatísticas */}
+          {/* Dashboard com estatísticas */}
           <div className="mb-6">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
               {/* Card - Total de Fornecedores */}
@@ -208,13 +420,9 @@ const SuppliersTable = () => {
                     icon={faBuilding}
                     className="h-8 w-8 text-[#81059e] bg-purple-300 p-2 rounded-2xl"
                   />
-                  <span className="text-lg font-medium text-gray-700 flex-grow ml-3">
-                    Total de Fornecedores
-                  </span>
+                  <span className="text-lg font-medium text-gray-700 flex-grow ml-3">Total de Fornecedores</span>
                 </div>
-                <p className="text-2xl font-semibold text-center mt-2">
-                  {suppliers.length}
-                </p>
+                <p className="text-2xl font-semibold text-center mt-2">{totalFornecedores}</p>
               </div>
 
               {/* Card - Fornecedores Recentes */}
@@ -224,61 +432,44 @@ const SuppliersTable = () => {
                     icon={faIndustry}
                     className="h-8 w-8 text-[#81059e] bg-purple-300 p-2 rounded-2xl"
                   />
-                  <span className="text-lg font-medium text-gray-700 flex-grow ml-3">
-                    Fornecedores Recentes
-                  </span>
+                  <span className="text-lg font-medium text-gray-700 flex-grow ml-3">Recentes</span>
                 </div>
-                <p className="text-2xl font-semibold text-center mt-2">
-                  {recentSuppliers}
-                </p>
-                <p className="text-sm text-gray-500 text-center mt-1">
-                  Últimos 30 dias
-                </p>
+                <p className="text-2xl font-semibold text-center mt-2">{fornecedoresRecentes}</p>
+                <p className="text-sm text-gray-500 text-center mt-1">Últimos 30 dias</p>
               </div>
 
-              {/* Card - Pedidos em Aberto */}
+              {/* Card - Cidades */}
               <div className="border-2 rounded-lg p-4 border-gray-200 shadow-sm hover:shadow-md transition-shadow">
                 <div className="flex items-center justify-between mb-3">
                   <FontAwesomeIcon
-                    icon={faFileInvoice}
+                    icon={faMapMarkerAlt}
                     className="h-8 w-8 text-[#81059e] bg-purple-300 p-2 rounded-2xl"
                   />
-                  <span className="text-lg font-medium text-gray-700 flex-grow ml-3">
-                    Pedidos em Aberto
-                  </span>
+                  <span className="text-lg font-medium text-gray-700 flex-grow ml-3">Cidades</span>
                 </div>
-                <p className="text-2xl font-semibold text-center mt-2">
-                  0
-                </p>
+                <p className="text-2xl font-semibold text-center mt-2">{cidadesUnicas}</p>
               </div>
 
-              {/* Card - Valor Total dos Pedidos */}
+              {/* Card - Com Contato */}
               <div className="border-2 rounded-lg p-4 border-gray-200 shadow-sm hover:shadow-md transition-shadow">
                 <div className="flex items-center justify-between mb-3">
                   <FontAwesomeIcon
-                    icon={faDollarSign}
+                    icon={faPhone}
                     className="h-8 w-8 text-[#81059e] bg-purple-300 p-2 rounded-2xl"
                   />
-                  <span className="text-lg font-medium text-gray-700 flex-grow ml-3">
-                    Valor de Pedidos
-                  </span>
+                  <span className="text-lg font-medium text-gray-700 flex-grow ml-3">Com Telefone</span>
                 </div>
-                <p className="text-2xl font-semibold text-center mt-2">
-                  R$ 0,00
-                </p>
-                <p className="text-sm text-gray-500 text-center mt-1">
-                  Este mês
-                </p>
+                <p className="text-2xl font-semibold text-center mt-2">{comTelefone}</p>
               </div>
             </div>
           </div>
 
-          {/* Barra de busca e filtros */}
+          {/* Barra de busca e botões de ação */}
           <div className="flex flex-wrap gap-2 items-center mb-4">
             {/* Barra de busca */}
             <input
               type="text"
-              placeholder="Busque por nome, CNPJ ou razão social"
+              placeholder="Busque por nome, CNPJ, email ou cidade"
               className="p-2 h-10 flex-grow min-w-[200px] border-2 border-gray-200 rounded-lg text-black"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -288,35 +479,44 @@ const SuppliersTable = () => {
             <div className="flex gap-2">
               {/* Botão Adicionar */}
               <Link href="/stock/suppliers/add-supplier">
-                <button className="bg-green-400 text-white h-10 w-10 rounded-md flex items-center justify-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  </svg>
+                <button className="bg-green-400 text-white h-10 w-10 rounded-md flex items-center justify-center hover:bg-green-500 transition-colors">
+                  <FontAwesomeIcon icon={faPlus} className="h-5 w-5" />
                 </button>
               </Link>
+
+              {/* Botão Editar */}
+              <button
+                onClick={openEditModal}
+                className={`${selectedForDeletion.length !== 1 ? 'bg-blue-300' : 'bg-blue-500 hover:bg-blue-600'} text-white h-10 w-10 rounded-md flex items-center justify-center transition-colors`}
+                disabled={selectedForDeletion.length !== 1}
+              >
+                <FontAwesomeIcon icon={faEdit} className="h-5 w-5" />
+              </button>
 
               {/* Botão Excluir */}
               <button
                 onClick={handleDeleteSelected}
-                className={`${selectedForDeletion.length === 0 ? 'bg-red-400' : 'bg-red-400'} text-white h-10 w-10 rounded-md flex items-center justify-center`}
+                className={`${selectedForDeletion.length === 0 ? 'bg-red-300' : 'bg-red-500 hover:bg-red-600'} text-white h-10 w-10 rounded-md flex items-center justify-center transition-colors`}
                 disabled={selectedForDeletion.length === 0}
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
+                <FontAwesomeIcon icon={faTrash} className="h-5 w-5" />
               </button>
             </div>
           </div>
 
           {/* Tabela de fornecedores */}
           {loading ? (
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#81059e]"></div>
+            <div className="flex justify-center items-center py-8">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#81059e]"></div>
+            </div>
           ) : error ? (
-            <p>{error}</p>
+            <div className="text-red-600 text-center py-8">{error}</div>
           ) : (
             <div className="w-full overflow-x-auto">
-              {filteredSuppliers.length === 0 ? (
-                <p>Nenhum fornecedor encontrado.</p>
+              {filteredFornecedores.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  Nenhum fornecedor encontrado.
+                </div>
               ) : (
                 <>
                   <div className="overflow-x-auto">
@@ -326,53 +526,31 @@ const SuppliersTable = () => {
                           <th className="px-3 py-2 w-12">
                             <span className="sr-only">Selecionar</span>
                           </th>
-                          <th className="px-3 py-2">CNPJ</th>
-                          <th className="px-3 py-2">Nome Fantasia</th>
-                          <th className="px-3 py-2">Razão Social</th>
-                          <th className="px-3 py-2">Telefone</th>
-                          <th className="px-3 py-2">Email</th>
-                          <th className="px-3 py-2">Cidade</th>
-                          <th className="px-3 py-2">Estado</th>
+                          <th className="px-3 py-2 cursor-pointer" onClick={() => handleSort('cnpj')}>
+                            CNPJ {renderSortArrow('cnpj')}
+                          </th>
+                          <th className="px-3 py-2 cursor-pointer" onClick={() => handleSort('nomeFantasia')}>
+                            Nome Fantasia {renderSortArrow('nomeFantasia')}
+                          </th>
+                          <th className="px-3 py-2 cursor-pointer" onClick={() => handleSort('razaoSocial')}>
+                            Razão Social {renderSortArrow('razaoSocial')}
+                          </th>
+                          <th className="px-3 py-2 cursor-pointer" onClick={() => handleSort('telefone')}>
+                            Telefone {renderSortArrow('telefone')}
+                          </th>
+                          <th className="px-3 py-2 cursor-pointer" onClick={() => handleSort('email')}>
+                            Email {renderSortArrow('email')}
+                          </th>
+                          <th className="px-3 py-2 cursor-pointer" onClick={() => handleSort('endereco.cidade')}>
+                            Cidade {renderSortArrow('endereco.cidade')}
+                          </th>
+                          <th className="px-3 py-2 cursor-pointer" onClick={() => handleSort('endereco.estado')}>
+                            Estado {renderSortArrow('endereco.estado')}
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
-                        {currentSuppliers.map((supplier) => (
-                          <tr
-                            key={supplier.id}
-                            className="text-black text-left hover:bg-gray-100 cursor-pointer"
-                          >
-                            <td className="border px-2 py-2 text-center">
-                              <input
-                                type="checkbox"
-                                checked={selectedForDeletion.includes(supplier.id)}
-                                onChange={(e) => toggleDeletion(e, supplier.id)}
-                                className="h-4 w-4 cursor-pointer"
-                                onClick={(e) => e.stopPropagation()}
-                              />
-                            </td>
-                            <td className="border px-3 py-2" onClick={() => handleModalOpen(supplier)}>
-                              {supplier.cnpj || 'N/A'}
-                            </td>
-                            <td className="border px-3 py-2" onClick={() => handleModalOpen(supplier)}>
-                              {supplier.nomeFantasia || 'N/A'}
-                            </td>
-                            <td className="border px-3 py-2" onClick={() => handleModalOpen(supplier)}>
-                              {supplier.razaoSocial || 'N/A'}
-                            </td>
-                            <td className="border px-3 py-2" onClick={() => handleModalOpen(supplier)}>
-                              {supplier.telefone || 'N/A'}
-                            </td>
-                            <td className="border px-3 py-2" onClick={() => handleModalOpen(supplier)}>
-                              {supplier.email || 'N/A'}
-                            </td>
-                            <td className="border px-3 py-2" onClick={() => handleModalOpen(supplier)}>
-                              {supplier.endereco?.cidade || 'N/A'}
-                            </td>
-                            <td className="border px-3 py-2" onClick={() => handleModalOpen(supplier)}>
-                              {supplier.endereco?.estado || 'N/A'}
-                            </td>
-                          </tr>
-                        ))}
+                        {renderFornecedores()}
                       </tbody>
                     </table>
                   </div>
@@ -382,9 +560,9 @@ const SuppliersTable = () => {
                     <div className="text-sm text-gray-700">
                       Mostrando <span className="font-medium">{indexOfFirstItem + 1}</span> a{' '}
                       <span className="font-medium">
-                        {Math.min(indexOfLastItem, filteredSuppliers.length)}
+                        {Math.min(indexOfLastItem, filteredFornecedores.length)}
                       </span>{' '}
-                      de <span className="font-medium">{filteredSuppliers.length}</span> registros
+                      de <span className="font-medium">{filteredFornecedores.length}</span> registros
                     </div>
                     <div className="flex space-x-1">
                       <button
@@ -393,7 +571,7 @@ const SuppliersTable = () => {
                         className={`px-3 py-1 rounded ${currentPage === 1
                           ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                           : 'bg-[#81059e] text-white hover:bg-[#690480]'
-                          }`}
+                        }`}
                       >
                         &laquo;
                       </button>
@@ -403,7 +581,7 @@ const SuppliersTable = () => {
                         className={`px-3 py-1 rounded ${currentPage === 1
                           ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                           : 'bg-[#81059e] text-white hover:bg-[#690480]'
-                          }`}
+                        }`}
                       >
                         &lt;
                       </button>
@@ -418,7 +596,7 @@ const SuppliersTable = () => {
                         className={`px-3 py-1 rounded ${currentPage === totalPages
                           ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                           : 'bg-[#81059e] text-white hover:bg-[#690480]'
-                          }`}
+                        }`}
                       >
                         &gt;
                       </button>
@@ -428,7 +606,7 @@ const SuppliersTable = () => {
                         className={`px-3 py-1 rounded ${currentPage === totalPages
                           ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                           : 'bg-[#81059e] text-white hover:bg-[#690480]'
-                          }`}
+                        }`}
                       >
                         &raquo;
                       </button>
@@ -439,94 +617,148 @@ const SuppliersTable = () => {
             </div>
           )}
 
-          {/* Modal para detalhes do fornecedor */}
-          {showModal && selectedSupplier && (
+          {/* Modal de Detalhamento */}
+          {isModalOpen && selectedFornecedor && (
             <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-              <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md relative text-black overflow-y-auto max-h-[90vh]">
-                <h3 className="text-xl font-bold mb-4" style={{ color: "#81059e" }}>
-                  Dados do Fornecedor
-                </h3>
+              <div className="bg-white rounded-lg shadow-lg w-full max-w-md flex flex-col h-3/5 overflow-hidden">
+                <div className="bg-[#81059e] text-white p-4 flex justify-between items-center">
+                  <h3 className="text-xl font-bold">Detalhes do Fornecedor</h3>
+                  <FontAwesomeIcon
+                    icon={faX}
+                    className="h-5 w-5 text-white cursor-pointer hover:text-gray-200"
+                    onClick={closeModal}
+                  />
+                </div>
+                <div className="space-y-3 p-4 overflow-y-auto flex-grow">
+                  <p><strong>Razão Social:</strong> {selectedFornecedor.razaoSocial || 'N/A'}</p>
+                  <p><strong>Nome Fantasia:</strong> {selectedFornecedor.nomeFantasia || 'N/A'}</p>
+                  <p><strong>CNPJ:</strong> {formatCNPJ(selectedFornecedor.cnpj)}</p>
+                  <p><strong>Email:</strong> {selectedFornecedor.email || 'N/A'}</p>
+                  <p><strong>Telefone:</strong> {formatPhone(selectedFornecedor.telefone)}</p>
+                  <p><strong>Celular:</strong> {formatPhone(selectedFornecedor.celular)}</p>
+                  <p><strong>Representante:</strong> {selectedFornecedor.representante || 'N/A'}</p>
+                  
+                  {selectedFornecedor.endereco && (
+                    <div className="mt-4">
+                      <strong>Endereço:</strong>
+                      <div className="ml-4 text-sm text-gray-600">
+                        <p>{selectedFornecedor.endereco.logradouro}, {selectedFornecedor.endereco.numero}</p>
+                        {selectedFornecedor.endereco.complemento && (
+                          <p>{selectedFornecedor.endereco.complemento}</p>
+                        )}
+                        <p>{selectedFornecedor.endereco.bairro}</p>
+                        <p>{selectedFornecedor.endereco.cidade} - {selectedFornecedor.endereco.estado}</p>
+                        <p>CEP: {selectedFornecedor.endereco.cep}</p>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <p><strong>Cadastrado em:</strong> {formatDate(selectedFornecedor.dataCadastro)}</p>
 
-                <div className="space-y-2">
-                  <p className="text-black">
-                    <strong>ID:</strong> {selectedSupplier.id}
-                  </p>
-                  <p className="text-black">
-                    <strong>Razão Social:</strong> {selectedSupplier.razaoSocial || 'N/A'}
-                  </p>
-                  <p className="text-black">
-                    <strong>Nome Fantasia:</strong> {selectedSupplier.nomeFantasia || 'N/A'}
-                  </p>
-                  <p className="text-black">
-                    <strong>CNPJ:</strong> {selectedSupplier.cnpj || 'N/A'}
-                  </p>
-                  <p className="text-black">
-                    <strong>Email:</strong> {selectedSupplier.email || 'N/A'}
-                  </p>
-                  <p className="text-black">
-                    <strong>Telefone:</strong> {selectedSupplier.telefone || 'N/A'}
-                  </p>
-                  <p className="text-black">
-                    <strong>Representante:</strong> {selectedSupplier.representante || 'N/A'}
-                  </p>
-                  <p className="text-black">
-                    <strong>Celular:</strong> {selectedSupplier.celular || 'N/A'}
-                  </p>
+                  <div className="flex justify-around mt-6">
+                    <button
+                      onClick={generatePDF}
+                      className="bg-[#81059e] text-white px-4 py-2 rounded-md flex items-center hover:bg-[#690480] transition-colors"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                      </svg>
+                      Ver PDF
+                    </button>
+                    <button
+                      onClick={handlePrint}
+                      className="bg-[#81059e] text-white px-4 py-2 rounded-md flex items-center hover:bg-[#690480] transition-colors"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                      </svg>
+                      Imprimir
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
-                  <div className="pt-2 border-t mt-4">
-                    <p className="text-black font-semibold">Endereço</p>
-                    <p className="text-black">
-                      <strong>CEP:</strong> {selectedSupplier.endereco?.cep || 'N/A'}
-                    </p>
-                    <p className="text-black">
-                      <strong>Logradouro:</strong> {selectedSupplier.endereco?.logradouro || 'N/A'}
-                    </p>
-                    <p className="text-black">
-                      <strong>Número:</strong> {selectedSupplier.endereco?.numero || 'N/A'}
-                    </p>
-                    <p className="text-black">
-                      <strong>Cidade:</strong> {selectedSupplier.endereco?.cidade || 'N/A'}
-                    </p>
-                    <p className="text-black">
-                      <strong>Estado:</strong> {selectedSupplier.endereco?.estado || 'N/A'}
-                    </p>
+          {/* Modal de Edição */}
+          {isEditModalOpen && editingFornecedor && (
+            <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+              <div className="bg-white rounded-lg shadow-lg w-full max-w-md flex flex-col h-3/5 overflow-hidden">
+                <div className="bg-[#81059e] text-white p-4 flex justify-between items-center">
+                  <h3 className="text-xl font-bold">Editar Fornecedor</h3>
+                  <FontAwesomeIcon
+                    icon={faX}
+                    className="h-5 w-5 text-white cursor-pointer hover:text-gray-200"
+                    onClick={() => setIsEditModalOpen(false)}
+                  />
+                </div>
+
+                <div className="space-y-3 p-4 overflow-y-auto flex-grow">
+                  <div>
+                    <label className="text-[#81059e] font-medium">Nome Fantasia:</label>
+                    <input
+                      type="text"
+                      value={editingFornecedor.nomeFantasia || ''}
+                      onChange={(e) => setEditingFornecedor({ ...editingFornecedor, nomeFantasia: e.target.value })}
+                      className="w-full p-2 border-2 border-[#81059e] rounded-sm"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="text-[#81059e] font-medium">Razão Social:</label>
+                    <input
+                      type="text"
+                      value={editingFornecedor.razaoSocial || ''}
+                      onChange={(e) => setEditingFornecedor({ ...editingFornecedor, razaoSocial: e.target.value })}
+                      className="w-full p-2 border-2 border-[#81059e] rounded-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[#81059e] font-medium">Email:</label>
+                    <input
+                      type="email"
+                      value={editingFornecedor.email || ''}
+                      onChange={(e) => setEditingFornecedor({ ...editingFornecedor, email: e.target.value })}
+                      className="w-full p-2 border-2 border-[#81059e] rounded-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[#81059e] font-medium">Telefone:</label>
+                    <input
+                      type="text"
+                      value={editingFornecedor.telefone || ''}
+                      onChange={(e) => setEditingFornecedor({ ...editingFornecedor, telefone: e.target.value })}
+                      className="w-full p-2 border-2 border-[#81059e] rounded-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[#81059e] font-medium">Representante:</label>
+                    <input
+                      type="text"
+                      value={editingFornecedor.representante || ''}
+                      onChange={(e) => setEditingFornecedor({ ...editingFornecedor, representante: e.target.value })}
+                      className="w-full p-2 border-2 border-[#81059e] rounded-sm"
+                    />
                   </div>
                 </div>
 
-                <div className="mt-4 flex flex-wrap gap-2 justify-center">
+                <div className="p-4 bg-gray-50 border-t flex justify-end space-x-2">
                   <button
-                    className="bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600 transition"
-                    onClick={handlePrint}
+                    onClick={() => setIsEditModalOpen(false)}
+                    className="text-[#81059e] px-4 py-2 rounded-md hover:bg-gray-100 transition-colors"
                   >
-                    Imprimir
+                    Cancelar
                   </button>
                   <button
-                    className="bg-[#81059e] text-white py-2 px-4 rounded hover:bg-[#690480] transition"
-                    onClick={handleDownloadPDF}
+                    onClick={handleSaveEdit}
+                    className="bg-[#81059e] text-white px-4 py-2 rounded-sm hover:bg-[#690480] transition-colors"
                   >
-                    Baixar PDF
-                  </button>
-                  <Link href={`/stock/suppliers/edit/${selectedSupplier.id}`}>
-                    <button
-                      className="bg-yellow-500 text-white py-2 px-4 rounded hover:bg-yellow-600 transition"
-                    >
-                      Editar
-                    </button>
-                  </Link>
-                  <button
-                    className="bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-600 transition"
-                    onClick={handleModalClose}
-                  >
-                    Fechar
+                    Salvar
                   </button>
                 </div>
-
-                <button
-                  onClick={handleModalClose}
-                  className="absolute top-2 right-2 text-gray-600 hover:text-gray-800"
-                >
-                  &times;
-                </button>
               </div>
             </div>
           )}
@@ -534,6 +766,4 @@ const SuppliersTable = () => {
       </div>
     </Layout>
   );
-};
-
-export default SuppliersTable;
+}

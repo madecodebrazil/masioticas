@@ -37,7 +37,11 @@ export default function ProductsPage() {
         { icon: '/images/financeiro/receber.png', label: 'Contas a Receber', route: '/finance/add-receive/list-receives' },
         { icon: '/images/financeiro/caixa.png', label: 'Caixa', route: '/finance/cashier_day' },
         { icon: '/images/financeiro/vendas.png', label: 'Vendas', route: '/commercial/sales' },
-        { icon: '/images/financeiro/cartoes.png', label: 'Cartões', route: '/finance/cards' }
+        { icon: '/images/financeiro/cartoes.png', label: 'Cartões', route: '/finance/cards' },
+        { icon: '/images/products_and_services/distribuidor.png', label: 'Distribuidores', route: '/products_and_services/service_provider' },
+        { icon: '/images/products_and_services/prestador.png', label: 'Prestadores', route: '/products_and_services/service_provider' },
+        { icon: '/images/products_and_services/laboratorio.png', label: 'Laboratórios', route: '/products_and_services/laboratory' },
+        { icon: '/images/products_and_services/industria.png', label: 'Indústrias', route: '/products_and_services/industry' },
     ];
 
     return (

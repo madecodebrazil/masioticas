@@ -455,13 +455,13 @@ export default function AddAccountPage() {
           {/* Seletor de Loja para Admins */}
           {userPermissions?.isAdmin && (
             <div className="mb-6">
-              <label className="text-[#81059e] font-medium flex items-center gap-2">
+              <label className="text-[#96709d] font-medium flex items-center gap-2">
                 <FiHome /> Selecionar Loja
               </label>
               <select
                 value={selectedLoja || ''}
                 onChange={(e) => setSelectedLoja(e.target.value)}
-                className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black mt-1"
+                className="border-2 border-[#96709d] p-3 rounded-sm w-full text-gray-600 mt-2 mt-1"
               >
                 <option value="">Selecione uma loja</option>
                 {userPermissions.lojas.map((loja) => (
@@ -489,13 +489,13 @@ export default function AddAccountPage() {
 
           <form onSubmit={handleSubmit} className="mt-8 mb-20">
             {/* Seção Cliente */}
-            <div className="p-4 bg-gray-50 rounded-sm mb-6 h-64">
-              <h3 className="text-lg font-semibold text-[#81059e] mb-4 flex items-center gap-2">
+            <div className="bg-white p-6 rounded-sm shadow-sm border-2 border-gray-200 h-68 mb-6">
+              <h3 className="text-xl font-semibold text-[#81059e] flex items-center gap-2 mb-4">
                 <FiUser /> Informações do Cliente
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="relative">
-                  <label className="text-[#81059e] font-medium">Nome do Cliente</label>
+                <div>
+                  <label className="text-[#96709d] font-medium">Nome do Cliente</label>
                   <input
                     type="text"
                     value={searchTerm}
@@ -504,73 +504,86 @@ export default function AddAccountPage() {
                       setFormData(prev => ({ ...prev, cliente: e.target.value }));
                     }}
                     placeholder="Digite o nome do cliente"
-                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
+                    className="border-2 border-[#96709d] p-3 rounded-sm w-full text-gray-600 mt-2"
                     required
                   />
-                  {searchTerm && consumers.length > 0 && (
-                    <div className="absolute w-full z-10">
-                      <ul className="bg-white border-2 border-[#81059e] rounded-sm w-full max-h-[104px] overflow-y-auto shadow-lg custom-scroll">
-                        {consumers.map((consumer) => (
-                          <li
-                            key={consumer.id}
-                            onClick={() => handleClienteSelect(consumer)}
-                            className="p-2 hover:bg-purple-50 cursor-pointer text-black border-b last:border-b-0 h-[52px] flex items-center"
-                          >
-                            {consumer.nome} (CPF: {formatCPF(consumer.cpf)})
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                  {isLoading && searchTerm && (
-                    <p className="text-sm text-gray-500 mt-1">Buscando clientes...</p>
+                  {searchTerm && (
+                    <>
+                      {isLoading ? (
+                        <div className="mt-4 p-3 text-sm text-gray-600">
+                          <span className="inline-block animate-pulse">Buscando clientes...</span>
+                        </div>
+                      ) : (
+                        <>
+                          {consumers.length > 0 ? (
+                            <ul className="bg-white border-2 border-[#96709d] rounded-sm w-full max-h-[104px] overflow-y-auto shadow-lg custom-scroll">
+                              {consumers.map((consumer) => (
+                                <li
+                                  key={consumer.id}
+                                  onClick={() => handleClienteSelect(consumer)}
+                                  className="p-2 hover:bg-purple-50 cursor-pointer text-gray-700 border-b last:border-b-0"
+                                >
+                                  {consumer.nome} <span className="text-xs text-gray-500">(CPF: {formatCPF(consumer.cpf)})</span>
+                                </li>
+                              ))}
+                            </ul>
+                          ) : (
+                            searchTerm && consumers.length === 0 && (
+                              <div className="mt-2 p-3 text-sm text-gray-500">
+                                Não encontrado. Tente outro termo de busca.
+                              </div>
+                            )
+                          )}
+                        </>
+                      )}
+                    </>
                   )}
                 </div>
                 <div>
-                  <label className="text-[#81059e] font-medium">CPF do Cliente</label>
+                  <label className="text-[#96709d] font-medium">CPF do Cliente</label>
                   <input
                     type="text"
                     value={formData.cpf ? formatCPF(formData.cpf) : ''}
                     readOnly
-                    className="border-2 border-[#81059e] p-3 rounded-sm w-full bg-gray-100 text-black"
+                    className="border-2 border-[#96709d] p-3 rounded-sm w-full text-gray-600 mt-2"
                   />
                 </div>
               </div>
             </div>
 
             {/* Seção Documento */}
-            <div className="p-4 bg-gray-50 rounded-sm mb-6">
-              <h3 className="text-lg font-semibold text-[#81059e] mb-4 flex items-center gap-2">
+            <div className="bg-white p-6 rounded-sm shadow-sm border-2 border-gray-200 h-68 mb-6">
+              <h3 className="text-xl font-semibold text-[#81059e] flex items-center gap-2 mb-4">
                 <FiFileText /> Informações do Documento
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
-                  <label className="text-[#81059e] font-medium">Nº do Documento</label>
+                  <label className="text-[#96709d] font-medium">Nº do Documento</label>
                   <input
                     type="text"
                     name="numeroDocumento"
                     value={formData.numeroDocumento}
                     onChange={handleInputChange}
-                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
+                    className="border-2 border-[#96709d] p-3 rounded-sm w-full text-gray-600 mt-2"
                   />
                 </div>
                 <div>
-                  <label className="text-[#81059e] font-medium">Origem</label>
+                  <label className="text-[#96709d] font-medium">Origem</label>
                   <input
                     type="text"
                     name="origem"
                     value={formData.origem}
                     onChange={handleInputChange}
-                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
+                    className="border-2 border-[#96709d] p-3 rounded-sm w-full text-gray-600 mt-2"
                   />
                 </div>
                 <div>
-                  <label className="text-[#81059e] font-medium">Forma de Recebimento</label>
+                  <label className="text-[#96709d] font-medium">Forma de Recebimento</label>
                   <select
                     name="tipoCobranca"
                     value={formData.tipoCobranca}
                     onChange={handleInputChange}
-                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
+                    className="border-2 border-[#96709d] p-3 rounded-sm w-full text-gray-600 mt-2"
                   >
                     <option value="">Selecione</option>
                     <option value="boleto">Boleto</option>
@@ -584,26 +597,26 @@ export default function AddAccountPage() {
             </div>
 
             {/* Seção Recebimento */}
-            <div className=" p-4 bg-gray-50 rounded-sm mb-6">
-              <h3 className="text-lg font-semibold text-[#81059e] mb-4 flex items-center gap-2">
+            <div className=" bg-white p-6 rounded-sm shadow-sm border-2 border-gray-200 h-68 mb-6">
+              <h3 className="text-xl font-semibold text-[#81059e] flex items-center gap-2 mb-4">
                 <FiDollarSign /> Informações de Recebimento
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-4">
                 <div>
-                  <label className="text-[#81059e] font-medium">Valor</label>
+                  <label className="text-[#96709d] font-medium">Valor</label>
                   <input
                     type="text"
                     name="valor"
                     value={formData.valor}
                     onChange={handleValorChange}
                     placeholder="R$ 0,00"
-                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
+                    className="border-2 border-[#96709d] p-3 rounded-sm w-full text-gray-600 mt-2"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="text-[#81059e] font-medium">
+                  <label className="text-[#96709d] font-medium">
                     Número de Parcelas
                   </label>
                   <select
@@ -612,7 +625,7 @@ export default function AddAccountPage() {
                       setNumeroParcelas(e.target.value);
                       setFormData(prev => ({ ...prev, totalParcelas: e.target.value }));
                     }}
-                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
+                    className="border-2 border-[#96709d] p-3 rounded-sm w-full text-gray-600 mt-2"
                   >
                     <option value="1">1</option>
                     <option value="2">2</option>
@@ -628,7 +641,7 @@ export default function AddAccountPage() {
                 </div>
 
                 <div>
-                  <label className="text-[#81059e] font-medium">Data de Emissão</label>
+                  <label className="text-[#96709d] font-medium">Data de Emissão</label>
                   <input
                     type="date"
                     name="dataCobranca"
@@ -645,27 +658,27 @@ export default function AddAccountPage() {
                         dataCobranca: selectedDate,
                       }));
                     }}
-                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
+                    className="border-2 border-[#96709d] p-3 rounded-sm w-full text-gray-600 mt-2"
                   />
                 </div>
                 <div>
-                  <label className="text-[#81059e] font-medium">Taxa de Juros (%)</label>
+                  <label className="text-[#96709d] font-medium">Taxa de Juros (%)</label>
                   <input
                     type="text"
                     value={taxaJuros}
                     readOnly
-                    className="border-2 border-[#81059e] p-3 rounded-sm w-full bg-gray-100 text-black"
+                    className="border-2 border-[#96709d] p-3 rounded-sm w-full text-gray-600 mt-2"
                   />
                   <p className="text-xs text-gray-500 mt-1">Taxa de juros padrão do sistema: {taxaJuros}%</p>
                 </div>
                 <div>
-                  <label className="text-[#81059e] font-medium">Local de Recebimento</label>
+                  <label className="text-[#96709d] font-medium">Local de Recebimento</label>
                   <input
                     type="text"
                     name="localCobranca"
                     value={formData.localCobranca}
                     onChange={handleInputChange}
-                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
+                    className="border-2 border-[#96709d] p-3 rounded-sm w-full text-gray-600 mt-2"
                   />
                 </div>
                 <div className="flex items-center">
@@ -677,7 +690,7 @@ export default function AddAccountPage() {
                     onChange={handleInputChange}
                     className="w-4 h-4 mr-2"
                   />
-                  <label htmlFor="dispensarJuros" className="text-[#81059e] font-medium">
+                  <label htmlFor="dispensarJuros" className="text-[#96709d] font-medium">
                     Dispensar Juros
                   </label>
                 </div>
@@ -685,18 +698,18 @@ export default function AddAccountPage() {
             </div>
 
             {/* Seção Contabilidade */}
-            <div className="p-4 bg-gray-50 rounded-sm mb-6">
-              <h3 className="text-lg font-semibold text-[#81059e] mb-4 flex items-center gap-2">
+            <div className="bg-white p-6 rounded-sm shadow-sm border-2 border-gray-200 h-68 mb-6">
+              <h3 className="text-xl font-semibold text-[#81059e] flex items-center gap-2 mb-4">
                 <FiTrendingUp /> Informações Contábeis
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="text-[#81059e] font-medium">Lançamento no Caixa</label>
+                  <label className="text-[#96709d] font-medium">Lançamento no Caixa</label>
                   <select
                     name="contaLancamentoCaixa"
                     value={formData.contaLancamentoCaixa}
                     onChange={handleInputChange}
-                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
+                    className="border-2 border-[#96709d] p-3 rounded-sm w-full text-gray-600 mt-2"
                   >
                     <option value="">Selecione um caixa</option>
                     {caixasDisponiveis.map(caixa => (
@@ -708,7 +721,7 @@ export default function AddAccountPage() {
                 </div>
 
                 <div>
-                  <label className="text-[#81059e] font-medium">Categoria de Receita</label>
+                  <label className="text-[#96709d] font-medium">Categoria de Receita</label>
                   <div className="relative flex">
                     <select
                       name="categoriaReceita"
@@ -720,7 +733,7 @@ export default function AddAccountPage() {
                           setFormData(prev => ({ ...prev, categoriaReceita: e.target.value }));
                         }
                       }}
-                      className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
+                      className="border-2 border-[#96709d] p-3 rounded-sm w-full text-gray-600 mt-2"
                     >
                       <option value="">Selecione</option>
                       {categoriasReceita.map((categoria) => (
@@ -808,8 +821,8 @@ export default function AddAccountPage() {
             </div>
 
             {/* Seção Observações */}
-            <div className="p-4 bg-gray-50 rounded-sm mb-6">
-              <h3 className="text-lg font-semibold text-[#81059e] mb-4 flex items-center gap-2">
+            <div className="bg-white p-6 rounded-sm shadow-sm border-2 border-gray-200 h-68 mb-6">
+              <h3 className="text-xl font-semibold text-[#81059e] flex items-center gap-2 mb-4">
                 <FiFileText /> Observações
               </h3>
               <div>
@@ -817,7 +830,7 @@ export default function AddAccountPage() {
                   name="observacoes"
                   value={formData.observacoes}
                   onChange={handleInputChange}
-                  className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black min-h-[120px]"
+                  className="border-2 border-[#96709d] p-3 rounded-sm w-full text-gray-600 mt-2 min-h-[120px]"
                   placeholder="Adicione observações relevantes..."
                 ></textarea>
               </div>
@@ -829,14 +842,14 @@ export default function AddAccountPage() {
               <button
                 type="button"
                 onClick={handleClear}
-                className="border-2 border-[#81059e] p-2 px-3 rounded-sm text-[#81059e] flex items-center gap-2"
+                className="inline-flex justify-center py-3 px-4 border-2 border-[#81059e] shadow-sm text-sm font-semibold rounded-sm text-[#81059e] hover:bg-purple-100"
                 disabled={isLoading}
               >
                 CANCELAR
               </button>
               <button
                 type="submit"
-                className="bg-[#81059e] p-3 px-6 rounded-sm text-white flex items-center gap-2"
+                className="bg-[#81059e] p-3 px-6 rounded-sm text-white font-semibold flex items-center gap-2 hover:bg-purple-700"
                 disabled={isLoading}
               >
                 {isLoading ? 'PROCESSANDO...' : 'SALVAR'}

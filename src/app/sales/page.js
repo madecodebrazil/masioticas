@@ -65,12 +65,12 @@ export default function SalesPage() {
     },
     {
       icon: "/images/financeiro/receber.png",
-      label: "Histórico de Vendas",
+      label: "Minhas Vendas",
       route: "/sales/history"
     },
     {
       icon: "/images/financeiro/receber.png",
-      label: "Histórico de Orçamentos",
+      label: "Meus Orçamentos",
       route: "/sales/estimates-history"
     },
     {

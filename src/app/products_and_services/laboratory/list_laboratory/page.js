@@ -9,120 +9,20 @@ import {
   faBuilding,
   faClock,
   faExclamationTriangle,
-  faFilter,
   faX,
   faEdit,
   faTrash
 } from '@fortawesome/free-solid-svg-icons';
-import { collection, getDocs, doc, setDoc, deleteDoc, getDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, deleteDoc } from 'firebase/firestore';
 import { useAuth } from '@/hooks/useAuth';
 import { firestore } from '../../../../lib/firebaseConfig';
 import jsPDF from 'jspdf';
-
-// FilterModal component 
-const FilterModal = ({ 
-  isOpen, 
-  onClose, 
-  yearFilter, 
-  setYearFilter, 
-  monthFilter, 
-  setMonthFilter, 
-  dayFilter, 
-  setDayFilter, 
-  availableYears, 
-  months, 
-  availableDays 
-}) => {
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-40 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-md animate-fadeIn">
-        <div className="p-4 border-b flex justify-between items-center">
-          <h3 className="text-lg font-semibold text-[#81059e]">Filtros</h3>
-          <button 
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 transition-colors"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-        
-        <div className="p-5 space-y-4">
-          {/* Filtro de ano */}
-          <div>
-            <label className="block text-sm text-gray-700 mb-1 font-medium">Ano</label>
-            <select
-              value={yearFilter}
-              onChange={(e) => setYearFilter(e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded-md text-gray-800 bg-white focus:border-[#81059e] focus:ring focus:ring-purple-200 transition-colors"
-            >
-              {availableYears.map(year => (
-                <option key={year} value={year}>{year}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Filtro de mês */}
-          <div>
-            <label className="block text-sm text-gray-700 mb-1 font-medium">Mês</label>
-            <select
-              value={monthFilter}
-              onChange={(e) => setMonthFilter(e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded-md text-gray-800 bg-white focus:border-[#81059e] focus:ring focus:ring-purple-200 transition-colors"
-            >
-              {months.map(month => (
-                <option key={month} value={month}>{month}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Filtro de dia */}
-          <div>
-            <label className="block text-sm text-gray-700 mb-1 font-medium">Dia</label>
-            <select
-              value={dayFilter}
-              onChange={(e) => setDayFilter(e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded-md text-gray-800 bg-white focus:border-[#81059e] focus:ring focus:ring-purple-200 transition-colors"
-            >
-              {availableDays.map(day => (
-                <option key={day} value={day}>{day}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-        
-        <div className="p-4 bg-gray-50 border-t flex justify-between rounded-b-lg">
-          <button
-            onClick={() => {
-              setYearFilter('Todos');
-              setMonthFilter('Todos');
-              setDayFilter('Todos');
-            }}
-            className="text-[#81059e] hover:text-[#690480] px-4 py-2 rounded-md transition-colors"
-          >
-            Limpar Filtros
-          </button>
-          <button
-            onClick={onClose}
-            className="bg-[#81059e] hover:bg-[#690480] text-white px-5 py-2 rounded-md transition-colors"
-          >
-            Aplicar
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 export default function ListaLaboratorios() {
   const { userPermissions, userData } = useAuth();
   const [laboratorios, setLaboratorios] = useState([]);
   const [filteredLaboratorios, setFilteredLaboratorios] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedLoja, setSelectedLoja] = useState('Ambas');
   const [selectedLaboratorio, setSelectedLaboratorio] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -131,19 +31,10 @@ export default function ListaLaboratorios() {
   const [selectedForDeletion, setSelectedForDeletion] = useState([]);
   const [sortField, setSortField] = useState('razaoSocial');
   const [sortDirection, setSortDirection] = useState('asc');
-  const [yearFilter, setYearFilter] = useState('Todos');
-  const [monthFilter, setMonthFilter] = useState('Todos');
-  const [dayFilter, setDayFilter] = useState('Todos');
-  const [availableYears, setAvailableYears] = useState(['Todos']);
-  const months = ['Todos', 'Janeiro', 'Fevereiro', 'Marco', 'Abril', 'Maio', 'Junho',
-    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
-  const [availableDays, setAvailableDays] = useState(['Todos']);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(15);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingLaboratorio, setEditingLaboratorio] = useState(null);
-  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
-  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchLaboratorios = async () => {
@@ -151,38 +42,18 @@ export default function ListaLaboratorios() {
         setLoading(true);
         const fetchedLaboratorios = [];
 
-        // Usar o caminho correto para lojas específicas
-        if (selectedLoja !== 'Ambas') {
-          // Caminho para uma loja específica
-          const laboratoriosRef = collection(firestore, `lojas/laboratorio/items`);
-          const laboratoriosSnapshot = await getDocs(laboratoriosRef);
+        // Laboratórios são globais - buscar apenas uma vez
+        const laboratoriosRef = collection(firestore, `lojas/laboratorio/items`);
+        const laboratoriosSnapshot = await getDocs(laboratoriosRef);
 
-          laboratoriosSnapshot.docs.forEach((docItem) => {
-            const laboratorioData = docItem.data();
-            fetchedLaboratorios.push({
-              id: docItem.id,
-              ...laboratorioData,
-              loja: selectedLoja
-            });
+        laboratoriosSnapshot.docs.forEach((docItem) => {
+          const laboratorioData = docItem.data();
+          fetchedLaboratorios.push({
+            id: docItem.id,
+            ...laboratorioData,
+            loja: 'Global'
           });
-        } else {
-          // Se for "Ambas", buscar de todas as lojas que o usuário tem acesso
-          const lojas = userPermissions?.lojas || [];
-
-          for (const loja of lojas) {
-            const laboratoriosRef = collection(firestore, `lojas/laboratorio/items`);
-            const laboratoriosSnapshot = await getDocs(laboratoriosRef);
-
-            laboratoriosSnapshot.docs.forEach((docItem) => {
-              const laboratorioData = docItem.data();
-              fetchedLaboratorios.push({
-                id: docItem.id,
-                ...laboratorioData,
-                loja: loja
-              });
-            });
-          }
-        }
+        });
 
         // Aplicar ordenação inicial
         const sortedLaboratorios = sortLaboratorios(fetchedLaboratorios, sortField, sortDirection);
@@ -198,43 +69,12 @@ export default function ListaLaboratorios() {
     };
 
     fetchLaboratorios();
-  }, [selectedLoja, userPermissions]);
+  }, [userPermissions]);
 
-  // Extrair anos disponíveis dos dados
+  // Função para filtrar laboratórios apenas por busca
   useEffect(() => {
-    if (laboratorios.length > 0) {
-      const years = ['Todos'];
-      laboratorios.forEach(lab => {
-        if (lab.dataRegistro) {
-          const date = lab.dataRegistro.seconds
-            ? new Date(lab.dataRegistro.seconds * 1000)
-            : new Date(lab.dataRegistro);
-          const year = date.getFullYear().toString();
-          if (!years.includes(year)) {
-            years.push(year);
-          }
-        }
-      });
-      setAvailableYears(years.sort());
-
-      // Gerar dias de 1 a 31
-      const days = ['Todos'];
-      for (let i = 1; i <= 31; i++) {
-        days.push(i.toString());
-      }
-      setAvailableDays(days);
-    }
-  }, [laboratorios]);
-
-  // Função para filtrar laboratórios com base na busca e loja
-  useEffect(() => {
-    const filterBySearchAndLojaAndDate = () => {
+    const filterBySearch = () => {
       let filtered = laboratorios;
-
-      // Filtro por loja
-      if (selectedLoja !== 'Ambas') {
-        filtered = filtered.filter((lab) => lab.loja === selectedLoja);
-      }
 
       // Filtro por busca
       if (searchQuery !== '') {
@@ -246,46 +86,13 @@ export default function ListaLaboratorios() {
         );
       }
 
-      // Filtro por data
-      filtered = filtered.filter(lab => {
-        if (!lab.dataRegistro && (yearFilter !== 'Todos' || monthFilter !== 'Todos' || dayFilter !== 'Todos')) {
-          return false;
-        }
-
-        if (!lab.dataRegistro) return true;
-
-        const labDate = lab.dataRegistro.seconds
-          ? new Date(lab.dataRegistro.seconds * 1000)
-          : new Date(lab.dataRegistro);
-
-        // Filtrar por ano se não for "Todos"
-        if (yearFilter !== 'Todos' && labDate.getFullYear().toString() !== yearFilter) {
-          return false;
-        }
-
-        // Filtrar por mês se não for "Todos"
-        if (monthFilter !== 'Todos') {
-          const monthIndex = months.indexOf(monthFilter) - 1;
-          if (labDate.getMonth() !== monthIndex) {
-            return false;
-          }
-        }
-
-        // Filtrar por dia se não for "Todos"
-        if (dayFilter !== 'Todos' && labDate.getDate().toString() !== dayFilter) {
-          return false;
-        }
-
-        return true;
-      });
-
       // Aplicar ordenação
       filtered = sortLaboratorios(filtered, sortField, sortDirection);
       setFilteredLaboratorios(filtered);
     };
 
-    filterBySearchAndLojaAndDate();
-  }, [searchQuery, selectedLoja, laboratorios, sortField, sortDirection, yearFilter, monthFilter, dayFilter]);
+    filterBySearch();
+  }, [searchQuery, laboratorios, sortField, sortDirection]);
 
   // Função para ordenar laboratórios
   const sortLaboratorios = (labsToSort, field, direction) => {
@@ -398,8 +205,7 @@ export default function ListaLaboratorios() {
     doc.text(`Email: ${selectedLaboratorio.email || 'N/A'}`, 10, 50);
     doc.text(`Telefone: ${selectedLaboratorio.telefone || 'N/A'}`, 10, 60);
     doc.text(`Endereço: ${getEnderecoCompleto(selectedLaboratorio)}`, 10, 70);
-    doc.text(`Loja: ${selectedLaboratorio.loja || 'N/A'}`, 10, 80);
-    doc.text(`Data de Registro: ${formatFirestoreDate(selectedLaboratorio.dataRegistro) || 'N/A'}`, 10, 90);
+    doc.text(`Data de Registro: ${formatFirestoreDate(selectedLaboratorio.dataRegistro) || 'N/A'}`, 10, 80);
 
     doc.save(`Laboratorio_${selectedLaboratorio.nomeFantasia || selectedLaboratorio.id}.pdf`);
   };
@@ -450,20 +256,15 @@ export default function ListaLaboratorios() {
     if (confirm(`Deseja realmente excluir ${selectedForDeletion.length} laboratório(s) selecionado(s)?`)) {
       try {
         for (const labId of selectedForDeletion) {
-          // Encontrar a loja do laboratório
-          const lab = laboratorios.find(l => l.id === labId);
-          if (lab && lab.loja) {
-            // Excluir o laboratório
-            const labRef = doc(firestore, `lojas/laboratorio/items`, labId);
-            await deleteDoc(labRef);
-          }
+          // Excluir o laboratório da coleção global
+          const labRef = doc(firestore, `lojas/laboratorio/items`, labId);
+          await deleteDoc(labRef);
         }
 
         // Atualizar as listas de laboratórios
         const updatedLaboratorios = laboratorios.filter(lab => !selectedForDeletion.includes(lab.id));
         setLaboratorios(updatedLaboratorios);
         setFilteredLaboratorios(updatedLaboratorios.filter(l =>
-          (selectedLoja === 'Ambas' || l.loja === selectedLoja) &&
           (!searchQuery ||
             l.razaoSocial?.toLowerCase().includes(searchQuery.toLowerCase()) ||
             l.nomeFantasia?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -544,104 +345,6 @@ export default function ListaLaboratorios() {
     setCurrentPage(Math.max(1, Math.min(pageNumber, totalPages)));
   };
 
-  useEffect(() => {
-    if (showFilterDropdown) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [showFilterDropdown]);
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      const dropdownElement = document.getElementById('filter-dropdown');
-      const filterToggleElement = document.querySelector('button[data-filter-toggle="true"]');
-
-      if (showFilterDropdown &&
-        dropdownElement &&
-        !dropdownElement.contains(event.target) &&
-        filterToggleElement &&
-        !filterToggleElement.contains(event.target)) {
-        setShowFilterDropdown(false);
-      }
-    };
-
-    // Adicionar manipulador de cliques
-    document.addEventListener('mousedown', handleClickOutside);
-
-    // Adicionar manipulador para fechar ao pressionar ESC
-    const handleEscKey = (event) => {
-      if (event.key === 'Escape' && showFilterDropdown) {
-        setShowFilterDropdown(false);
-      }
-    };
-
-    document.addEventListener('keydown', handleEscKey);
-
-    // Limpar os event listeners ao desmontar o componente
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('keydown', handleEscKey);
-    };
-  }, [showFilterDropdown]);
-
-  const FilterActiveBadges = () => {
-    const activeFilters = [];
-
-    if (yearFilter !== 'Todos') {
-      activeFilters.push({ type: 'Ano', value: yearFilter });
-    }
-
-    if (monthFilter !== 'Todos') {
-      activeFilters.push({ type: 'Mês', value: monthFilter });
-    }
-
-    if (dayFilter !== 'Todos') {
-      activeFilters.push({ type: 'Dia', value: dayFilter });
-    }
-
-    if (activeFilters.length === 0) return null;
-
-    return (
-      <div className="flex flex-wrap gap-1 mt-2">
-        {activeFilters.map((filter, index) => (
-          <span
-            key={index}
-            className="inline-flex items-center px-2 py-1 rounded text-xs bg-purple-100 text-[#81059e]"
-          >
-            <span>{filter.type}: {filter.value}</span>
-            <button
-              className="ml-1 text-[#81059e] hover:text-[#690480]"
-              onClick={() => {
-                if (filter.type === 'Ano') setYearFilter('Todos');
-                if (filter.type === 'Mês') setMonthFilter('Todos');
-                if (filter.type === 'Dia') setDayFilter('Todos');
-              }}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-              </svg>
-            </button>
-          </span>
-        ))}
-        <button
-          className="text-xs text-[#81059e] hover:underline px-2 py-1"
-          onClick={() => {
-            setYearFilter('Todos');
-            setMonthFilter('Todos');
-            setDayFilter('Todos');
-          }}
-        >
-          Limpar todos
-        </button>
-      </div>
-    );
-  };
-
   // Renderizar laboratórios
   const renderLaboratorios = () => {
     return currentLaboratorios.map((lab) => (
@@ -719,7 +422,7 @@ export default function ListaLaboratorios() {
                 </p>
               </div>
 
-              {/* Outros cards podem ser adicionados conforme a necessidade */}
+              {/* Card - Registrados no Mês */}
               <div className="border-2 rounded-lg p-4 border-gray-200 shadow-sm hover:shadow-md transition-shadow">
                 <div className="flex items-center justify-between mb-3">
                   <FontAwesomeIcon
@@ -730,16 +433,17 @@ export default function ListaLaboratorios() {
                 </div>
                 <p className="text-2xl font-semibold text-center mt-2">
                   {laboratorios.filter(lab => {
-                    if (!lab.dataRegistro) return false;
+                    if (!lab.createdAt) return false;
                     const now = new Date();
-                    const labDate = lab.dataRegistro.seconds
-                      ? new Date(lab.dataRegistro.seconds * 1000)
-                      : new Date(lab.dataRegistro);
+                    const labDate = lab.createdAt.seconds
+                      ? new Date(lab.createdAt.seconds * 1000)
+                      : new Date(lab.createdAt);
                     return labDate.getMonth() === now.getMonth() && labDate.getFullYear() === now.getFullYear();
                   }).length}
                 </p>
               </div>
 
+              {/* Card - Sem Contato */}
               <div className="border-2 rounded-lg p-4 border-gray-200 shadow-sm hover:shadow-md transition-shadow">
                 <div className="flex items-center justify-between mb-3">
                   <FontAwesomeIcon
@@ -755,7 +459,7 @@ export default function ListaLaboratorios() {
             </div>
           </div>
 
-          {/* Barra de busca e filtros com dropdown */}
+          {/* Barra de busca e ações */}
           <div className="flex flex-wrap gap-2 items-center mb-4">
             {/* Barra de busca */}
             <input
@@ -765,34 +469,6 @@ export default function ListaLaboratorios() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
-
-            {/* Filtro por loja */}
-            <select
-              value={selectedLoja}
-              onChange={(e) => setSelectedLoja(e.target.value)}
-              className="p-2 h-10 border-2 border-gray-200 rounded-lg text-gray-800 w-24"
-            >
-              {userPermissions?.isAdmin && <option value="Ambas">Ambas</option>}
-              {userPermissions?.lojas?.includes('loja1') && <option value="loja1">Loja 1</option>}
-              {userPermissions?.lojas?.includes('loja2') && <option value="loja2">Loja 2</option>}
-            </select>
-
-            {/* Dropdown de filtros de data */}
-            <div className="relative">
-              <button
-                onClick={() => setIsFilterModalOpen(true)}
-                className="p-2 h-10 border-2 border-gray-200 rounded-lg bg-white flex items-center gap-1 text-[#81059e] hover:border-[#81059e] transition-colors"
-                data-filter-toggle="true"
-              >
-                <FontAwesomeIcon icon={faFilter} className="h-4 w-4" />
-                <span className="hidden sm:inline">Filtrar</span>
-                {(yearFilter !== 'Todos' || monthFilter !== 'Todos' || dayFilter !== 'Todos') && (
-                  <span className="ml-1 bg-[#81059e] text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
-                    {(yearFilter !== 'Todos' ? 1 : 0) + (monthFilter !== 'Todos' ? 1 : 0) + (dayFilter !== 'Todos' ? 1 : 0)}
-                  </span>
-                )}
-              </button>
-            </div>
 
             {/* Botões de ação */}
             <div className="flex gap-2">
@@ -817,7 +493,7 @@ export default function ListaLaboratorios() {
               {/* Botão Excluir */}
               <button
                 onClick={handleDeleteSelected}
-                className={`${selectedForDeletion.length === 0 ? 'bg-red-400' : 'bg-red-400'} text-white h-10 w-10 rounded-md flex items-center justify-center`}
+                className={`${selectedForDeletion.length === 0 ? 'bg-red-400' : 'bg-red-500'} text-white h-10 w-10 rounded-md flex items-center justify-center`}
                 disabled={selectedForDeletion.length === 0}
               >
                 <FontAwesomeIcon icon={faTrash} className="h-5 w-5" />
@@ -825,17 +501,19 @@ export default function ListaLaboratorios() {
             </div>
           </div>
 
-          <FilterActiveBadges />
-
           {/* Tabela de laboratórios */}
           {loading ? (
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#81059e]"></div>
+            <div className="flex justify-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#81059e]"></div>
+            </div>
           ) : error ? (
-            <p>{error}</p>
+            <p className="text-red-500">{error}</p>
           ) : (
             <div className="w-full overflow-x-auto">
               {filteredLaboratorios.length === 0 ? (
-                <p>Nenhum laboratório encontrado.</p>
+                <div className="text-center py-8">
+                  <p className="text-gray-500">Nenhum laboratório encontrado.</p>
+                </div>
               ) : (
                 <>
                   <div className="overflow-x-auto">
@@ -872,62 +550,64 @@ export default function ListaLaboratorios() {
                   </div>
 
                   {/* Paginação */}
-                  <div className="flex items-center justify-between mt-4">
-                    <div className="text-sm text-gray-700">
-                      Mostrando <span className="font-medium">{indexOfFirstItem + 1}</span> a{' '}
-                      <span className="font-medium">
-                        {Math.min(indexOfLastItem, filteredLaboratorios.length)}
-                      </span>{' '}
-                      de <span className="font-medium">{filteredLaboratorios.length}</span> registros
-                    </div>
-                    <div className="flex space-x-1">
-                      <button
-                        onClick={() => goToPage(1)}
-                        disabled={currentPage === 1}
-                        className={`px-3 py-1 rounded ${currentPage === 1
-                          ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                          : 'bg-[#81059e] text-white hover:bg-[#690480]'
-                          }`}
-                      >
-                        &laquo;
-                      </button>
-                      <button
-                        onClick={() => goToPage(currentPage - 1)}
-                        disabled={currentPage === 1}
-                        className={`px-3 py-1 rounded ${currentPage === 1
-                          ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                          : 'bg-[#81059e] text-white hover:bg-[#690480]'
-                          }`}
-                      >
-                        &lt;
-                      </button>
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-between mt-4">
+                      <div className="text-sm text-gray-700">
+                        Mostrando <span className="font-medium">{indexOfFirstItem + 1}</span> a{' '}
+                        <span className="font-medium">
+                          {Math.min(indexOfLastItem, filteredLaboratorios.length)}
+                        </span>{' '}
+                        de <span className="font-medium">{filteredLaboratorios.length}</span> registros
+                      </div>
+                      <div className="flex space-x-1">
+                        <button
+                          onClick={() => goToPage(1)}
+                          disabled={currentPage === 1}
+                          className={`px-3 py-1 rounded ${currentPage === 1
+                            ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                            : 'bg-[#81059e] text-white hover:bg-[#690480]'
+                            }`}
+                        >
+                          &laquo;
+                        </button>
+                        <button
+                          onClick={() => goToPage(currentPage - 1)}
+                          disabled={currentPage === 1}
+                          className={`px-3 py-1 rounded ${currentPage === 1
+                            ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                            : 'bg-[#81059e] text-white hover:bg-[#690480]'
+                            }`}
+                        >
+                          &lt;
+                        </button>
 
-                      <span className="px-3 py-1 text-gray-700">
-                        {currentPage} / {totalPages}
-                      </span>
+                        <span className="px-3 py-1 text-gray-700">
+                          {currentPage} / {totalPages}
+                        </span>
 
-                      <button
-                        onClick={() => goToPage(currentPage + 1)}
-                        disabled={currentPage === totalPages}
-                        className={`px-3 py-1 rounded ${currentPage === totalPages
-                          ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                          : 'bg-[#81059e] text-white hover:bg-[#690480]'
-                          }`}
-                      >
-                        &gt;
-                      </button>
-                      <button
-                        onClick={() => goToPage(totalPages)}
-                        disabled={currentPage === totalPages}
-                        className={`px-3 py-1 rounded ${currentPage === totalPages
-                          ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                          : 'bg-[#81059e] text-white hover:bg-[#690480]'
-                          }`}
-                      >
-                        &raquo;
-                      </button>
+                        <button
+                          onClick={() => goToPage(currentPage + 1)}
+                          disabled={currentPage === totalPages}
+                          className={`px-3 py-1 rounded ${currentPage === totalPages
+                            ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                            : 'bg-[#81059e] text-white hover:bg-[#690480]'
+                            }`}
+                        >
+                          &gt;
+                        </button>
+                        <button
+                          onClick={() => goToPage(totalPages)}
+                          disabled={currentPage === totalPages}
+                          className={`px-3 py-1 rounded ${currentPage === totalPages
+                            ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                            : 'bg-[#81059e] text-white hover:bg-[#690480]'
+                            }`}
+                        >
+                          &raquo;
+                        </button>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </>
               )}
             </div>
@@ -1001,16 +681,12 @@ export default function ListaLaboratorios() {
                   </div>
 
                   <p>
-                    <strong>Loja:</strong> {selectedLaboratorio.loja || 'N/A'}
+                    <strong>Data de Registro:</strong> {formatFirestoreDate(selectedLaboratorio.createdAt) || 'N/A'}
                   </p>
 
-                  <p>
-                    <strong>Data de Registro:</strong> {formatFirestoreDate(selectedLaboratorio.dataRegistro) || 'N/A'}
-                  </p>
-
-                  {selectedLaboratorio.dataAtualizacao && (
+                  {selectedLaboratorio.updatedAt && (
                     <p>
-                      <strong>Última Atualização:</strong> {formatFirestoreDate(selectedLaboratorio.dataAtualizacao)}
+                      <strong>Última Atualização:</strong> {formatFirestoreDate(selectedLaboratorio.updatedAt)}
                     </p>
                   )}
 
@@ -1189,21 +865,6 @@ export default function ListaLaboratorios() {
               </div>
             </div>
           )}
-
-          {/* FilterModal component */}
-          <FilterModal 
-            isOpen={isFilterModalOpen}
-            onClose={() => setIsFilterModalOpen(false)}
-            yearFilter={yearFilter}
-            setYearFilter={setYearFilter}
-            monthFilter={monthFilter}
-            setMonthFilter={setMonthFilter}
-            dayFilter={dayFilter}
-            setDayFilter={setDayFilter}
-            availableYears={availableYears}
-            months={months}
-            availableDays={availableDays}
-          />
         </div>
       </div>
     </Layout>

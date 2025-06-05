@@ -7,7 +7,7 @@ const geistSans = localFont({
 
 export const metadata = {
   title: "MASI",
-  description: "um sistema de uso interno",
+  description: "O sistema de Gestão ideal para o seu negócio",
   icons: {
     icon: '/favicon.ico',
   },

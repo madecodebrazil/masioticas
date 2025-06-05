@@ -550,7 +550,7 @@ export default function ContasPagar() {
           {/* Seletor de Loja para Admins */}
           {userPermissions?.isAdmin && (
             <div className="mb-2">
-              <label className="text-[#81059e] font-medium flex items-center gap-2">
+              <label className="text-[#96709d] font-medium flex items-center gap-2">
                 <FiHome /> Selecionar Loja
               </label>
               <select
@@ -582,15 +582,15 @@ export default function ContasPagar() {
           </div>
 
           <form onSubmit={handleSubmit} className="mt-8 mb-20">
-            {/* Seção Credor */}
-            <div className="p-4 bg-gray-50 rounded-sm mb-6 h-64">
-              <h3 className="text-lg font-semibold text-[#81059e] mb-4 flex items-center gap-2">
-                <FiUser /> Informações do Credor
+            {/* INFORMAÇÕES DO CREDOR */}
+            <div className="bg-white p-6 rounded-sm shadow-sm border-2 border-gray-200 h-68 mb-6 ">
+              <h3 className="text-xl font-semibold text-[#81059e] flex items-center gap-2 mb-4">
+                <FiUser className='w-6 h-6'/> Informações do Credor
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Componente de busca de credores */}
                 <div>
-                  <label className="text-[#81059e] font-medium">Nome do Credor</label>
+                  <label className="text-[#96709d] font-medium">Nome do Credor</label>
                   <input
                     type="text"
                     value={searchTerm}
@@ -599,7 +599,7 @@ export default function ContasPagar() {
                       setFormData(prev => ({ ...prev, credor: e.target.value }));
                     }}
                     placeholder="Digite o nome do credor"
-                    className="border-2 mb-2 mt-1 border-[#81059e] p-3 rounded-sm w-full text-black"
+                    className="border-2 border-[#96709d] p-3 rounded-sm w-full text-gray-600 mt-2"
                     required
                   />
                   {searchTerm && (
@@ -611,12 +611,12 @@ export default function ContasPagar() {
                       ) : (
                         <>
                           {credores.length > 0 ? (
-                            <ul className="bg-white border-2 border-[#81059e] rounded-sm w-full max-h-[104px] overflow-y-auto shadow-lg custom-scroll">
+                            <ul className="bg-white border-2 border-[#96709d] rounded-sm w-full max-h-[104px] overflow-y-auto shadow-lg custom-scroll">
                               {credores.map((credor) => (
                                 <li
                                   key={credor.id}
                                   onClick={() => handleCredorSelect(credor)}
-                                  className="p-2 hover:bg-purple-50 cursor-pointer text-black border-b last:border-b-0"
+                                  className="p-2 hover:bg-purple-50 cursor-pointer text-gray-700 border-b last:border-b-0"
                                 >
                                   {credor.nome} {" "}
                                   {credor.tipo === 'fornecedor' ? (
@@ -642,47 +642,47 @@ export default function ContasPagar() {
                   )}
                 </div>
                 <div>
-                  <label className="text-[#81059e] font-medium">CPF ou CNPJ do Credor</label>
+                  <label className="text-[#96709d] font-medium">CPF ou CNPJ do Credor</label>
                   <input type="text" value={formData.documentoCredor} readOnly
-                    className="border-2 border-[#81059e] p-3 mt-1 rounded-sm w-full bg-gray-50 text-black"
+                    className="border-2 border-[#96709d] p-3 rounded-sm w-full text-gray-600 mt-2"
                   />
                 </div>
               </div>
             </div>
 
-            {/* Seção Documento */}
-            <div className="p-4 bg-gray-50 rounded-sm mb-6">
-              <h3 className="text-lg font-semibold text-[#81059e] mb-4 flex items-center gap-2">
+            {/* INFORMAÇÕES DO DOCUMENTO */}
+            <div className="bg-white p-6 rounded-sm shadow-sm border-2 border-gray-200 mb-6">
+              <h3 className="text-xl font-semibold text-[#81059e] flex items-center gap-2 mb-4">
                 <FiFileText /> Informações do Documento
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-4">
                 <div>
-                  <label className="text-[#81059e] font-medium">Nº do Documento</label>
+                  <label className="text-[#96709d] font-medium">Nº do Documento</label>
                   <input
                     type="text"
                     name="documento"
                     value={formData.documento}
                     onChange={handleDocumentoChange}
-                    className="border-2 border-[#81059e] p-3 rounded-sm mt-1 w-full text-black"
+                    className="border-2 border-[#96709d] p-3 rounded-sm w-full text-gray-600 mt-2"
                   />
                 </div>
                 <div>
-                  <label className="text-[#81059e] font-medium">Origem</label>
+                  <label className="text-[#96709d] font-medium">Origem</label>
                   <input
                     type="text"
                     name="origem"
                     value={formData.origem}
                     onChange={handleInputChange}
-                    className="border-2 border-[#81059e] p-3 rounded-sm mt-1 w-full text-black"
+                    className="border-2 border-[#96709d] p-3 rounded-sm w-full text-gray-600 mt-2"
                   />
                 </div>
                 <div>
-                  <label className="text-[#81059e] font-medium">Forma de Pagamento</label>
+                  <label className="text-[#96709d] font-medium">Forma de Pagamento</label>
                   <select
                     name="tipoCobranca"
                     value={formData.tipoCobranca}
                     onChange={handleInputChange}
-                    className="border-2 border-[#81059e] p-3 rounded-sm mt-1 w-full text-black"
+                    className="border-2 border-[#96709d] p-3 rounded-sm w-full text-gray-600 mt-2"
                   >
                     <option value="">Selecione</option>
                     <option value="boleto">Boleto</option>
@@ -696,26 +696,26 @@ export default function ContasPagar() {
             </div>
 
             {/* Seção Pagamento */}
-            <div className="p-4 bg-gray-50 rounded-sm mb-6">
-              <h3 className="text-lg font-semibold text-[#81059e] mb-4 flex items-center gap-2">
+            <div className="bg-white p-6 rounded-sm shadow-sm border-2 border-gray-200 mb-6">
+              <h3 className="text-xl font-semibold text-[#81059e] flex items-center gap-2 mb-4">
                 <FiDollarSign /> Informações de Pagamento
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-4">
                 <div>
-                  <label className="text-[#81059e] font-medium">Valor</label>
+                  <label className="text-[#96709d] font-medium">Valor</label>
                   <input
                     type="text"
                     name="valor"
                     value={formData.valor}
                     onChange={handleValorChange}
                     placeholder="R$ 0,00"
-                    className="border-2 border-[#81059e] p-3 rounded-sm mt-1 w-full text-black"
+                    className="border-2 border-[#96709d] p-3 rounded-sm w-full text-gray-600 mt-2"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="text-[#81059e] font-medium">
+                  <label className="text-[#96709d] font-medium">
                     Número de Parcelas
                   </label>
                   <select
@@ -724,7 +724,7 @@ export default function ContasPagar() {
                       setNumeroParcelas(e.target.value);
                       atualizarParcelas('1', e.target.value);  // Aqui estamos definindo a parcela atual como '1'
                     }}
-                    className="border-2 border-[#81059e] p-3 rounded-sm mt-1 w-full text-black"
+                    className="border-2 border-[#96709d] p-3 rounded-sm w-full text-gray-600 mt-2"
                   >
                     <option value="1">1</option>
                     <option value="2">2</option>
@@ -746,7 +746,7 @@ export default function ContasPagar() {
                 </div>
 
                 <div>
-                  <label className="text-[#81059e] font-medium">Data de Emissão</label>
+                  <label className="text-[#96709d] font-medium">Data de Emissão</label>
                   <input
                     type="date"
                     name="dataEntrada"
@@ -760,11 +760,11 @@ export default function ContasPagar() {
                         dataEntrada: selectedDate,
                       }));
                     }}
-                    className="border-2 border-[#81059e] p-3 rounded-sm w-full text-black"
+                    className="border-2 border-[#96709d] p-3 rounded-sm w-full text-gray-600 mt-1"
                   />
                 </div>
                 <div>
-                  <label className="text-[#81059e] font-medium">Data de Vencimento</label>
+                  <label className="text-[#96709d] font-medium">Data de Vencimento</label>
                   <input
                     type="date"
                     name="dataVencimento"
@@ -778,35 +778,35 @@ export default function ContasPagar() {
                         dataVencimento: selectedDate,
                       }));
                     }}
-                    className="border-2 border-[#81059e] p-3 rounded-sm mt-1 w-full text-black"
+                    className="border-2 border-[#96709d] p-3 rounded-sm w-full text-gray-600 mt-2"
                   />
                 </div>
                 <div>
-                  <label className="text-[#81059e] font-medium">Local de Pagamento</label>
+                  <label className="text-[#96709d] font-medium">Local de Pagamento</label>
                   <input
                     type="text"
                     name="localPagamento"
                     value={formData.localPagamento}
                     onChange={handleInputChange}
-                    className="border-2 border-[#81059e] p-3 rounded-sm mt-1 w-full text-black"
+                    className="border-2 border-[#96709d] p-3 rounded-sm w-full text-gray-600 mt-2"
                   />
                 </div>
               </div>
             </div>
 
             {/* Seção Contabilidade */}
-            <div className="p-4 bg-gray-50 rounded-lg mb-6">
-              <h3 className="text-lg font-semibold text-[#81059e] mb-4 flex items-center gap-2">
+            <div className="bg-white p-6 rounded-sm shadow-sm border-2 border-gray-200 mb-6">
+              <h3 className="text-xl font-semibold text-[#81059e] flex items-center gap-2 mb-4">
                 <FiTrendingUp /> Informações Contábeis
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
                 <div>
-                  <label className="text-[#81059e] font-medium">Lançamento no Caixa</label>
+                  <label className="text-[#96709d] font-medium">Lançamento no Caixa</label>
                   <select
                     name="lancamentoNoCaixa"
                     value={formData.lancamentoNoCaixa}
                     onChange={handleInputChange}
-                    className="border-2 border-[#81059e] p-3 rounded-sm mt-1 w-full text-black"
+                    className="border-2 border-[#96709d] p-3 rounded-sm w-full text-gray-600 mt-2"
                   >
                     <option value="">Selecione um caixa</option>
                     {caixasDisponiveis.map(caixa => (
@@ -818,7 +818,7 @@ export default function ContasPagar() {
                 </div>
 
                 <div>
-                  <label className="text-[#81059e] font-medium">Categoria da Despesa</label>
+                  <label className="text-[#96709d] font-medium">Categoria da Despesa</label>
                   <div className="relative flex">
                     <select
                       name="categoriaDespesa"
@@ -830,7 +830,7 @@ export default function ContasPagar() {
                           setFormData(prev => ({ ...prev, categoriaDespesa: e.target.value }));
                         }
                       }}
-                      className="border-2 border-[#81059e] p-3 rounded-sm mt-1 w-full text-black"
+                      className="border-2 border-[#96709d] p-3 rounded-sm w-full text-gray-600 mt-2"
                     >
                       <option value="">Selecione</option>
                       {categoriasDespesa.map((categoria) => (
@@ -868,10 +868,10 @@ export default function ContasPagar() {
                             }
                           }
                         }}
-                        className="ml-2 bg-red-50 border-2 border-red-400 text-red-600 p-2 rounded-lg flex items-center justify-center"
+                        className="ml-2 bg-red-50 border-2 border-red-300 text-red-600 px-2 rounded-sm flex items-center justify-center"
                         title="Remover categoria"
                       >
-                        <FiTrash2 />
+                        <FiTrash2 className='h-6 w-6'/>
                       </button>
                     )}
 
@@ -918,8 +918,8 @@ export default function ContasPagar() {
             </div>
 
             {/* Seção Observações */}
-            <div className="p-4 bg-gray-50 rounded-sm mb-6">
-              <h3 className="text-lg font-semibold text-[#81059e] mb-4 flex items-center gap-2">
+            <div className="bg-white p-6 rounded-sm shadow-sm border-2 border-gray-200 mb-6">
+              <h3 className="text-xl font-semibold text-[#81059e] flex items-center gap-2 mb-4">
                 <FiFileText /> Observações
               </h3>
               <div>
@@ -927,7 +927,7 @@ export default function ContasPagar() {
                   name="observacoes"
                   value={formData.observacoes}
                   onChange={handleInputChange}
-                  className="border-2 border-[#81059e] p-3 rounded-sm mt-1 w-full text-black min-h-[120px]"
+                  className="border-2 border-[#96709d] p-3 rounded-sm w-full text-gray-600 mt-2 min-h-[120px]"
                   placeholder="Adicione observações relevantes..."
                 ></textarea>
               </div>
@@ -938,14 +938,14 @@ export default function ContasPagar() {
               <button
                 type="button"
                 onClick={handleClear}
-                className="inline-flex justify-center py-3 px-4 border-2 border-[#81059e] shadow-sm text-sm font-semibold rounded-sm text-[#81059e] bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#81059e]"
+                className="inline-flex justify-center py-3 px-4 border-2 border-[#81059e] shadow-sm text-sm font-semibold rounded-sm text-[#81059e] hover:bg-purple-100"
                 disabled={isLoading}
               >
                 CANCELAR
               </button>
               <button
                 type="submit"
-                className="bg-[#81059e] p-3 px-6 rounded-sm text-white font-semibold flex items-center gap-2"
+                className="bg-[#81059e] p-3 px-6 rounded-sm text-white font-semibold flex items-center gap-2 hover:bg-purple-700"
                 disabled={isLoading}
               >
                 {isLoading ? 'PROCESSANDO...' : 'SALVAR'}

@@ -3,7 +3,9 @@ import { FiCalendar, FiX } from 'react-icons/fi';
 
 const CrediarioModal = ({ isOpen, onClose, onConfirm, value, formatCurrency }) => {
     const [installments, setInstallments] = useState('2');
-    const [dueDate, setDueDate] = useState('');
+    const [dueDate, setDueDate] = useState(
+        new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+    );
     const [interestRate, setInterestRate] = useState('0');
 
     if (!isOpen) return null;
@@ -122,4 +124,4 @@ const CrediarioModal = ({ isOpen, onClose, onConfirm, value, formatCurrency }) =
     );
 };
 
-export default CrediarioModal; 
+export default CrediarioModal;

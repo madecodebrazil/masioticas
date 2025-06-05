@@ -9,7 +9,7 @@ export default function ProductsPage() {
     const productsItems = [
         { icon: '/images/estoque/Graph.png', label: 'Controle de Produtos', route: '/stock/product-control' },
         { icon: '/images/estoque/Change.png', label: 'Trocas', route: '/stock/exchanges' },
-        { icon: '/images/estoque/Supplier.png', label: 'Fornecedores', route: '/stock/suppliers' },
+        { icon: '/images/estoque/Supplier.png', label: 'Fornecedores', route: '/register/suppliers' },
         { icon: '/images/estoque/Logistics.png', label: 'Entregas', route: '/stock/delivery' },
         { icon: '/images/estoque/Montagem.png', label: 'Montagem', route: '/stock/assembly' },
         { icon: '/images/estoque/Puzzle.png', label: 'Avarias', route: '/stock/breakdown' },

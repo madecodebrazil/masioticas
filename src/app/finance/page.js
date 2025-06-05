@@ -43,12 +43,12 @@ export default function FinancesPage() {
             route: '/finance/add-receive'
         },
         {
-            icon: '/images/financeiro/caixa.png',
+            icon: '/images/financeiro/controle.png',
             label: 'Controle de Caixa',
             route: '/finance/cashier_day'
         },
         {
-            icon: '/images/estoque/Graph.png',
+            icon: '/images/financeiro/fluxo.png',
             label: 'Fluxo de caixa',
             route: '/finance/cashflow'
         },
@@ -58,7 +58,7 @@ export default function FinancesPage() {
             route: '/finance/cards/display-cards'
         },
         {
-            icon: '/images/financeiro/cartoes.png',
+            icon: '/images/financeiro/cheques.png',
             label: 'Cheques',
             route: '/finance/cards/display-cards'
         },
@@ -107,8 +107,8 @@ export default function FinancesPage() {
                                                 <Image
                                                     src={item.icon}
                                                     alt={item.label}
-                                                    width={50}
-                                                    height={50}
+                                                    width={150}
+                                                    height={150}
                                                     className="object-contain mr-2"
                                                 />
                                                 <span className="font-semibold text-sm sm:text-base lg:text-lg flex-grow text-left">
