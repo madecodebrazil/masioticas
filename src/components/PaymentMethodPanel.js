@@ -37,7 +37,7 @@ const PaymentMethodPanel = ({
     addPaymentMethod,
     removePaymentMethod,
     changePaymentMethod,
-    cashbackDisponivel,
+    cashbackDisponivel = 0, // Valor padrão para evitar undefined
     formatCurrency,
     boletoVencimento,
     setBoletoVencimento,
@@ -63,6 +63,11 @@ const PaymentMethodPanel = ({
     // Fallback para calculateTotal caso não seja passado
     const getTotal = typeof calculateTotal === 'function' ? calculateTotal : () => 0;
 
+    // Debug: Log do cashback disponível
+    useEffect(() => {
+        console.log('Cashback disponível:', cashbackDisponivel);
+    }, [cashbackDisponivel]);
+
     // Verifica se os pagamentos totalizam o valor da venda
     const isPaymentComplete = () => {
         const total = calculateTotal();
@@ -74,6 +79,8 @@ const PaymentMethodPanel = ({
     const handleConfigurePayment = (index) => {
         const payment = paymentMethods[index];
         setCurrentModalIndex(index);
+
+        console.log('Configurando pagamento:', payment.method, 'Index:', index);
 
         switch (payment.method) {
             case 'cartao':
@@ -95,12 +102,14 @@ const PaymentMethodPanel = ({
                 setIsCryptoModalOpen(true);
                 break;
             case 'cashback':
+                console.log('Abrindo modal cashback, cashback disponível:', cashbackDisponivel);
                 setIsCashbackModalOpen(true);
                 break;
             case 'pix':
                 setIsPixModalOpen(true);
                 break;
             default:
+                console.warn('Método de pagamento não reconhecido:', payment.method);
                 break;
         }
     };
@@ -323,13 +332,21 @@ const PaymentMethodPanel = ({
                                         { key: 'crediario', label: 'Crediário', icon: FiFileText },
                                         { key: 'boleto', label: 'Boleto', icon: FiFileText },
                                         { key: 'ted', label: 'TEV', icon: FiActivity },
-                                        { key: 'cashback', label: 'Cashback', icon: FiPercent, disabled: cashbackDisponivel <= 0 },
+                                        { 
+                                            key: 'cashback', 
+                                            label: `Cashback${cashbackDisponivel > 0 ? ` (${formatCurrency(cashbackDisponivel)})` : ' (Indisponível)'}`, 
+                                            icon: FiPercent, 
+                                            disabled: false // Removemos a condição de disable
+                                        },
                                         { key: 'crypto', label: 'Crypto', icon: FaBitcoin }
                                     ].map(({ key, label, icon: Icon, disabled }) => (
                                         <button
                                             key={key}
                                             type="button"
-                                            onClick={() => changePaymentMethod(index, key)}
+                                            onClick={() => {
+                                                console.log('Clicando em:', key, 'Disabled:', disabled);
+                                                changePaymentMethod(index, key);
+                                            }}
                                             disabled={disabled}
                                             className={`p-2 border rounded-sm flex items-center justify-center text-sm font-medium transition-all ${
                                                 payment.method === key
@@ -337,13 +354,25 @@ const PaymentMethodPanel = ({
                                                     : disabled
                                                         ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
                                                         : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-[#81059e]'
-                                            }`}
+                                            } ${key === 'cashback' && cashbackDisponivel <= 0 ? 'opacity-75' : ''}`}
                                         >
                                             {Icon && <Icon className="mr-1" size={14} />}
                                             {key === 'pix' ? 'PIX' : label}
                                         </button>
                                     ))}
                                 </div>
+
+                                {/* Aviso para cashback sem saldo */}
+                                {payment.method === 'cashback' && cashbackDisponivel <= 0 && (
+                                    <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-sm">
+                                        <div className="flex items-center">
+                                            <FiAlertCircle className="text-yellow-600 mr-2" />
+                                            <span className="text-yellow-800 text-sm font-medium">
+                                                Nenhum cashback disponível no momento
+                                            </span>
+                                        </div>
+                                    </div>
+                                )}
 
                                 {/* Configuração de valor */}
                                 <div className="mb-4">
@@ -394,7 +423,10 @@ const PaymentMethodPanel = ({
 
                                 {/* Botão de configurar pagamento */}
                                 <button
-                                    onClick={() => handleConfigurePayment(index)}
+                                    onClick={() => {
+                                        console.log('Configurar pagamento clicado para:', payment.method);
+                                        handleConfigurePayment(index);
+                                    }}
                                     className="w-full p-3 bg-[#81059e] text-white rounded-sm hover:bg-[#6f0486] font-medium transition-colors flex items-center justify-center gap-2"
                                 >
                                     <FiCreditCard size={18} />

@@ -761,14 +761,15 @@ const OSManager = ({ cartItems, selectedClient, onOSChange, collections, activeC
                                         ? 'border-[#81059e] bg-purple-50' : 'border-gray-200 hover:border-purple-300'
                                         }`}
                                 >
-                                    <div className="flex justify-between items-start">
-                                        <div className="flex-1">
+                                    {/* LAYOUT RESPONSIVO: Flex column em mobile, row em desktop */}
+                                    <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4">
+                                        <div className="flex-1 min-w-0"> {/* min-w-0 permite que o flex-item shrink */}
                                             <div className="flex items-center gap-3 mb-2">
-                                                <FiFileText className="text-[#81059e] text-xl" />
-                                                <span className="font-semibold text-lg">{colecao.name}</span>
+                                                <FiFileText className="text-[#81059e] text-xl flex-shrink-0" />
+                                                <span className="font-semibold text-lg break-words">{colecao.name}</span>
 
                                                 {osData[colecao.id]?.isCompleted && (
-                                                    <span className="bg-green-100 text-green-800 text-sm px-3 py-1 rounded-full font-medium flex items-center gap-1">
+                                                    <span className="bg-green-100 text-green-800 text-sm px-3 py-1 rounded-full font-medium flex items-center gap-1 flex-shrink-0">
                                                         <FiCheck size={14} /> Preenchida
                                                     </span>
                                                 )}
@@ -776,7 +777,7 @@ const OSManager = ({ cartItems, selectedClient, onOSChange, collections, activeC
 
                                             {/* Lista de itens */}
                                             <div className="mb-3">
-                                                <span className="bg-orange-100 text-blue-800 text-sm px-3 py-1 rounded-full font-medium ">
+                                                <span className="bg-orange-100 text-blue-800 text-sm px-3 py-1 rounded-full font-medium inline-block">
                                                     {osData[colecao.id]?.tipoOSColecao || 'Pendente'}
                                                 </span>
                                                 <h5 className="font-medium text-sm text-gray-600 mb-2 mt-3">Itens desta coleção:</h5>
@@ -812,25 +813,36 @@ const OSManager = ({ cartItems, selectedClient, onOSChange, collections, activeC
                                             </div>
                                         </div>
 
-                                        {/* Botão de ação */}
-                                        <div className="ml-4">
+                                        {/* BOTÃO RESPONSIVO */}
+                                        <div className="w-full lg:w-auto lg:ml-4 flex-shrink-0">
                                             <button
                                                 type="button"
                                                 onClick={() => openOSForm(colecao.id)}
-                                                className={`px-6 py-3 rounded-sm font-semibold transition-all flex items-center gap-2 text-base ${osData[colecao.id]?.isCompleted
+                                                className={`
+                            w-full lg:w-auto
+                            px-4 lg:px-6 
+                            py-2 lg:py-3 
+                            rounded-sm font-semibold transition-all 
+                            flex items-center justify-center gap-2 
+                            text-sm lg:text-base
+                            whitespace-nowrap
+                            ${osData[colecao.id]?.isCompleted
                                                         ? 'bg-green-500 hover:bg-green-600 text-white'
                                                         : 'bg-[#81059e] hover:bg-[#6f0486] text-white'
-                                                    }`}
+                                                    }
+                        `}
                                             >
                                                 {osData[colecao.id]?.isCompleted ? (
                                                     <>
-                                                        <FiEdit3 size={18} />
-                                                        Editar OS
+                                                        <FiEdit3 size={16} className="lg:w-[18px] lg:h-[18px]" />
+                                                        <span className="hidden sm:inline">Editar OS</span>
+                                                        <span className="sm:hidden">Editar</span>
                                                     </>
                                                 ) : (
                                                     <>
-                                                        <FiFileText size={18} />
-                                                        Preencher OS
+                                                        <FiFileText size={16} className="lg:w-[18px] lg:h-[18px]" />
+                                                        <span className="hidden sm:inline">Preencher OS</span>
+                                                        <span className="sm:hidden">Preencher</span>
                                                     </>
                                                 )}
                                             </button>

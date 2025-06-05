@@ -153,14 +153,14 @@ const CarrinhoCompras = ({
       // Calcular o subtotal baseado em TODOS os itens de TODAS as coleções
       const subtotalGlobal = collections.reduce((total, collection) => {
         if (!collection.items) return total;
-        
+
         const collectionSubtotal = collection.items.reduce(
-          (colTotal, item) => colTotal + ((item.valor || item.preco || 0) * (item.quantity || 1)), 
+          (colTotal, item) => colTotal + ((item.valor || item.preco || 0) * (item.quantity || 1)),
           0
         );
         return total + collectionSubtotal;
       }, 0);
-      
+
       // Enviar o subtotal global e as coleções para o componente pai
       updateCartValue(subtotalGlobal, collections);
     }
@@ -610,14 +610,13 @@ const CarrinhoCompras = ({
           <button
             onClick={addCollection}
             disabled={!canAddMoreCollections}
-            className={`text-xs px-3 py-1 rounded-sm flex items-center transition-colors ${
-              canAddMoreCollections
+            className={`text-xs px-3 py-1 rounded-sm flex items-center transition-colors ${canAddMoreCollections
                 ? 'bg-[#81059e] opacity-70 text-white hover:opacity-90'
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-            }`}
+              }`}
             title={!canAddMoreCollections ? `Limite máximo de ${MAX_COLLECTIONS} coleções atingido` : 'Adicionar nova coleção'}
           >
-            <FiPlusCircle className="mr-1 text-lg" /> 
+            <FiPlusCircle className="mr-1 text-lg" />
             <p className='text-sm'>
               {canAddMoreCollections ? 'Nova Coleção' : 'Nova Coleção'}
             </p>
@@ -886,12 +885,12 @@ const CarrinhoCompras = ({
           <div className="flex justify-between items-center mb-2">
             <span className=" text-base">Total desta coleção:</span>
             <span className="font-medium text-lg text-[#81059e]">
-              {formatCurrencyValue(cartItems.reduce((total, item) => 
+              {formatCurrencyValue(cartItems.reduce((total, item) =>
                 total + ((item.valor || item.preco || 0) * (item.quantity || 1)), 0)
               )}
             </span>
           </div>
-          
+
           {/* NOVO: Mostrar o total global considerando todas as coleções */}
           <div className="flex justify-between items-center pt-2 border-t border-gray-300">
             <span className="font-semiboald text-lg">Total geral (todas as coleções):</span>
@@ -899,7 +898,7 @@ const CarrinhoCompras = ({
               {formatCurrencyValue(getTotal())}
             </span>
           </div>
-          
+
           {/* Exibir contagem de itens por coleção */}
           <div className="mt-2 text-xs text-gray-500">
             {collections.map(collection => (
@@ -924,7 +923,10 @@ const CarrinhoCompras = ({
       {showPriceModal && selectedProduct && (
         <PriceEditModal
           product={selectedProduct}
-          onSave={(newPrice) => updateProductPrice(selectedProduct.id, selectedProduct.categoria, newPrice)}
+          onSave={(newPrice) => {
+            updateProductPrice(selectedProduct.id, selectedProduct.categoria, newPrice);
+            setShowPriceModal(false);
+          }}
           onClose={() => setShowPriceModal(false)}
         />
       )}

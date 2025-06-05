@@ -235,7 +235,7 @@ const NovaVendaPage = () => {
     return (
         <div className="min-h-screen bg-gray-100 pb-6">
             <Head>
-                <title>{tipoTransacao === 'venda' ? 'Nova Venda' : 'Novo Orçamento'} | MASI Óticas</title>
+                <title>{tipoTransacao === 'venda' ? 'Vendas' : 'Orçamentos'} | MASI Óticas</title>
             </Head>
 
             {/* Barra superior com título e botão voltar */}
